@@ -5,6 +5,7 @@ Scrapes plans from UMG, generates JSON + ICS files, and exports a production-rea
 """
 
 import os
+import re
 import sys
 import json
 import shutil
@@ -114,14 +115,15 @@ def build(limit=None):
                     html_text, grupa, grupy
                 )
 
-                safe_group_filename = f"{plan_id_str}_{grupa}.json"
+                safe_grupa = re.sub(r'[^\w-]', '_', grupa)
+                safe_group_filename = f"{plan_id_str}_{safe_grupa}.json"
                 json_path = os.path.join(SCHEDULES_DIR, safe_group_filename)
                 with open(json_path, "w", encoding="utf-8") as jf:
                     json.dump(dane_plaskie, jf, ensure_ascii=False, indent=2)
 
                 # 2. Generate iCal (.ics) file
                 ics_text = generuj_ics(dane_plaskie, grupa)
-                ics_filename = f"{plan_id_str}_{grupa}.ics"
+                ics_filename = f"{plan_id_str}_{safe_grupa}.ics"
                 ics_path = os.path.join(CALENDARS_DIR, ics_filename)
                 with open(ics_path, "w", encoding="utf-8") as icsf:
                     icsf.write(ics_text)
@@ -247,7 +249,7 @@ def build_cross_reference_indexes(plans_metadata=None):
                     teacher = (lesson.get("prowadzacy") or "").strip()
                     room = (lesson.get("sala") or "").strip()
                     hours = (lesson.get("godziny") or "").strip()
-                    weeks = lesson.get("tygodnie", 20)
+                    weeks = lesson.get("tygodnie", 1)
                     data_start = lesson.get("data_start", "")
 
                     if not subject:

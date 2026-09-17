@@ -1,5 +1,5 @@
 // Service Worker for Plan UMG PWA
-const CACHE_NAME = 'plan-umg-v1.8';
+const CACHE_NAME = 'plan-umg-v2.5';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -39,41 +39,16 @@ self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (event.request.method !== 'GET') return;
 
-  // Handle data requests (schedules, plans, cross-reference) with network-first strategy
-  if (url.pathname.includes('/data/') || url.pathname.includes('/calendars/')) {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          }
-          return response;
-        })
-        .catch(() => caches.match(event.request))
-    );
-    return;
-  }
-
-  // Handle static assets with cache-first / network fallback
+  // Network-first strategy: always fetch latest version from server, fallback to cache offline
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Fetch update in background (stale-while-revalidate)
-        fetch(event.request).then((networkResponse) => {
-          if (networkResponse && networkResponse.ok) {
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));
-          }
-        }).catch(() => {});
-        return cachedResponse;
-      }
-      return fetch(event.request).then((response) => {
-        if (response.ok) {
-          const clone = response.clone();
+    fetch(event.request)
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.ok) {
+          const clone = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
         }
-        return response;
-      });
-    })
+        return networkResponse;
+      })
+      .catch(() => caches.match(event.request))
   );
 });

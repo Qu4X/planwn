@@ -58,9 +58,9 @@ def pobierz_dane_z_ajax(session, ajax_val, url_target="https://arktur.umg.edu.pl
     try:
         r = session.post(url, data=payload, headers=headers, timeout=5)
         r.raise_for_status()
-        match = re.search(r"<komunikat>([^<]+)</komunikat>", r.text)
-        if match:
-            tresc = match.group(1).strip()
+        kom_tag = BeautifulSoup(r.text, 'html.parser').find('komunikat')
+        if kom_tag:
+            tresc = kom_tag.get_text().strip()
             items = []
             for part in tresc.split('|'):
                 subparts = [p.strip() for p in part.split('_')]
@@ -144,8 +144,8 @@ def pobierz_surowy_plan(plan_id):
     return html_text, grupy
 
 
-def _wspolny_parser_html(html_text, _soup=None):
-    soup = _soup or BeautifulSoup(html_text, 'html.parser')
+def _wspolny_parser_html(html_text):
+    soup = BeautifulSoup(html_text, 'html.parser')
     min_slot, max_slot = 999, 0
     zajecia_dane = {d: {} for d in DNI_MAPA.values()}
     inputs_by_id = {inp['id']: inp.get('value', '0') for inp in soup.find_all('input', id=True)}
@@ -213,8 +213,38 @@ def _wspolny_parser_html(html_text, _soup=None):
         ajax_key = f"{v1}_{v2}_{v3}"
         ajax_items = ajax_cache.get(ajax_key, [])
 
+        # Pre-compute start slots for every chunk so each chunk's end = next chunk's start
+        chunk_slot_starts = []
+        for gf in green_fonts:
+            try:
+                sh_j, sm_j = map(int, gf.get_text().strip().split(':'))
+                chunk_slot_starts.append((sh_j - 7) * 12 + sm_j // 5)
+            except Exception:
+                chunk_slot_starts.append(None)
+        while len(chunk_slot_starts) < len(chunks):
+            chunk_slot_starts.append(None)
+
+        cell_base_start = None
         for i, chunk in enumerate(chunks):
             chunk_text = ' '.join(chunk)
+            clean_chunk_text = chunk_text.replace('\xa0', ' ').replace('&nbsp;', ' ')
+
+            # Detect cycle: (od 1 tyg co 2 tyg), (od 2 tyg co 2 tyg), (co 2 tyg)
+            co_ile = 1
+            od_tyg = 1
+            m_cycle = re.search(r"\(od\s*(\d+)\s*tyg\s*co\s*(\d+)\s*tyg\)", clean_chunk_text)
+            if m_cycle:
+                od_tyg = int(m_cycle.group(1))
+                co_ile = int(m_cycle.group(2))
+            elif re.search(r"\(co\s*(\d+)\s*tyg\)", clean_chunk_text):
+                co_ile = int(re.search(r"\(co\s*(\d+)\s*tyg\)", clean_chunk_text).group(1))
+
+            # Detect semester half: (1 poł sem), (2 poł sem)
+            polowa_sem = None
+            m_pol = re.search(r"\((\d+)\s*poł\s*sem\)", clean_chunk_text)
+            if m_pol:
+                polowa_sem = int(m_pol.group(1))
+
             start_h = green_fonts[i].get_text().strip() if i < len(green_fonts) else None
             if not start_h:
                 time_match = re.search(r'\b(\d{2}:\d{2})\b', chunk_text)
@@ -231,7 +261,11 @@ def _wspolny_parser_html(html_text, _soup=None):
             if sub_slot_start < min_slot: min_slot = sub_slot_start
             if cell_end_slot > max_slot: max_slot = cell_end_slot
 
-            sub_height = max(1, cell_end_slot - sub_slot_start)
+            # Each chunk ends at the next chunk's start if it starts later; otherwise cell_end_slot
+            next_start = next((chunk_slot_starts[k] for k in range(i + 1, len(chunk_slot_starts))
+                               if chunk_slot_starts[k] is not None and chunk_slot_starts[k] > sub_slot_start), None)
+            chunk_end_slot = next_start if next_start is not None else cell_end_slot
+            sub_height = max(1, chunk_end_slot - sub_slot_start)
             sub_duration = sub_height * 5
             koniec_h = oblicz_godzine_konca(start_h, sub_duration)
 
@@ -252,19 +286,44 @@ def _wspolny_parser_html(html_text, _soup=None):
             data_start = data_start_match.group(1) if data_start_match else None
             liczba_tygodni = int(tygodnie_match.group(1)) if tygodnie_match else None
 
+            if data_start and not cell_base_start:
+                cell_base_start = data_start
+
             if not data_start and i < len(ajax_items):
                 d_m = re.search(r"(\d{4}-\d{2}-\d{2})", ajax_items[i].get("date_info", ""))
                 if d_m: data_start = d_m.group(1)
+
+            if not cell_base_start and data_start:
+                cell_base_start = data_start
+
+            # Calculate 2nd semester half start date if not explicitly specified
+            if polowa_sem == 2 and not data_start_match:
+                if cell_base_start:
+                    try:
+                        base_dt = datetime.strptime(cell_base_start, "%Y-%m-%d")
+                        data_start = (base_dt + timedelta(weeks=8)).strftime("%Y-%m-%d")
+                    except Exception:
+                        pass
+
             if liczba_tygodni is None and i < len(ajax_items):
                 t_m = re.search(r"tygodni:\s*(\d+)", ajax_items[i].get("date_info", ""))
                 if t_m: liczba_tygodni = int(t_m.group(1))
+
             if liczba_tygodni is None:
-                liczba_tygodni = 20
+                if polowa_sem == 1:
+                    liczba_tygodni = 7
+                elif polowa_sem == 2:
+                    liczba_tygodni = 8
+                elif co_ile == 2:
+                    liczba_tygodni = 8 if od_tyg == 1 else 7
+                else:
+                    liczba_tygodni = 15
+                    logger.debug(f"Week count not found for slot {sub_slot_start} in {dzien_nazwa}, defaulting to 15 (full semester)")
 
             l0 = chunk[0] if chunk else ""
             cleaned = re.sub(r'\b\d{2}:\d{2}\b', '', l0)
             if sala != 'OL':
-                cleaned = cleaned.replace(sala, '')
+                cleaned = re.sub(r'(?<!\w)' + re.escape(sala) + r'(?!\w)', '', cleaned)
             cleaned = re.sub(r'\(.*?\)', '', cleaned)
             cleaned = re.sub(r'\{.*?\}', '', cleaned)
             cleaned = re.sub(r'\[.*?\]', '', cleaned)
@@ -288,12 +347,15 @@ def _wspolny_parser_html(html_text, _soup=None):
                 "height": sub_height,
                 "colspan": colspan,
                 "data_start": data_start,
-                "tygodnie": liczba_tygodni
+                "tygodnie": liczba_tygodni,
+                "co_ile": co_ile,
+                "od_tyg": od_tyg,
+                "polowa_sem": polowa_sem
             }
 
             slot_key = sub_slot_start
             if slot_key in zajecia_dane[dzien_nazwa] and col_start in zajecia_dane[dzien_nazwa][slot_key]:
-                slot_key = f"{sub_slot_start}_{i}"
+                slot_key = f"{sub_slot_start}_{col_start}_{i}"
 
             if slot_key not in zajecia_dane[dzien_nazwa]:
                 zajecia_dane[dzien_nazwa][slot_key] = {}
@@ -329,12 +391,12 @@ def _wspolny_parser_html(html_text, _soup=None):
     return zajecia_dane, min_slot, max_slot
 
 
-def przetworz_plan_na_grafike(html_text, wybrana_grupa, lista_grup, _soup=None):
+def przetworz_plan_na_grafike(html_text, wybrana_grupa, lista_grup):
     if wybrana_grupa not in lista_grup:
         return {}, 0, 0
 
     target_idx = lista_grup.index(wybrana_grupa)
-    dane_z_kolumnami, min_slot, max_slot = _wspolny_parser_html(html_text, _soup=_soup)
+    dane_z_kolumnami, min_slot, max_slot = _wspolny_parser_html(html_text)
 
     dane_plaskie = {d: {} for d in DNI_MAPA.values()}
 
@@ -357,12 +419,10 @@ def przetworz_plan_na_grafike(html_text, wybrana_grupa, lista_grup, _soup=None):
                     break
 
                 # WARUNEK 2: Specjalny przypadek dla "BiSS" i Auli (kolumna 0 i duży colspan)
-                # Jeśli kafelek zaczyna się w kolumnie 0 i jest szeroki (np. min 5 kolumn),
-                # traktujemy go jako ogólny, o ile nie mamy już nic lepszego.
-                if col_start == 0 and colspan > 5:
+                # Kafelek traktujemy jako ogólny tylko jeśli faktycznie obejmuje naszą kolumnę.
+                if col_start == 0 and colspan > 5 and target_idx < (col_start + colspan):
                     wybrane_info = info
-                    # Nie robimy break, bo może dalej w pętli znajdziemy coś,
-                    # co jeszcze lepiej pasuje do naszej konkretnej kolumny.
+                    # Nie robimy break — dalej w pętli może być coś, co lepiej pasuje.
 
             if wybrane_info:
                 target_key = slot_start
@@ -371,10 +431,6 @@ def przetworz_plan_na_grafike(html_text, wybrana_grupa, lista_grup, _soup=None):
                 dane_plaskie[dzien][target_key] = wybrane_info
 
     return dane_plaskie, min_slot, max_slot
-
-
-def przetworz_plan_wszystkie(html_text, lista_grup):
-    return _wspolny_parser_html(html_text)
 
 
 def generuj_ics(dane_planu, nazwa_grupy):
@@ -408,28 +464,34 @@ def generuj_ics(dane_planu, nazwa_grupy):
             if nazwa_grupy:
                 desc += f"\nGrupa: {nazwa_grupy}"
 
+            step = int(info.get("co_ile", 1) or 1)
             for t in range(info.get("tygodnie", 1)):
                 event = Event()
+                event_start = start_dt + timedelta(weeks=t * step)
+                event_end   = koniec_dt + timedelta(weeks=t * step)
                 event.add('summary', info['przedmiot'])
-                event.add('dtstart', start_dt + timedelta(weeks=t))
-                event.add('dtend', koniec_dt + timedelta(weeks=t))
+                event.add('dtstart', event_start)
+                event.add('dtend', event_end)
+                # RFC 5545 §3.6.1 — both UID and DTSTAMP are required
+                uid = (f"{nazwa_grupy}_{event_start.strftime('%Y%m%dT%H%M%S')}"
+                       f"_{info['przedmiot']}@umg.edu.pl")
+                event.add('uid', uid)
+                event.add('dtstamp', datetime.utcnow())
                 if loc:
                     event.add('location', loc)
                 event.add('description', desc)
                 cal.add_component(event)
-        except Exception as e:
-            logger.warning(f"ICS - pominięto: {e}")
+        except (ValueError, KeyError) as e:
+            logger.warning(f"ICS - pominięto ({e}): {info.get('przedmiot', '?')} @ {info.get('data_start', '?')}")
 
-    # Obsługa różnych formatów danych wejściowych
-    if isinstance(dane_planu, dict):
-        for dzien_nazwa, sloty in dane_planu.items():
-            for slot, slot_data in sloty.items():
-                if "przedmiot" in slot_data:
-                    _dodaj_event(slot_data)
-                else:
-                    for col_idx, info in slot_data.items():
-                        if isinstance(info, dict) and "przedmiot" in info:
-                            _dodaj_event(info)
+    for dzien_nazwa, sloty in dane_planu.items():
+        for slot, slot_data in sloty.items():
+            if "przedmiot" in slot_data:
+                _dodaj_event(slot_data)
+            else:
+                for col_idx, info in slot_data.items():
+                    if isinstance(info, dict) and "przedmiot" in info:
+                        _dodaj_event(info)
 
     output = cal.to_ical()
     if isinstance(output, bytes):
