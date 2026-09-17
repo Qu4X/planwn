@@ -529,6 +529,10 @@ function selectGroup(groupName) {
   loadSchedule();
 }
 
+function getSafeGroupName(group) {
+  return group ? String(group).replace(/[^\w-]/g, '_') : '';
+}
+
 // Load schedule JSON for selected plan + group
 async function loadSchedule() {
   if (!state.selectedPlanId || !state.selectedGroup) return;
@@ -539,7 +543,8 @@ async function loadSchedule() {
   elements.emptyState.classList.add("hidden");
 
   try {
-    const filename = `data/schedules/${state.selectedPlanId}_${encodeURIComponent(state.selectedGroup)}.json`;
+    const safeGroup = getSafeGroupName(state.selectedGroup);
+    const filename = `data/schedules/${state.selectedPlanId}_${safeGroup}.json`;
     const response = await fetch(filename);
     if (!response.ok) throw new Error("Brak pliku planu dla tej grupy");
 
@@ -1306,7 +1311,8 @@ function openCalendarModal() {
 
   const origin = window.location.origin;
   const pathname = window.location.pathname.replace(/\/index\.html$/, "").replace(/\/$/, "");
-  const icsPath = `${pathname}/calendars/${state.selectedPlanId}_${encodeURIComponent(state.selectedGroup)}.ics`;
+  const safeGroup = getSafeGroupName(state.selectedGroup);
+  const icsPath = `${pathname}/calendars/${state.selectedPlanId}_${safeGroup}.ics`;
   const fullHttpUrl = `${origin}${icsPath}`;
   const webcalUrl = fullHttpUrl.replace(/^https?:\/\//, "webcal://");
 
@@ -2017,7 +2023,8 @@ if (typeof module !== "undefined" && module.exports) {
     getMonday,
     isTeachingDay,
     getLessonMeetingInfo,
-    getLessonProgress
+    getLessonProgress,
+    getSafeGroupName
   };
 }
 

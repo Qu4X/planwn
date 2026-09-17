@@ -223,7 +223,8 @@ def build_cross_reference_indexes(plans_metadata=None):
         groups = plan_info.get("groups", [])
 
         for group in groups:
-            schedule_filename = f"{plan_id_str}_{group}.json"
+            safe_group = re.sub(r'[^\w-]', '_', group)
+            schedule_filename = f"{plan_id_str}_{safe_group}.json"
             schedule_path = os.path.join(SCHEDULES_DIR, schedule_filename)
             if not os.path.exists(schedule_path):
                 continue

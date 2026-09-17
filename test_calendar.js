@@ -1,5 +1,5 @@
 const assert = require("assert");
-const { getLessonMeetingInfo, getMonday } = require("./web/app.js");
+const { getLessonMeetingInfo, getMonday, getSafeGroupName } = require("./web/app.js");
 
 console.log("\n🧪 Running Calendar Engine TDD Tests...\n");
 
@@ -422,6 +422,15 @@ assert.strictEqual(prog10.text, "10/15", `Oczekiwano '10/15', a otrzymano: ${pro
 assert.strictEqual(prog10.isFinal, false);
 
 console.log("✅ [PASS] Format licznika w UI wyświetla czyste 'x/y' oraz wyróżnia 'Ostatnie zajęcia'.");
+
+// --- TEST 12: Bezpieczne mapowanie nazw grup na pliki JSON i ICS ---
+console.log("\n-- Test 12: getSafeGroupName - bezpieczne mapowanie nazw grup z kropkami i spacjami");
+assert.strictEqual(getSafeGroupName("GR.01"), "GR_01");
+assert.strictEqual(getSafeGroupName("1 TM"), "1_TM");
+assert.strictEqual(getSafeGroupName("1/2 M"), "1_2_M");
+assert.strictEqual(getSafeGroupName("GR-1"), "GR-1");
+console.log("✅ [PASS] getSafeGroupName poprawnie mapuje kropki, spacje i ukośniki.");
+
 
 
 
