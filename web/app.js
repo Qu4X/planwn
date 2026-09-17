@@ -57,8 +57,7 @@ const DNI_PRZYIMEK = {
 const ACADEMIC_CALENDAR = {
   // Day replacements: format 'YYYY-MM-DD': { replaceWith: 'DAY_CODE', note: 'Description' }
   daySwaps: {
-    "2026-11-05": { replaceWith: "PON", note: "Czwartek 05.11 – zajęcia z poniedziałku" },
-    "2026-11-13": { replaceWith: "ŚR", note: "Piątek 13.11 – zajęcia ze środy" },
+    "2026-12-18": { replaceWith: "ŚR", note: "Piątek 18.12 – zajęcia ze środy" },
     "2027-01-04": { replaceWith: "ŚR", note: "Poniedziałek 04.01 – zajęcia ze środy" },
     "2027-03-31": { replaceWith: "PON", note: "Środa 31.03 – zajęcia z poniedziałku" },
     "2027-05-25": { replaceWith: "PT", note: "Wtorek 25.05 – zajęcia z piątku" },
@@ -101,7 +100,9 @@ const ACADEMIC_CALENDAR = {
   ]
 };
 
-const savedDaysView = localStorage.getItem("umg_days_view") || (localStorage.getItem("umg_show_weekends") === "true" ? "all" : "workdays");
+const savedDaysView = typeof localStorage !== "undefined"
+  ? (localStorage.getItem("umg_days_view") || (localStorage.getItem("umg_show_weekends") === "true" ? "all" : "workdays"))
+  : "workdays";
 
 function getTodayCode(respectMode = false) {
   const days = ["ND", "PON", "WT", "ŚR", "CZW", "PT", "SOB"];
@@ -123,12 +124,14 @@ const state = {
   weekOffset: 0, // 0 = current week, 1 = next week, etc.
   daysView: savedDaysView, // "workdays" | "active_only" | "all"
   selectedDayTab: "ALL",
-  theme: localStorage.getItem("umg_theme") || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+  theme: typeof localStorage !== "undefined" && localStorage.getItem("umg_theme")
+    ? localStorage.getItem("umg_theme")
+    : (typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
 };
 state.selectedDayTab = typeof window !== "undefined" && window.innerWidth >= 900 ? "ALL" : getTodayCode(true);
 
 // DOM Elements
-const elements = {
+const elements = typeof document !== "undefined" ? {
   menuToggleBtn: document.getElementById("menu-toggle"),
   openMenuCta: document.getElementById("open-menu-cta"),
   closeSidebarBtn: document.getElementById("close-sidebar"),
@@ -173,17 +176,19 @@ const elements = {
   iosInstallModal: document.getElementById("ios-install-modal"),
   closeIosModalBtn: document.getElementById("close-ios-modal"),
   closeIosModalActionBtn: document.getElementById("close-ios-modal-btn")
-};
+} : {};
 
 // Initialize App
-document.addEventListener("DOMContentLoaded", () => {
-  initTheme();
-  setupEventListeners();
-  initPwaInstall();
-  updateDayTabsUI();
-  loadPlans();
-  loadCrossRefData(); // Preload cross-reference data in background
-});
+if (typeof document !== "undefined") {
+  document.addEventListener("DOMContentLoaded", () => {
+    initTheme();
+    setupEventListeners();
+    initPwaInstall();
+    updateDayTabsUI();
+    loadPlans();
+    loadCrossRefData(); // Preload cross-reference data in background
+  });
+}
 
 function initTheme() {
   document.documentElement.setAttribute("data-theme", state.theme);
@@ -841,30 +846,47 @@ function updateDayTabsUI(filteredSchedule = null) {
 
 const DNI_MAP_SUNDAY_FIRST = ["ND", "PON", "WT", "ŚR", "CZW", "PT", "SOB"];
 
+// Check if a given date is an official teaching day (not a holiday, break, or exam session)
+function isTeachingDay(iso) {
+  if (ACADEMIC_CALENDAR.holidays && ACADEMIC_CALENDAR.holidays[iso]) return false;
+  if (ACADEMIC_CALENDAR.periods) {
+    const isNonTeaching = ACADEMIC_CALENDAR.periods.some(
+      p => (p.type === "break" || p.type === "exam") && p.start <= iso && p.end >= iso
+    );
+    if (isNonTeaching) return false;
+    const isTeaching = ACADEMIC_CALENDAR.periods.some(
+      p => p.type === "teaching" && p.start <= iso && p.end >= iso
+    );
+    return isTeaching;
+  }
+  return true;
+}
+
 // Calculate lesson meeting occurrence info accounting for calendar holidays, day swaps, and breaks
-function getLessonMeetingInfo(lesson, baseDay, targetMonday) {
-  if (!lesson.data_start) return { active: true, meetingNum: 1, total: lesson.tygodnie || 20 };
+function getLessonMeetingInfo(lesson, baseDay, targetMonday, targetDate = null) {
+  if (!lesson.data_start) return { active: true, meetingNum: 1, total: lesson.tygodnie || 15 };
 
   try {
     const [year, month, day] = lesson.data_start.split("-").map(Number);
     const startDate = new Date(year, month - 1, day);
     const startMonday = getMonday(startDate);
-    const totalWeeks = lesson.tygodnie || 20;
+    const totalWeeks = lesson.tygodnie || 15;
 
-    if (targetMonday < startMonday) {
+    // Hard semester end: days outside teaching periods, holidays, or exam sessions cannot have active classes
+    if (targetDate && !isTeachingDay(targetDate)) {
       return { active: false, meetingNum: 0, total: totalWeeks };
     }
 
-    // For whole-semester classes (20 weeks default fallback in UMG), calendar week is used
-    if (totalWeeks >= 20) {
-      const diffTime = targetMonday.getTime() - startMonday.getTime();
-      const diffWeeks = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7));
-      const currentWeek = diffWeeks + 1;
-      return {
-        active: diffWeeks >= 0 && diffWeeks < totalWeeks,
-        meetingNum: currentWeek,
-        total: totalWeeks
-      };
+    if (targetDate && targetDate < formatDateISO(startDate)) {
+      return { active: false, meetingNum: 0, total: totalWeeks };
+    }
+    if (!targetDate && targetMonday < startMonday) {
+      return { active: false, meetingNum: 0, total: totalWeeks };
+    }
+
+    // Guard: if baseDay is not a recognised weekday name, avoid iterating at all
+    if (!DNI_MAP_SUNDAY_FIRST.includes(baseDay)) {
+      return { active: true, meetingNum: 1, total: totalWeeks };
     }
 
     let currentMon = new Date(startMonday);
@@ -872,44 +894,54 @@ function getLessonMeetingInfo(lesson, baseDay, targetMonday) {
     let targetMeetingNum = null;
     let targetActive = false;
 
-    // Simulate week-by-week actual teaching sessions
-    while (currentMon <= targetMonday || meetingCount < totalWeeks) {
-      let heldInWeek = false;
+    // Simulate week-by-week actual teaching sessions (hard cap = 50 weeks)
+    const MAX_ITER = 50;
+    let safetyCount = 0;
 
-      for (let i = 0; i < 7; i++) {
-        const dayDate = new Date(currentMon);
-        dayDate.setDate(currentMon.getDate() + i);
-        const iso = formatDateISO(dayDate);
+    while ((currentMon <= targetMonday || meetingCount < totalWeeks) && safetyCount++ < MAX_ITER) {
+      const diffTime = currentMon.getTime() - startMonday.getTime();
+      const diffWeeks = Math.round(diffTime / (1000 * 60 * 60 * 24 * 7));
 
-        // Academic breaks (e.g. Christmas, Easter)
-        const isBreak = ACADEMIC_CALENDAR.periods.some(p => p.type === "break" && p.start <= iso && p.end >= iso);
-        if (isBreak) continue;
+      // For bi-weekly classes, odd intervals from startMonday are off-weeks
+      const isCycleWeek = (lesson.co_ile !== 2) || (diffWeeks % 2 === 0);
 
-        // Non-teaching holidays / rector's days
-        if (ACADEMIC_CALENDAR.holidays[iso]) continue;
+      if (isCycleWeek) {
+        for (let i = 0; i < 7; i++) {
+          const dayDate = new Date(currentMon);
+          dayDate.setDate(currentMon.getDate() + i);
+          const iso = formatDateISO(dayDate);
 
-        // Effective day of teaching (accounting for rector day swaps)
-        let effectiveDay = DNI_MAP_SUNDAY_FIRST[dayDate.getDay()];
-        if (ACADEMIC_CALENDAR.daySwaps[iso]) {
-          effectiveDay = ACADEMIC_CALENDAR.daySwaps[iso].replaceWith;
-        }
+          // Skip if before subject start date
+          if (iso < lesson.data_start) continue;
 
-        if (effectiveDay === baseDay) {
-          heldInWeek = true;
-          break;
+          // Skip if not an official teaching day (holiday, break, or exam session)
+          if (!isTeachingDay(iso)) continue;
+
+          // Effective day of teaching (accounting for rector day swaps)
+          let effectiveDay = DNI_MAP_SUNDAY_FIRST[dayDate.getDay()];
+          if (ACADEMIC_CALENDAR.daySwaps[iso]) {
+            effectiveDay = ACADEMIC_CALENDAR.daySwaps[iso].replaceWith;
+          }
+
+          if (effectiveDay === baseDay) {
+            meetingCount++;
+
+            if (targetDate) {
+              if (iso === targetDate) {
+                targetMeetingNum = meetingCount;
+                targetActive = meetingCount <= totalWeeks;
+              }
+            } else if (currentMon.getTime() === targetMonday.getTime()) {
+              targetMeetingNum = meetingCount;
+              targetActive = meetingCount <= totalWeeks;
+            }
+          }
         }
       }
 
-      if (heldInWeek) {
-        meetingCount++;
-        if (currentMon.getTime() === targetMonday.getTime()) {
-          targetMeetingNum = meetingCount;
-          targetActive = meetingCount <= totalWeeks;
-        }
-      } else {
-        if (currentMon.getTime() === targetMonday.getTime()) {
-          targetActive = false;
-        }
+      if (currentMon.getTime() === targetMonday.getTime() && targetMeetingNum === null) {
+        targetActive = false;
+        targetMeetingNum = meetingCount;
       }
 
       if (currentMon > targetMonday && meetingCount >= totalWeeks) break;
@@ -918,45 +950,49 @@ function getLessonMeetingInfo(lesson, baseDay, targetMonday) {
 
     return {
       active: targetActive,
-      meetingNum: targetMeetingNum,
+      meetingNum: targetMeetingNum || meetingCount,
       total: totalWeeks
     };
   } catch (e) {
-    return { active: true, meetingNum: 1, total: lesson.tygodnie || 20 };
+    return { active: true, meetingNum: 1, total: lesson.tygodnie || 15 };
   }
 }
 
-// Check if lesson is active in selected week
-function isLessonInWeek(lesson, baseDay, targetMonday) {
+// Check if lesson is active in selected week or specific date
+function isLessonInWeek(lesson, baseDay, targetMonday, targetDate = null) {
   if (!lesson.data_start) return true;
-  const info = getLessonMeetingInfo(lesson, baseDay, targetMonday);
+  const info = getLessonMeetingInfo(lesson, baseDay, targetMonday, targetDate);
   return info.active;
 }
 
-// Calculate subject week progress (e.g. tydz. 3/5, tydz. 3)
-function getLessonProgress(lesson, baseDay, targetMonday) {
+// Calculate subject meeting progress (e.g. 3/5, 10/15, Ostatnie zajęcia)
+function getLessonProgress(lesson, baseDay, targetMonday, targetDate = null) {
   if (!lesson.tygodnie) return null;
-  if (!lesson.data_start) return { text: `${lesson.tygodnie} tyg.`, isFinal: false };
+  if (!lesson.data_start) return { text: `${lesson.tygodnie}`, title: `Liczba spotkań: ${lesson.tygodnie}`, isFinal: false };
 
   try {
-    const info = getLessonMeetingInfo(lesson, baseDay, targetMonday);
+    const info = getLessonMeetingInfo(lesson, baseDay, targetMonday, targetDate);
     if (!info.meetingNum || info.meetingNum < 1) {
-      return { text: `${lesson.tygodnie} tyg.`, isFinal: false };
+      return { text: `${lesson.tygodnie}`, title: `Liczba spotkań: ${lesson.tygodnie}`, isFinal: false };
     }
 
-    // For semester-long classes (tygodnie >= 20 default fallback in UMG)
-    if (lesson.tygodnie >= 20) {
-      return { text: `tydz. ${info.meetingNum}`, isFinal: false };
+    const total = info.total || lesson.tygodnie;
+    const isFinal = info.meetingNum >= total;
+
+    if (isFinal) {
+      return {
+        text: "Ostatnie zajęcia",
+        title: `Ostatnie zajęcia (${info.meetingNum} z ${total})`,
+        isFinal: true
+      };
     }
 
-    const isFinal = info.meetingNum === info.total;
-    const text = isFinal
-      ? `tydz. ${info.meetingNum}/${info.total} • Ostatni`
-      : `tydz. ${info.meetingNum}/${info.total}`;
+    const text = total > 1 ? `${info.meetingNum}/${total}` : `${info.meetingNum}`;
+    const title = total > 1 ? `Spotkanie ${info.meetingNum} z ${total}` : `Spotkanie ${info.meetingNum}`;
 
-    return { text, isFinal };
+    return { text, title, isFinal: false };
   } catch (e) {
-    return { text: `${lesson.tygodnie} tyg.`, isFinal: false };
+    return { text: `${lesson.tygodnie}`, title: `Liczba spotkań: ${lesson.tygodnie}`, isFinal: false };
   }
 }
 
@@ -992,10 +1028,11 @@ function renderSchedule() {
     // If it's a holiday or day off, no classes are held!
     if (!holiday) {
       for (const [slotStart, lessonInfo] of Object.entries(daySlots)) {
-        if (isLessonInWeek(lessonInfo, sourceDay, targetMonday)) {
+        if (isLessonInWeek(lessonInfo, sourceDay, targetMonday, dateKey)) {
           dayLessons.push({
             slot: parseInt(slotStart),
             sourceDay: sourceDay,
+            lessonDate: dateKey,
             ...lessonInfo
           });
         }
@@ -1208,7 +1245,7 @@ function renderLessonCard(lesson, targetMonday = null) {
   const safeTeacher = escapeHtml(rawTeacher);
 
   const targetMon = targetMonday || getWeekMonday(state.weekOffset);
-  const prog = getLessonProgress(lesson, lesson.sourceDay || "PON", targetMon);
+  const prog = getLessonProgress(lesson, lesson.sourceDay || "PON", targetMon, lesson.lessonDate || null);
 
   const isPhysicalRoom = rawRoom && rawRoom.toUpperCase() !== "OL";
   const roomHtml = isPhysicalRoom
@@ -1220,14 +1257,24 @@ function renderLessonCard(lesson, targetMonday = null) {
     : `<span class="lesson-teacher">${safeTeacher || "Brak danych prowadzącego"}</span>`;
 
   const weeksHtml = prog
-    ? `<span class="lesson-weeks ${prog.isFinal ? 'final-week' : ''}" title="Tydzień trwania zajęć">${escapeHtml(prog.text)}</span>`
+    ? `<span class="lesson-weeks ${prog.isFinal ? 'final-week' : ''}" title="${escapeHtml(prog.title || 'Spotkanie')}">${escapeHtml(prog.text)}</span>`
     : "";
+
+  let badgeHtml = "";
+  if (lesson.co_ile === 2) {
+    badgeHtml += `<span class="lesson-cycle-badge" title="Zajęcia odbywają się co 2 tygodnie">co 2 tyg.</span>`;
+  }
+  if (lesson.polowa_sem === 1) {
+    badgeHtml += `<span class="lesson-sem-badge" title="Zajęcia w 1. połowie semestru">1. poł. sem.</span>`;
+  } else if (lesson.polowa_sem === 2) {
+    badgeHtml += `<span class="lesson-sem-badge" title="Zajęcia w 2. połowie semestru">2. poł. sem.</span>`;
+  }
 
   return `
     <div class="lesson-card">
       <div class="lesson-title">${safeTitle}</div>
       <div class="lesson-time">${safeTime}</div>
-      <div class="lesson-room-wrapper">${roomHtml}</div>
+      <div class="lesson-room-wrapper">${roomHtml}${badgeHtml}</div>
       <div class="lesson-footer">
         ${teacherHtml}
         ${weeksHtml}
@@ -1955,10 +2002,24 @@ async function openFreeRoomsModal(customDay, customSlot) {
 }
 
 // Global exports for inline handlers
-window.openTeacherSchedule = openTeacherSchedule;
-window.openRoomSchedule = openRoomSchedule;
-window.openSubjectDetail = openSubjectDetail;
-window.openFreeRoomsModal = openFreeRoomsModal;
-window.closeCrossModal = closeCrossModal;
+if (typeof window !== "undefined") {
+  window.openTeacherSchedule = openTeacherSchedule;
+  window.openRoomSchedule = openRoomSchedule;
+  window.openSubjectDetail = openSubjectDetail;
+  window.openFreeRoomsModal = openFreeRoomsModal;
+  window.closeCrossModal = closeCrossModal;
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    ACADEMIC_CALENDAR,
+    formatDateISO,
+    getMonday,
+    isTeachingDay,
+    getLessonMeetingInfo,
+    getLessonProgress
+  };
+}
+
 
 
