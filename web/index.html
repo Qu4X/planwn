@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plan Zajęć UMG</title>
+  <link rel="stylesheet" href="style.css?v=2.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚓</text></svg>">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Plan UMG">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#0d233a">
+  <meta name="description" content="Szybki, nowoczesny i czytelny plan zajęć dla studentów Uniwersytetu Morskiego w Gdyni.">
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-content">
+      <div class="header-left">
+        <button id="menu-toggle" class="btn-icon" title="Otwórz menu wyboru planu" aria-label="Menu">
+          <span class="material-symbols-rounded">menu</span>
+        </button>
+        <div class="brand">
+          <span class="logo">⚓</span>
+          <div class="brand-titles">
+            <h1>Plan Zajęć UMG</h1>
+            <span class="header-group-badge" id="header-active-group">Wybierz grupę</span>
+          </div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="header-search-btn" class="btn-icon" title="Szukaj wykładowcy, sali lub przedmiotu" aria-label="Szukaj">
+          <span class="material-symbols-rounded">search</span>
+        </button>
+        <button id="theme-toggle" class="btn-icon" title="Przełącz motyw" aria-label="Przełącz motyw">
+          <span class="material-symbols-rounded">dark_mode</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Left Sidebar / Drawer Menu -->
+  <div id="sidebar-backdrop" class="sidebar-backdrop hidden"></div>
+  <aside id="app-sidebar" class="app-sidebar">
+    <div class="sidebar-header">
+      <h2>Ustawienia Planu</h2>
+      <button id="close-sidebar" class="btn-icon close-sidebar-btn" title="Zamknij" aria-label="Zamknij">
+        <span class="material-symbols-rounded">close</span>
+      </button>
+    </div>
+
+    <div class="sidebar-body">
+      <!-- Quick Search -->
+      <div class="sidebar-section search-sidebar-section">
+        <label for="sidebar-search-input" class="control-label">Szybkie wyszukiwanie:</label>
+        <div class="search-input-wrapper">
+          <span class="search-icon material-symbols-rounded">search</span>
+          <input type="text" id="sidebar-search-input" placeholder="Wykładowca, sala, przedmiot..." autocomplete="off">
+          <button id="clear-search-btn" class="btn-icon clear-search-btn hidden" aria-label="Wyczyść">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </div>
+        <div id="search-results" class="search-results-dropdown hidden"></div>
+      </div>
+
+      <div class="sidebar-section">
+        <label for="plan-select" class="control-label">Kierunek / Semestr:</label>
+        <div class="select-wrapper">
+          <select id="plan-select">
+            <option value="">Wybierz kierunek studiów...</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <label for="group-select" class="control-label">Grupa zajęciowa:</label>
+        <div class="select-wrapper">
+          <select id="group-select" disabled>
+            <option value="">Najpierw wybierz kierunek...</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="sidebar-section tools-sidebar-section">
+        <span class="control-label">Narzędzia:</span>
+        <button id="free-rooms-btn" class="btn-secondary btn-sidebar-tool" title="Znajdź wolną salę">
+          <span class="material-symbols-rounded btn-tool-icon">meeting_room</span> <span class="btn-text">Znajdź wolną salę</span>
+        </button>
+        <button id="calendar-btn" class="btn-primary btn-sidebar-calendar" title="Subskrybuj kalendarz" style="margin-top: 0.5rem;">
+          <span class="material-symbols-rounded btn-tool-icon">calendar_month</span> <span class="btn-text">Subskrybuj kalendarz</span>
+        </button>
+        <button id="pwa-install-btn" class="btn-secondary btn-sidebar-tool hidden" title="Zainstaluj aplikację" style="margin-top: 0.5rem;">
+          <span class="material-symbols-rounded btn-tool-icon">install_mobile</span> <span class="btn-text" id="pwa-install-btn-text">Zainstaluj aplikację</span>
+        </button>
+      </div>
+
+      <div class="sidebar-section settings-sidebar-section">
+        <label for="days-view-select" class="control-label">Widok dni:</label>
+        <div class="select-wrapper">
+          <select id="days-view-select">
+            <option value="workdays">Dni robocze (Pon – Pt)</option>
+            <option value="active_only">Tylko dni z zajęciami</option>
+            <option value="all">Pełny tydzień (Pon – Nd)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <span class="subtext" id="last-updated">Ładowanie danych...</span>
+    </div>
+  </aside>
+
+  <main class="app-main">
+    <!-- Week navigation -->
+    <section class="week-nav-card">
+      <div class="week-nav-controls">
+        <button id="prev-week" class="btn-nav" title="Poprzedni tydzień">‹</button>
+        <div class="week-info">
+          <span class="week-label" id="current-week-label" title="Kliknij, aby wybrać dzień z kalendarza">Ładowanie tygodnia...</span>
+          <input type="date" id="week-date-picker" class="visually-hidden-picker" tabindex="-1" aria-hidden="true">
+          <button id="today-btn" class="btn-today">Dzisiaj</button>
+        </div>
+        <button id="next-week" class="btn-nav" title="Następny tydzień">›</button>
+      </div>
+
+      <!-- Mobile day selector tabs -->
+      <div class="day-tabs" id="day-tabs">
+        <button class="day-tab" data-day="PON">Pon</button>
+        <button class="day-tab" data-day="WT">Wt</button>
+        <button class="day-tab" data-day="ŚR">Śr</button>
+        <button class="day-tab" data-day="CZW">Czw</button>
+        <button class="day-tab" data-day="PT">Pt</button>
+        <button class="day-tab hidden" data-day="SOB">Sob</button>
+        <button class="day-tab hidden" data-day="ND">Nd</button>
+        <button class="day-tab active" data-day="ALL">Cały tydzień</button>
+      </div>
+    </section>
+
+    <!-- Calendar Notice / Day Replacement Alert -->
+    <div id="calendar-notice" class="calendar-notice hidden"></div>
+
+    <!-- Timetable view -->
+    <section id="schedule-container" class="schedule-section">
+      <div id="loading-state" class="state-card">
+        <div class="spinner"></div>
+        <p>Wczytywanie planu...</p>
+      </div>
+
+      <div id="empty-state" class="state-card hidden">
+        <span class="state-icon">🗓️</span>
+        <h3>Wybierz kierunek i grupę</h3>
+        <p>Kliknij ikonę menu <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 1.15em;">menu</span> w lewym górnym rogu, aby wybrać swój kierunek i grupę.</p>
+        <button id="open-menu-cta" class="btn-primary" style="margin: 1rem auto 0;"><span class="material-symbols-rounded">menu</span> Otwórz menu</button>
+      </div>
+
+      <div id="no-classes-state" class="state-card hidden">
+        <span class="state-icon" id="no-classes-icon">🎉</span>
+        <h3 id="no-classes-title">Brak zajęć</h3>
+        <p id="no-classes-desc">W tym okresie nie ma zaplanowanych żadnych zajęć.</p>
+      </div>
+
+      <!-- Mobile card list / Desktop timetable -->
+      <div id="schedule-content" class="schedule-content hidden"></div>
+    </section>
+  </main>
+
+  <!-- Calendar subscription modal -->
+  <div id="calendar-modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Subskrypcja kalendarza</h3>
+        <button id="close-modal" class="btn-close" aria-label="Zamknij">
+          <span class="material-symbols-rounded">close</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>Dodaj plan do aplikacji Kalendarza w telefonie lub na komputerze (Apple Calendar, Google, Outlook). Zajęcia będą aktualizować się automatycznie.</p>
+        
+        <div class="calendar-actions">
+          <a id="webcal-btn" href="#" class="btn-modal-action primary">
+            📲 Dodaj do Kalendarza w telefonie / PC
+          </a>
+        </div>
+
+        <div class="calendar-copy-box">
+          <label>Link bezpośredni (np. dla Kalendarza Google):</label>
+          <div class="copy-input-group">
+            <input type="text" id="calendar-url-input" readonly>
+            <button id="copy-url-btn" class="btn-copy">Kopiuj</button>
+          </div>
+          <span id="copy-feedback" class="copy-feedback hidden">Skopiowano do schowka!</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cross-reference detail modal (Teacher / Room / Subject / Free Rooms) -->
+  <div id="cross-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content modal-content-large">
+      <div class="modal-header">
+        <div class="modal-header-titles">
+          <span id="cross-modal-badge" class="cross-modal-badge">Informacja</span>
+          <h3 id="cross-modal-title">Szczegóły</h3>
+        </div>
+        <button id="close-cross-modal" class="btn-close" aria-label="Zamknij">
+          <span class="material-symbols-rounded">close</span>
+        </button>
+      </div>
+      <div id="cross-modal-body" class="modal-body cross-modal-body">
+        <!-- Dynamic content populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- iOS PWA Install Guide Modal -->
+  <div id="ios-install-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Dodaj do ekranu początkowego</h3>
+        <button id="close-ios-modal" class="btn-close" aria-label="Zamknij">
+          <span class="material-symbols-rounded">close</span>
+        </button>
+      </div>
+      <div class="modal-body ios-install-body">
+        <p>Zainstaluj Plan UMG na swoim urządzeniu Apple (Safari), aby mieć błyskawiczny dostęp jak do natywnej aplikacji:</p>
+        <ol class="ios-install-steps">
+          <li>
+            <span class="step-num">1</span>
+            <div class="step-desc">
+              Kliknij ikonę <strong>Udostępnij</strong> (<span class="material-symbols-rounded ios-step-icon">ios_share</span>) na pasku Safari.
+            </div>
+          </li>
+          <li>
+            <span class="step-num">2</span>
+            <div class="step-desc">
+              Przewiń w dół i wybierz <strong>„Do ekranu początkowego”</strong> (<span class="material-symbols-rounded ios-step-icon">add_box</span>).
+            </div>
+          </li>
+          <li>
+            <span class="step-num">3</span>
+            <div class="step-desc">
+              Potwierdź klikając <strong>„Dodaj”</strong> w prawym górnym rogu.
+            </div>
+          </li>
+        </ol>
+        <button id="close-ios-modal-btn" class="btn-primary" style="width: 100%; justify-content: center; margin-top: 1.25rem;">Rozumiem</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    <p>Projekt nieoficjalny dla studentów UMG. Dane pobierane z <a href="https://arktur.umg.edu.pl/planyzaj/strpza5.php" target="_blank" rel="noopener">arktur.umg.edu.pl</a>.</p>
+  </footer>
+
+  <script src="app.js?v=2.0"></script>
+</body>
+</html>

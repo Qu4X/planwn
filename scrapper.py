@@ -1,19 +1,31 @@
+import os
+import json
+import html
 import requests
 import re
 import logging
 from bs4 import BeautifulSoup
 from concurrent.futures import ThreadPoolExecutor
+from requests.adapters import HTTPAdapter
 from datetime import datetime, timedelta
 from icalendar import Calendar, Event
 
 # Konfiguracja logowania
-logging.basicConfig(level=logging.WARNING, format='%(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
 
 DNI_MAPA = {"1": "PON", "2": "WT", "3": "ŚR", "4": "CZW", "5": "PT", "6": "SOB"}
 
-SLOWNIK_PRZEDMIOTOW = {
-}
+MANUAL_DICT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "subjects_manual.json")
+
+def load_manual_subjects():
+    """Loads curated manual subject overrides from subjects_manual.json"""
+    if os.path.exists(MANUAL_DICT_PATH):
+        try:
+            with open(MANUAL_DICT_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            logger.warning(f"Nie udało się wczytać subjects_manual.json: {e}")
+    return {}
 
 
 def oblicz_godzine_konca(start_str, trwanie_min):
@@ -39,21 +51,32 @@ def pobierz_liste_planow():
         return {}
 
 
-def pobierz_dane_z_ajax(ajax_val):
+def pobierz_dane_z_ajax(session, ajax_val, url_target="https://arktur.umg.edu.pl/planyzaj/strpza6.php"):
     url = "https://arktur.umg.edu.pl/planyzaj/validate_sp_ka.php"
-    headers = {"User-Agent": "Mozilla/5.0", "X-Requested-With": "XMLHttpRequest"}
+    headers = {"User-Agent": "Mozilla/5.0", "X-Requested-With": "XMLHttpRequest", "Referer": url_target}
     payload = {"inputValue": ajax_val, "fieldID": "prowadzacy_zajecia_public"}
     try:
-        r = requests.post(url, data=payload, headers=headers, timeout=5)
+        r = session.post(url, data=payload, headers=headers, timeout=5)
         r.raise_for_status()
         match = re.search(r"<komunikat>([^<]+)</komunikat>", r.text)
         if match:
-            parts = match.group(1).split('_')
-            if len(parts) > 1:
-                return parts[1].strip()
+            tresc = match.group(1).strip()
+            items = []
+            for part in tresc.split('|'):
+                subparts = [p.strip() for p in part.split('_')]
+                sub = subparts[0] if len(subparts) > 0 else ""
+                teach = subparts[1] if len(subparts) > 1 else ""
+                dt = subparts[2] if len(subparts) > 2 else ""
+                if sub or teach or dt:
+                    items.append({
+                        "subject": sub,
+                        "teacher": teach,
+                        "date_info": dt
+                    })
+            return items
     except Exception as e:
         logger.warning(f"Błąd AJAX dla {ajax_val}: {e}")
-    return ""
+    return []
 
 
 def pobierz_surowy_plan(plan_id):
@@ -63,6 +86,8 @@ def pobierz_surowy_plan(plan_id):
 
     try:
         session = requests.Session()
+        adapter = HTTPAdapter(pool_connections=20, pool_maxsize=20)
+        session.mount("https://", adapter)
         session.get(url_start, headers=headers, timeout=10)
         payload = {"id_planu_zajec": plan_id, "id_obiektu": "1", "id_grupy": "0", "nazwa_rodzaju_zestawienia": "0"}
         r = session.post(url_target, data=payload, headers=headers, timeout=10)
@@ -78,30 +103,40 @@ def pobierz_surowy_plan(plan_id):
     for h in soup.find_all("td", class_="komopcji"):
         txt = h.get_text(strip=True)
 
-        # FILTR: Ignorujemy ETMON, nawet jeśli system dokleił tam inne dane
-        if "ETMON" in txt:
+        # Ignorujemy opisy zajęć, znaczniki czasu i nawiasy
+        if "ETMON" in txt or "[" in txt or "{" in txt or ":" in txt or len(txt) > 12:
             continue
 
-        if any(x in txt for x in ["GR.", "ER", "L.", "TM"]):
-            if txt in grupy: break
-            grupy.append(txt)
+        if re.search(r"^(?:GR\.?\s*\d+|[1-4]\s*(?:TM|ER|L|N)\b|[A-Z]{2,4}\.?\s*\d+)", txt, re.IGNORECASE):
+            if txt not in grupy:
+                grupy.append(txt)
 
     unique_ajax_vals = set()
-    for inp in soup.find_all('input', id=re.compile(r"^id_pzz_\d+_\d+_\d+$")):
-        if inp.get('value') and inp.get('value') != '0':
-            numer = inp['id'].replace('id_pzz_', '')
-            inp2 = soup.find('input', id=f"id_pzz_{numer}_2")
-            inp3 = soup.find('input', id=f"id_pzz_{numer}_3")
-            v1 = inp['value']
-            v2 = inp2['value'] if inp2 else '0'
-            v3 = inp3['value'] if inp3 else '0'
+    inputs_by_id = {inp['id']: inp.get('value', '0') for inp in soup.find_all('input', id=True)}
+    id_pattern = re.compile(r"^id_pzz_\d+_\d+_\d+$")
+    for inp_id, v1 in inputs_by_id.items():
+        if id_pattern.match(inp_id) and v1 and v1 != '0':
+            v2 = inputs_by_id.get(f"{inp_id}_2", "0")
+            v3 = inputs_by_id.get(f"{inp_id}_3", "0")
             unique_ajax_vals.add(f"{v1}_{v2}_{v3}")
 
-    ukryty_cache_html = '<div id="ukryta_baza_prowadzacych" style="display:none;">'
+    ajax_cache = {}
     with ThreadPoolExecutor(max_workers=10) as executor:
-        results = executor.map(lambda val: (val, pobierz_dane_z_ajax(val)), unique_ajax_vals)
-        for ajax_val, prowadzacy in results:
-            ukryty_cache_html += f'<span id="ajax_{ajax_val}">{prowadzacy}</span>'
+        results = executor.map(lambda val: (val, pobierz_dane_z_ajax(session, val, url_target)), unique_ajax_vals)
+        for ajax_val, res_items in results:
+            ajax_cache[ajax_val] = res_items
+
+    ukryty_cache_html = '<div id="ukryta_baza_prowadzacych" style="display:none;">'
+    ukryty_cache_html += f'<script id="ajax_cache_json" type="application/json">{json.dumps(ajax_cache, ensure_ascii=False)}</script>'
+    for ajax_val, res_items in ajax_cache.items():
+        for idx, res in enumerate(res_items):
+            t = html.escape(res.get("teacher", ""))
+            s = html.escape(res.get("subject", ""))
+            ukryty_cache_html += f'<span id="ajax_{ajax_val}_{idx}" data-subject="{s}">{t}</span>'
+        if res_items:
+            t0 = html.escape(res_items[0].get("teacher", ""))
+            s0 = html.escape(res_items[0].get("subject", ""))
+            ukryty_cache_html += f'<span id="ajax_{ajax_val}" data-subject="{s0}">{t0}</span>'
 
     ukryty_cache_html += '</div>'
     html_text += ukryty_cache_html
@@ -109,88 +144,185 @@ def pobierz_surowy_plan(plan_id):
     return html_text, grupy
 
 
-def _wspolny_parser_html(html_text, target_idx=None, _soup=None):
+def _wspolny_parser_html(html_text, _soup=None):
     soup = _soup or BeautifulSoup(html_text, 'html.parser')
-    min_slot, max_slot = 999, 0  # DODANO: Inicjalizacja zmiennych
+    min_slot, max_slot = 999, 0
     zajecia_dane = {d: {} for d in DNI_MAPA.values()}
+    inputs_by_id = {inp['id']: inp.get('value', '0') for inp in soup.find_all('input', id=True)}
+
+    ajax_cache = {}
+    ajax_script = soup.find('script', id='ajax_cache_json')
+    if ajax_script and ajax_script.string:
+        try:
+            ajax_cache = json.loads(ajax_script.string)
+        except Exception as e:
+            logger.warning(f"Błąd parsowania ajax_cache_json: {e}")
+
+    cache_spans = {
+        span['id']: {
+            "teacher": span.get_text(strip=True),
+            "subject": span.get('data-subject', '').strip()
+        }
+        for span in soup.find_all('span', id=True)
+    }
+    manual_dict = load_manual_subjects()
 
     for td in soup.find_all("td", id=True):
         tid = td['id']
         if not tid.startswith("td_"): continue
         parts = tid.split('_')
         dzien_nazwa = DNI_MAPA.get(parts[1], "Inny")
-        slot_start, col_start = int(parts[2]), int(parts[3])
+        cell_slot_start, col_start = int(parts[2]), int(parts[3])
         colspan = int(td.get('colspan', 1))
-
-        if target_idx is not None:
-            is_in_range = col_start <= target_idx < (col_start + colspan)
-            # Dodatkowo sprawdzamy, czy to nie są zajęcia ogólne (np. dla całego roku)
-            if not is_in_range:
-                continue
+        rowspan = int(td.get('rowspan', 1))
+        cell_end_slot = cell_slot_start + rowspan
 
         drag = td.find('div', class_='drag')
-        if drag:
-            info_list = [i.strip() for i in drag.get_text("|", strip=True).split("|") if i.strip()]
-            rowspan = int(td.get('rowspan', 1))
-            trwanie = rowspan * 5
+        if not drag:
+            continue
 
-            if slot_start < min_slot: min_slot = slot_start
-            if (slot_start + rowspan) > max_slot: max_slot = (slot_start + rowspan)
+        green_fonts = td.find_all('font', color='green')
+        blue_rooms = [
+            f.get_text().strip() for f in td.find_all('font', color='darkblue')
+            if not f.get_text().strip().startswith('{prow')
+        ]
 
-            start_font = td.find('font', color='green')
-            start_h = start_font.get_text() if start_font else "??:??"
-            koniec_h = oblicz_godzine_konca(start_h, trwanie)
+        inner = drag.find('div') or drag
+        inner_soup = BeautifulSoup(str(inner), 'html.parser')
+        for br in inner_soup.find_all('br'):
+            br.replace_with('|||')
+        raw_lines = [l.strip() for l in inner_soup.get_text().split('|||') if l.strip()]
 
+        chunks = []
+        for l in raw_lines:
+            if re.search(r'\b\d{2}:\d{2}\b', l):
+                chunks.append([l])
+            else:
+                if chunks:
+                    chunks[-1].append(l)
+                else:
+                    chunks.append([l])
+
+        if not chunks:
+            chunks = [raw_lines] if raw_lines else [[""]]
+
+        numer = tid.split('_', 1)[1]
+        v1 = inputs_by_id.get(f"id_pzz_{numer}", '0')
+        v2 = inputs_by_id.get(f"id_pzz_{numer}_2", '0')
+        v3 = inputs_by_id.get(f"id_pzz_{numer}_3", '0')
+        ajax_key = f"{v1}_{v2}_{v3}"
+        ajax_items = ajax_cache.get(ajax_key, [])
+
+        for i, chunk in enumerate(chunks):
+            chunk_text = ' '.join(chunk)
+            start_h = green_fonts[i].get_text().strip() if i < len(green_fonts) else None
+            if not start_h:
+                time_match = re.search(r'\b(\d{2}:\d{2})\b', chunk_text)
+                start_h = time_match.group(1) if time_match else "??:??"
+
+            sala = blue_rooms[i] if i < len(blue_rooms) else ('OL' if not blue_rooms else blue_rooms[0])
+
+            try:
+                sh, sm = map(int, start_h.split(':'))
+                sub_slot_start = (sh - 7) * 12 + sm // 5
+            except Exception:
+                sub_slot_start = cell_slot_start
+
+            if sub_slot_start < min_slot: min_slot = sub_slot_start
+            if cell_end_slot > max_slot: max_slot = cell_end_slot
+
+            sub_height = max(1, cell_end_slot - sub_slot_start)
+            sub_duration = sub_height * 5
+            koniec_h = oblicz_godzine_konca(start_h, sub_duration)
+
+            match_prow = re.search(r"\{prow:\s*([^}]+)\}", chunk_text)
             prowadzacy = ""
-            td_text = td.get_text(" ", strip=True)
-            match_prow = re.search(r"\{prow:\s*([^}]+)\}", td_text)
-            data_start_match = re.search(r"\[od:\s*(\d{4}-\d{2}-\d{2})\]", td_text)
-            tygodnie_match = re.search(r"\[il\.tyg:\s*(\d+)\]", td_text)
-
-            data_start = data_start_match.group(1) if data_start_match else None
-            liczba_tygodni = int(tygodnie_match.group(1)) if tygodnie_match else 20
-
+            ajax_subject = ""
             if match_prow:
                 prowadzacy = match_prow.group(1).strip()
+            elif i < len(ajax_items):
+                prowadzacy = ajax_items[i].get("teacher", "").strip()
+                ajax_subject = ajax_items[i].get("subject", "").strip()
+            elif ajax_key in cache_spans:
+                prowadzacy = cache_spans[ajax_key].get("teacher", "").strip()
+                ajax_subject = cache_spans[ajax_key].get("subject", "").strip()
+
+            data_start_match = re.search(r"\[od:\s*(\d{4}-\d{2}-\d{2})\]", chunk_text)
+            tygodnie_match = re.search(r"\[il\.tyg:\s*(\d+)\]", chunk_text)
+            data_start = data_start_match.group(1) if data_start_match else None
+            liczba_tygodni = int(tygodnie_match.group(1)) if tygodnie_match else None
+
+            if not data_start and i < len(ajax_items):
+                d_m = re.search(r"(\d{4}-\d{2}-\d{2})", ajax_items[i].get("date_info", ""))
+                if d_m: data_start = d_m.group(1)
+            if liczba_tygodni is None and i < len(ajax_items):
+                t_m = re.search(r"tygodni:\s*(\d+)", ajax_items[i].get("date_info", ""))
+                if t_m: liczba_tygodni = int(t_m.group(1))
+            if liczba_tygodni is None:
+                liczba_tygodni = 20
+
+            l0 = chunk[0] if chunk else ""
+            cleaned = re.sub(r'\b\d{2}:\d{2}\b', '', l0)
+            if sala != 'OL':
+                cleaned = cleaned.replace(sala, '')
+            cleaned = re.sub(r'\(.*?\)', '', cleaned)
+            cleaned = re.sub(r'\{.*?\}', '', cleaned)
+            cleaned = re.sub(r'\[.*?\]', '', cleaned)
+            raw_przedmiot = cleaned.strip()
+
+            if raw_przedmiot in manual_dict:
+                przedmiot = manual_dict[raw_przedmiot]
+            elif ajax_subject:
+                przedmiot = ajax_subject
+            elif i < len(ajax_items) and ajax_items[i].get("subject"):
+                przedmiot = ajax_items[i]["subject"]
             else:
-                numer = tid.split('_', 1)[1]
-                inp1 = soup.find('input', id=f"id_pzz_{numer}")
-                if inp1 and inp1.get('value') != '0':
-                    inp2 = soup.find('input', id=f"id_pzz_{numer}_2")
-                    inp3 = soup.find('input', id=f"id_pzz_{numer}_3")
-                    val1 = inp1.get('value')
-                    val2 = inp2.get('value') if inp2 else '0'
-                    val3 = inp3.get('value') if inp3 else '0'
+                przedmiot = raw_przedmiot
 
-                    cache_span = soup.find('span', id=f"ajax_{val1}_{val2}_{val3}")
-                    if cache_span:
-                        prowadzacy = cache_span.get_text(strip=True)
-
-            if slot_start not in zajecia_dane[dzien_nazwa]:
-                zajecia_dane[dzien_nazwa][slot_start] = {}
-
-            zajecia_dane[dzien_nazwa][slot_start][col_start] = {
-                "przedmiot": SLOWNIK_PRZEDMIOTOW.get(info_list[0], info_list[0]),
+            lesson_obj = {
+                "przedmiot": przedmiot,
+                "raw_przedmiot": raw_przedmiot,
                 "prowadzacy": prowadzacy,
                 "godziny": f"{start_h} - {koniec_h}",
-                "sala": td.find('font', color='darkblue').get_text() if td.find('font', color='darkblue') else "OL",
-                "height": rowspan,
+                "sala": sala,
+                "height": sub_height,
                 "colspan": colspan,
                 "data_start": data_start,
                 "tygodnie": liczba_tygodni
             }
 
-    znani = {
-        info["przedmiot"]: info["prowadzacy"]
-        for dzien in zajecia_dane.values()
-        for slot in dzien.values()
-        for info in slot.values() if info["prowadzacy"]
-    }
+            slot_key = sub_slot_start
+            if slot_key in zajecia_dane[dzien_nazwa] and col_start in zajecia_dane[dzien_nazwa][slot_key]:
+                slot_key = f"{sub_slot_start}_{i}"
+
+            if slot_key not in zajecia_dane[dzien_nazwa]:
+                zajecia_dane[dzien_nazwa][slot_key] = {}
+
+            zajecia_dane[dzien_nazwa][slot_key][col_start] = lesson_obj
+
+    # Safe fallback only for subjects where no teacher was found anywhere
+    # but only if a known subject abbreviation has a single unambiguous teacher
+    teacher_counts = {}
     for dzien in zajecia_dane.values():
         for slot in dzien.values():
             for info in slot.values():
-                if not info["prowadzacy"] and info["przedmiot"] in znani:
-                    info["prowadzacy"] = znani[info["przedmiot"]]
+                t = info.get("prowadzacy")
+                r = info.get("raw_przedmiot")
+                if t and r:
+                    teacher_counts.setdefault(r, set()).add(t)
+
+    unambiguous_teachers = {
+        r: list(teachers)[0]
+        for r, teachers in teacher_counts.items()
+        if len(teachers) == 1
+    }
+
+    for dzien in zajecia_dane.values():
+        for slot in dzien.values():
+            for info in slot.values():
+                raw = info.get("raw_przedmiot")
+                if not info.get("prowadzacy") and raw in unambiguous_teachers:
+                    info["prowadzacy"] = unambiguous_teachers[raw]
 
     min_slot = (min_slot // 12) * 12 if min_slot != 999 else 24
     max_slot = ((max_slot // 12) + 1) * 12 if max_slot != 0 else 144
@@ -202,7 +334,7 @@ def przetworz_plan_na_grafike(html_text, wybrana_grupa, lista_grup, _soup=None):
         return {}, 0, 0
 
     target_idx = lista_grup.index(wybrana_grupa)
-    dane_z_kolumnami, min_slot, max_slot = _wspolny_parser_html(html_text, target_idx=None, _soup=_soup)
+    dane_z_kolumnami, min_slot, max_slot = _wspolny_parser_html(html_text, _soup=_soup)
 
     dane_plaskie = {d: {} for d in DNI_MAPA.values()}
 
@@ -233,13 +365,16 @@ def przetworz_plan_na_grafike(html_text, wybrana_grupa, lista_grup, _soup=None):
                     # co jeszcze lepiej pasuje do naszej konkretnej kolumny.
 
             if wybrane_info:
-                dane_plaskie[dzien][slot_start] = wybrane_info
+                target_key = slot_start
+                if target_key in dane_plaskie[dzien]:
+                    target_key = f"{slot_start}_{len(dane_plaskie[dzien])}"
+                dane_plaskie[dzien][target_key] = wybrane_info
 
     return dane_plaskie, min_slot, max_slot
 
 
 def przetworz_plan_wszystkie(html_text, lista_grup):
-    return _wspolny_parser_html(html_text, target_idx=None)
+    return _wspolny_parser_html(html_text)
 
 
 def generuj_ics(dane_planu, nazwa_grupy):
@@ -257,13 +392,30 @@ def generuj_ics(dane_planu, nazwa_grupy):
             start_dt = datetime.strptime(f"{info['data_start']} {g_start}", "%Y-%m-%d %H:%M")
             koniec_dt = datetime.strptime(f"{info['data_start']} {g_koniec}", "%Y-%m-%d %H:%M")
 
+            # Format location nicely
+            sala = str(info.get('sala', '')).strip()
+            if sala.upper() == 'OL':
+                loc = "Zdalnie / Online"
+            elif sala.lower().startswith('sala') or sala.lower().startswith('aula') or sala.lower().startswith('basen'):
+                loc = sala
+            elif sala:
+                loc = f"Sala {sala}"
+            else:
+                loc = ""
+
+            prow = str(info.get('prowadzacy', '')).strip()
+            desc = f"Prowadzący: {prow}" if prow else "Brak danych prowadzącego"
+            if nazwa_grupy:
+                desc += f"\nGrupa: {nazwa_grupy}"
+
             for t in range(info.get("tygodnie", 1)):
                 event = Event()
                 event.add('summary', info['przedmiot'])
                 event.add('dtstart', start_dt + timedelta(weeks=t))
                 event.add('dtend', koniec_dt + timedelta(weeks=t))
-                event.add('location', f"Sala: {info['sala']}")
-                event.add('description', f"Prowadzący: {info['prowadzacy']}")
+                if loc:
+                    event.add('location', loc)
+                event.add('description', desc)
                 cal.add_component(event)
         except Exception as e:
             logger.warning(f"ICS - pominięto: {e}")

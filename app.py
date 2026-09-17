@@ -4,25 +4,12 @@ from datetime import datetime, timedelta, time
 from scrapper import pobierz_liste_planow, pobierz_surowy_plan, przetworz_plan_na_grafike, przetworz_plan_wszystkie, \
     generuj_ics
 
-# Subowanie kalendarza
-if "ical" in st.query_params:
-    g_name = st.query_params["ical"]
-    p_id = st.query_params.get("plan_id", "533")
+import logging
+# Configure logging at the application entry point
+logging.basicConfig(level=logging.WARNING, format='%(levelname)s: %(message)s')
 
-    try:
-        # Pobieramy i przetwarzamy plan "w locie"
-        html_content, grupy_z_planu = pobierz_surowy_plan(p_id)
-        dane_planu, _, _ = przetworz_plan_na_grafike(html_content, g_name, grupy_z_planu)
-
-        # Generujemy ICS
-        ics_output = generuj_ics(dane_planu, g_name)
-
-        # Kluczowe: wysyłamy czysty tekst i NATYCHMIAST zatrzymujemy apkę
-        st.write(ics_output)
-    except Exception as e:
-        st.write(f"Błąd: {e}")
-
-    st.stop()
+# Vercel endpoint deployment URL (Change this to your actual Vercel URL after deployment)
+VERCEL_URL = "https://plan-umg.vercel.app"
 
 st.set_page_config(page_title="Plan zajęć WN", page_icon="⚓", layout="wide", initial_sidebar_state="expanded")
 
@@ -192,7 +179,7 @@ if st.session_state.plan_id is None:
 else:
     with st.sidebar:
         st.header("Opcje")
-        st.markdown(f"**Kierunek:**<br>{st.session_state.plan_name}", unsafe_allow_html=True)
+        st.markdown(f"**Kierunek:** {st.session_state.plan_name}")
 
         lista_opcji = st.session_state.grupy + ["WSZYSTKIE GRUPY"]
 
@@ -229,39 +216,43 @@ else:
             default=etykiety[0]
         )
 
+        if not wybor_str:
+            wybor_str = etykiety[0]
+
         # 4. Mapujemy wybór z powrotem na obiekt daty dla reszty Twojej logiki
         wybrana_data = lista_tygodni[etykiety.index(wybor_str)]
 
-        # if st.session_state.plan_id:
-        #     st.write("---")
-        #     st.subheader("📅 Subskrypcja kalendarza")
-        #
-        #     if wybrana_g != "WSZYSTKIE GRUPY":
-        #         base_url = "planwn.streamlit.app"
-        #         params = f"?ical={wybrana_g}&plan_id={st.session_state.plan_id}"
-        #         webcal_link = f"webcal://{base_url}/{params}"
-        #
-        #         # Przycisk otwierający aplikację kalendarza
-        #         st.markdown(
-        #             f"""
-        #                     <a href="{webcal_link}">
-        #                         <button style="
-        #                             width: 100%; background-color: #1a4f8a; color: white;
-        #                             padding: 10px; border: none; border-radius: 5px;
-        #                             cursor: pointer; font-weight: bold;
-        #                         ">
-        #                             ➕ Subskrybuj w telefonie/PC
-        #                         </button>
-        #                     </a>
-        #                     """,
-        #             unsafe_allow_html=True
-        #         )
-        #
-        #         # Zapasowy link do skopiowania (np. dla Google Calendar)
-        #         st.caption("Dla Google Calendar skopiuj poniższy link:")
-        #         st.code(f"http://{base_url}/{params}", language=None)
-        #     else:
-        #         st.info("Wybierz grupę, aby aktywować subskrypcję iCal.")
+        if st.session_state.plan_id:
+            st.write("---")
+            st.subheader("📅 Subskrypcja kalendarza")
+
+            if wybrana_g != "WSZYSTKIE GRUPY":
+                clean_domain = VERCEL_URL.split('://')[-1]
+                params = f"/api/ical?ical={wybrana_g}&plan_id={st.session_state.plan_id}"
+                webcal_link = f"webcal://{clean_domain}{params}"
+                http_link = f"{VERCEL_URL}{params}"
+
+                # Przycisk otwierający aplikację kalendarza
+                st.markdown(
+                    f"""
+                    <a href="{webcal_link}">
+                        <button style="
+                            width: 100%; background-color: #1a4f8a; color: white;
+                            padding: 10px; border: none; border-radius: 5px;
+                            cursor: pointer; font-weight: bold;
+                        ">
+                            ➕ Subskrybuj w telefonie/PC
+                        </button>
+                    </a>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+                # Zapasowy link do skopiowania (np. dla Google Calendar)
+                st.caption("Dla Google Calendar skopiuj poniższy link:")
+                st.code(http_link, language=None)
+            else:
+                st.info("Wybierz grupę, aby aktywować subskrypcję iCal.")
 
         st.write("---")
         if st.button("🔄 Odśwież dane z serwera", use_container_width=True):
@@ -316,7 +307,8 @@ else:
 
                     if d_name in dane_all:
                         for start_slot, slots_data in dane_all[d_name].items():
-                            r_start = start_slot - min_s + 2
+                            slot_num = int(str(start_slot).split('_')[0])
+                            r_start = slot_num - min_s + 2
                             for col_start, info in slots_data.items():
                                 start_date_obj = datetime.strptime(info["data_start"], "%Y-%m-%d").date() if info.get(
                                     "data_start") else None
@@ -386,7 +378,8 @@ else:
 
                         if czy_zajecia_w_tygodniu(wybrana_data, start_date_obj, info.get("tygodnie", 1)):
                             zajecia_w_tym_tygodniu = True
-                            r_start = start_slot - min_s + 2
+                            slot_num = int(str(start_slot).split('_')[0])
+                            r_start = slot_num - min_s + 2
 
                             safe_przed = html.escape(info['przedmiot'])
                             safe_godz = html.escape(info['godziny'])

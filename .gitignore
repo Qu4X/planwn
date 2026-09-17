@@ -1,6 +1,8 @@
 # Twój testowy skrypt (podmień na dokładną nazwę pliku)
 test_scrapper.py
+scrapper_test.py
 test*.py
+strpza6_response.txt
 
 # Środowisko wirtualne
 .venv/
@@ -10,3 +12,4 @@ venv/
 .idea/
 __pycache__/
 *.pyc
+dist/

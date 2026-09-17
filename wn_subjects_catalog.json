@@ -1,0 +1,801 @@
+{
+  "Język Angielski": {
+    "majors": [
+      "Transport Morski",
+      "Transport i Logistyka",
+      "Morskie Systemy Transportowe i Logistyczne",
+      "Eksploatacja Systemów Transportowych",
+      "Transport Morski 2"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,6644df3b04c81"
+  },
+  "Wychowanie Fizyczne": {
+    "majors": [
+      "Transport Morski",
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,745ee3fe76891"
+  },
+  "Ekonomia": {
+    "majors": [
+      "Transport Morski"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,b58ef92d68b1a"
+  },
+  "Psychologia i Socjologia": {
+    "majors": [
+      "Transport Morski"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,9dbb44643207a"
+  },
+  "Bezpieczeństwo i Higiena Pracy": {
+    "majors": [
+      "Transport Morski",
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,34701b8eba3f7"
+  },
+  "Technologie Informacyjne": {
+    "majors": [
+      "Transport Morski",
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,b241acfca91ad"
+  },
+  "Matematyka": {
+    "majors": [
+      "Transport Morski",
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych",
+      "Transport Morski 2"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,1e9e8cfd7f074"
+  },
+  "Fizyka": {
+    "majors": [
+      "Transport Morski",
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych",
+      "Transport Morski 2"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,be7088cfc6d81"
+  },
+  "Chemia Ładunkowa": {
+    "majors": [
+      "Transport Morski"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,2a1d180ab15af"
+  },
+  "Informatyka": {
+    "majors": [
+      "Transport Morski",
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,93a299c5f331b"
+  },
+  "Elementy Elektroniki": {
+    "majors": [
+      "Transport Morski",
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,8bb84a89c0145"
+  },
+  "Elektrotechnika Okrętowa": {
+    "majors": [
+      "Transport Morski"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,42bdfc2346c52"
+  },
+  "Podstawy Automatyki": {
+    "majors": [
+      "Transport Morski",
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,084c0045c7139"
+  },
+  "Grafika Inżynierska": {
+    "majors": [
+      "Transport Morski",
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,83191565d520d"
+  },
+  "Mechanika Techniczna": {
+    "majors": [
+      "Transport Morski",
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,c788d95385e84"
+  },
+  "Nawigacja": {
+    "majors": [
+      "Transport Morski",
+      "Transport Morski 2"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,14c3374d3ebe1"
+  },
+  "Astronawigacja": {
+    "majors": [
+      "Transport Morski",
+      "Transport Morski 2"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,c241c7defb1d1"
+  },
+  "Bezpieczeństwo Nawigacji": {
+    "majors": [
+      "Transport Morski",
+      "Transport Morski 2"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,443ced06a8aad"
+  },
+  "Urządzenia Nawigacyjne": {
+    "majors": [
+      "Transport Morski",
+      "Transport Morski 2"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,353af97b897b1"
+  },
+  "Meteorologia i Oceanografia": {
+    "majors": [
+      "Transport Morski",
+      "Transport Morski 2"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,531b94e721e21"
+  },
+  "Budowa i Stateczność Statku": {
+    "majors": [
+      "Transport Morski",
+      "Transport Morski 2"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,1e89847b8b34e"
+  },
+  "Przewozy Morskie": {
+    "majors": [
+      "Transport Morski",
+      "Transport Morski 2"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,a164c29f83edd"
+  },
+  "Zarządzanie statkiem": {
+    "majors": [
+      "Transport Morski",
+      "Transport Morski 2"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,2eba54a2349ab"
+  },
+  "Ekonomika Transportu Morskiego": {
+    "majors": [
+      "Transport Morski"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,79a6ba5f6fb96"
+  },
+  "Prawo Morskie": {
+    "majors": [
+      "Transport Morski",
+      "Transport Morski 2"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,0da5d63d5408e"
+  },
+  "Manewrowanie Statkiem": {
+    "majors": [
+      "Transport Morski",
+      "Transport Morski 2"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,2254ba9396ad1"
+  },
+  "Ratownictwo Morskie": {
+    "majors": [
+      "Transport Morski",
+      "Transport Morski 2"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,00f26243c6d21"
+  },
+  "Łączność Morska": {
+    "majors": [
+      "Transport Morski",
+      "Transport Morski 2"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,94eb594fc3ca7"
+  },
+  "Siłownie Okrętowe": {
+    "majors": [
+      "Transport Morski"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,7a355335bc027"
+  },
+  "Ochrona Środowiska Morskiego": {
+    "majors": [
+      "Transport Morski",
+      "Transport Morski 2"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,c648ad68e316f"
+  },
+  "ECDIS": {
+    "majors": [
+      "Transport Morski",
+      "Transport Morski 2"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,73742584bedc5"
+  },
+  "Bezpieczeństwo Statku": {
+    "majors": [
+      "Transport Morski",
+      "Transport Morski 2"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,ab62221913298"
+  },
+  "Wykład Monograficzny": {
+    "majors": [
+      "Transport Morski",
+      "Transport i Logistyka",
+      "Morskie Systemy Transportowe i Logistyczne",
+      "Eksploatacja Systemów Transportowych",
+      "Transport Morski 2"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,c681c092c399c"
+  },
+  "Wykład Fakultatywny": {
+    "majors": [
+      "Transport Morski",
+      "Transport i Logistyka",
+      "Morskie Systemy Transportowe i Logistyczne",
+      "Eksploatacja Systemów Transportowych",
+      "Transport Morski 2"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,e1791fd6a800d"
+  },
+  "Ceremoniał Morski": {
+    "majors": [
+      "Transport Morski"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,e8f4c8419c9b3"
+  },
+  "Seminarium Dyplomowe": {
+    "majors": [
+      "Transport Morski",
+      "Transport i Logistyka",
+      "Morskie Systemy Transportowe i Logistyczne",
+      "Eksploatacja Systemów Transportowych",
+      "Transport Morski 2"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,00dd6345e3759"
+  },
+  "Praca Dyplomowa": {
+    "majors": [
+      "Transport Morski",
+      "Transport i Logistyka",
+      "Morskie Systemy Transportowe i Logistyczne",
+      "Eksploatacja Systemów Transportowych",
+      "Transport Morski 2"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,b218e545b7a22"
+  },
+  "Praktyka Morska": {
+    "majors": [
+      "Transport Morski",
+      "Transport Morski 2"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,3c4f8471829e4"
+  },
+  "Szkolenie w zakresie elementarnych zasad udzielania pierwszej pomocy medycznej": {
+    "majors": [
+      "Transport Morski"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,8f80a00cbb40cc9c0b06"
+  },
+  "Szkolenie w zakresie indywidualnych technik ratunkowych": {
+    "majors": [
+      "Transport Morski"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,f3db3338da085118db84"
+  },
+  "Szkolenie w zakresie ochrony przeciwpożarowej stopień podstawowy": {
+    "majors": [
+      "Transport Morski"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,c5fbfcf3093cb007a902"
+  },
+  "Szkolenia w zakresie bezpieczeństwa własnego i odpowiedzialności wspólnej": {
+    "majors": [
+      "Transport Morski"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,7c0de584da6814451795"
+  },
+  "Szkolenie w zakresie problematyki ochrony na statku": {
+    "majors": [
+      "Transport Morski"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,1eeb8ef39f3f8a1160c0"
+  },
+  "Szkolenie w zakresie eksploatacji zbiornikowców do przewozu produktów naftowych oraz chemikaliów – stopień podstawowy": {
+    "majors": [
+      "Transport Morski"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,90cf9418ef1faae5e696"
+  },
+  "Szkolenie w zakresie eksploatacji zbiornikowców do przewozu gazów skroplonych – stopień podstawowy": {
+    "majors": [
+      "Transport Morski"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,ff18f41f015152cc2a46"
+  },
+  "Szkolenie w zakresie przewozu ładunków niebezpiecznych": {
+    "majors": [
+      "Transport Morski"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,3d773ae67e90e0eefb1f"
+  },
+  "Szkolenie w zakresie kierowania tłumem": {
+    "majors": [
+      "Transport Morski"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,0b5f8a778363455020a2"
+  },
+  "Szkolenia w zakresie bezpieczeństwa dla członków załóg bezpośrednio obsługujących pasażerów w pomieszczeniach pasażerskich": {
+    "majors": [
+      "Transport Morski"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,46c18f86d18182e3f32b"
+  },
+  "Szkolenia w zakresie zarządzania kryzysowego i zachowań ludzkich": {
+    "majors": [
+      "Transport Morski"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,fd9e18f40d032dc98256"
+  },
+  "Szkolenie w zakresie ochrony przeciwpożarowej stopień wyższy": {
+    "majors": [
+      "Transport Morski"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,b1874fa12f6d14392160"
+  },
+  "Szkolenie dla członków załóg z przydzielonymi obowiązkami w zakresie ochrony": {
+    "majors": [
+      "Transport Morski"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,5a9dbc3d2318d4f6bffe"
+  },
+  "Szkolenie w zakresie udzielania pierwszej pomocy medycznej": {
+    "majors": [
+      "Transport Morski"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,11e8672978fa53cc7a6f"
+  },
+  "Szkolenie w celu uzyskania świadectwa ratownika": {
+    "majors": [
+      "Transport Morski"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,654dfe572a04ea5754b0"
+  },
+  "Nauki Humanistyczne": {
+    "majors": [
+      "Transport i Logistyka",
+      "Morskie Systemy Transportowe i Logistyczne",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,3613f0fc8adfb"
+  },
+  "Elementy Prawa z Prawem Transportowym": {
+    "majors": [
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,1071038b24e3e"
+  },
+  "Podstawy Ekonomii": {
+    "majors": [
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,234c5ba916a1b"
+  },
+  "Materiałoznawstwo": {
+    "majors": [
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,c543c90cbebba"
+  },
+  "Podstawy Statystyki": {
+    "majors": [
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,a0c44dacf2585"
+  },
+  "Badania Operacyjne": {
+    "majors": [
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,63dc73f81e03f"
+  },
+  "Podstawy Nautyki w Transporcie": {
+    "majors": [
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,0970a669db754"
+  },
+  "Elektrotechnika": {
+    "majors": [
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,670b4bdde873b"
+  },
+  "Podstawy Geodezji": {
+    "majors": [
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,caf8568cc120b"
+  },
+  "Infrastruktura Transportu": {
+    "majors": [
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,747beefaefe4a"
+  },
+  "Podstawy Budowy i Konstrukcji Maszyn": {
+    "majors": [
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,afa4886aee7a4"
+  },
+  "Środki Transportu": {
+    "majors": [
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,21726b8c15fd1"
+  },
+  "Organizacja i Zarządzanie": {
+    "majors": [
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,ee77d8488c06d"
+  },
+  "Systemy Satelitarne w Transporcie": {
+    "majors": [
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,2db8db7f832ba"
+  },
+  "Systemy Informacji Przestrzennej w Transporcie": {
+    "majors": [
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,72913c00b200d"
+  },
+  "Technologia Przewozu Przeładunku i Składowania": {
+    "majors": [
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,455efe8bb6c20"
+  },
+  "Podstawy Eksploatacji Technicznej": {
+    "majors": [
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,ec547dfd69724"
+  },
+  "Ekonomika Transportu": {
+    "majors": [
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,d56bbad1700e0"
+  },
+  "Logistyka": {
+    "majors": [
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,75c088bf6f64f"
+  },
+  "Systemy Transportowe": {
+    "majors": [
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,6d9949dc60f31"
+  },
+  "Telematyka Transportu": {
+    "majors": [
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,02553235f6c31"
+  },
+  "Podstawy Inżynierii Ruchu": {
+    "majors": [
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,89efeaad485c8"
+  },
+  "Eksploatacja Obiektów Transportu": {
+    "majors": [
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,6304a7bd28676"
+  },
+  "Niezawodność i Bezpieczeństwo Systemów Transportowych": {
+    "majors": [
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,4561e92798b51"
+  },
+  "Ocena Oddziaływania Transportu na Środowisko": {
+    "majors": [
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,9b3f81bd71383"
+  },
+  "Logistyka Dostaw": {
+    "majors": [
+      "Transport i Logistyka"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,1f3243950ca92"
+  },
+  "Eksploatacja Morskich Systemów Transportowych": {
+    "majors": [
+      "Transport i Logistyka"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,9517234632e32"
+  },
+  "Narzędzia Wspomagania Logistyki": {
+    "majors": [
+      "Transport i Logistyka"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,80ce5a7eaca0a"
+  },
+  "Spedycja": {
+    "majors": [
+      "Transport i Logistyka"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,b5cb3e66fa30f"
+  },
+  "Logistyka Magazynowania": {
+    "majors": [
+      "Transport i Logistyka"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,7d008086db97a"
+  },
+  "Planowanie Mobilności Miejskiej": {
+    "majors": [
+      "Transport i Logistyka"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,ddd9406e513ee"
+  },
+  "Organizacja i Zarządzanie w Systemach Logistycznych": {
+    "majors": [
+      "Transport i Logistyka"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,d4ea5700f22a3"
+  },
+  "Zarządzanie Globalnymi Łańcuchami Dostaw": {
+    "majors": [
+      "Transport i Logistyka"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,13b4a9ca210e9"
+  },
+  "Praktyka Kierunkowa": {
+    "majors": [
+      "Transport i Logistyka",
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,91c486eded3d1"
+  },
+  "Morskie Prawo Publiczne": {
+    "majors": [
+      "Morskie Systemy Transportowe i Logistyczne"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,c1cafad6772f5"
+  },
+  "Wybrane Działy Matematyki Stosowanej": {
+    "majors": [
+      "Morskie Systemy Transportowe i Logistyczne"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,a687a0c253aea"
+  },
+  "Metody Stochastyczne w Transporcie": {
+    "majors": [
+      "Morskie Systemy Transportowe i Logistyczne"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,a7cf6185e108c"
+  },
+  "Mechanika Stosowana": {
+    "majors": [
+      "Morskie Systemy Transportowe i Logistyczne"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,cd2b0ff9dd462"
+  },
+  "Systemy Teleinformatyczne": {
+    "majors": [
+      "Morskie Systemy Transportowe i Logistyczne"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,36cd90f06d09d"
+  },
+  "Komputerowe Wspomaganie Decyzji": {
+    "majors": [
+      "Morskie Systemy Transportowe i Logistyczne"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,5c4c903ba3e67"
+  },
+  "Logistyka i Zarządzanie Łańcuchami Dostaw": {
+    "majors": [
+      "Morskie Systemy Transportowe i Logistyczne"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,2dfbab141e7a9"
+  },
+  "Ochrona Środowiska w Transporcie": {
+    "majors": [
+      "Morskie Systemy Transportowe i Logistyczne"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,ad7e1153b049f"
+  },
+  "Bazy i Hurtownie Danych": {
+    "majors": [
+      "Morskie Systemy Transportowe i Logistyczne"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,3c987a1a0a8b9"
+  },
+  "Systemy Informacji Przestrzennej w Transporcie Morskim": {
+    "majors": [
+      "Morskie Systemy Transportowe i Logistyczne"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,f8c352e01067b"
+  },
+  "Komputerowe Wspomaganie Projektowania CAD": {
+    "majors": [
+      "Morskie Systemy Transportowe i Logistyczne"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,bb03772b9b23c"
+  },
+  "Modelowanie Procesów i Systemów Transportowo-Logistycznych": {
+    "majors": [
+      "Morskie Systemy Transportowe i Logistyczne"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,24388f29bfee3"
+  },
+  "Niezawodność i Bezpieczeństwo Systemów Transportowych i Logistycznych": {
+    "majors": [
+      "Morskie Systemy Transportowe i Logistyczne"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,072a0d316f0d6"
+  },
+  "Zarządzanie w Przedsiębiorstwach Sektora TSL": {
+    "majors": [
+      "Morskie Systemy Transportowe i Logistyczne"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,a6a606f4e0426"
+  },
+  "Mobilność i Zrównoważony Transport": {
+    "majors": [
+      "Morskie Systemy Transportowe i Logistyczne"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,bf07cf6571bd6"
+  },
+  "Transport w Gospodarce Globalnej": {
+    "majors": [
+      "Morskie Systemy Transportowe i Logistyczne"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,e3c9e03c6cfb5"
+  },
+  "Technologie Przewozu i Przeładunku w Transporcie": {
+    "majors": [
+      "Morskie Systemy Transportowe i Logistyczne"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,224bea8f17d4b"
+  },
+  "Spedycja Krajowa i Międzynarodowa": {
+    "majors": [
+      "Morskie Systemy Transportowe i Logistyczne"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,510791ccd781b"
+  },
+  "Projektowanie i Wykonawstwo Robót Portowych": {
+    "majors": [
+      "Morskie Systemy Transportowe i Logistyczne"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,263ef733ad128"
+  },
+  "Zarządzanie Flotą Morską": {
+    "majors": [
+      "Morskie Systemy Transportowe i Logistyczne"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,18c804c807276"
+  },
+  "Transport Intermodalny": {
+    "majors": [
+      "Morskie Systemy Transportowe i Logistyczne"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,bf43b0ecb116d"
+  },
+  "Projektowanie Terminali Portowych": {
+    "majors": [
+      "Morskie Systemy Transportowe i Logistyczne"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,8ac77bbdf9168"
+  },
+  "Cła i Procedury Celne": {
+    "majors": [
+      "Morskie Systemy Transportowe i Logistyczne"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,774a0e27bab15"
+  },
+  "Otoczenie Transportowe Portów Morskich": {
+    "majors": [
+      "Morskie Systemy Transportowe i Logistyczne"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,3d6862fd23f53"
+  },
+  "Transport Ładunków Niebezpiecznych": {
+    "majors": [
+      "Morskie Systemy Transportowe i Logistyczne"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,802beb3905863"
+  },
+  "Ubezpieczenia Morskie": {
+    "majors": [
+      "Morskie Systemy Transportowe i Logistyczne"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,262856b9fd4f9"
+  },
+  "Transport Miejski i Regionalny": {
+    "majors": [
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,fd47b771b72ddc6b3a3d"
+  },
+  "Inteligentne Systemy Zarządzania w Transporcie": {
+    "majors": [
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,09feacb9470c091d1473"
+  },
+  "Transport w Łańcuchach Dostaw": {
+    "majors": [
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,d506f54924fa46607df2"
+  },
+  "Nowoczesne Narzędzia w Logistyce": {
+    "majors": [
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,3a59c907aeceb4e93855"
+  },
+  "Planowanie Sieci Transportowych i Logistycznych": {
+    "majors": [
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,56a0b80744b5e2bbdcfb"
+  },
+  "Organizacja i Zarządzanie Systemami Transportowymi": {
+    "majors": [
+      "Eksploatacja Systemów Transportowych"
+    ],
+    "syllabus_url": "https://wn.umg.edu.pl/karty/siatki/karta,a076763bb573599d7b49"
+  }
+}
