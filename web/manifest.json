@@ -6,31 +6,34 @@
   "start_url": "/planwn/index.html",
   "scope": "/planwn/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "prefer_related_applications": false,
+  "categories": ["education", "productivity"],
   "orientation": "portrait-primary",
   "background_color": "#0d233a",
   "theme_color": "#0d233a",
   "lang": "pl",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "/planwn/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-192.png",
+      "src": "/planwn/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "icon-512.png",
+      "src": "/planwn/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-512.png",
+      "src": "/planwn/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
