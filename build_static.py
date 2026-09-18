@@ -47,6 +47,8 @@ def setup_dist_directories():
         "sw.js",
         "icon-192.png",
         "icon-512.png",
+        "icon-maskable-192.png",
+        "icon-maskable-512.png",
         "apple-touch-icon.png"
     ]
     for filename in web_assets:

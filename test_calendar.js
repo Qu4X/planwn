@@ -431,6 +431,58 @@ assert.strictEqual(getSafeGroupName("1/2 M"), "1_2_M");
 assert.strictEqual(getSafeGroupName("GR-1"), "GR-1");
 console.log("✅ [PASS] getSafeGroupName poprawnie mapuje kropki, spacje i ukośniki.");
 
+// --- TEST 13: Granice semestralne (przedmiot zimowy nie może odbyć się w semestrze letnim i odwrotnie) ---
+console.log("\n-- Test 13: Granice semestralne (przedmiot zimowy nie może odbyć się w semestrze letnim i odwrotnie)");
+
+// 1. Przedmiot z semestru zimowego (np. sem. 1 lub data_start w semestrze zimowym 2026-12-02)
+const lessonWinterCourse = {
+  przedmiot: "Nawigacja Techniczna",
+  data_start: "2026-12-02", // Grudzień (semestr zimowy)
+  tygodnie: 10,
+  co_ile: 1
+};
+
+// Środa 24 lutego 2027 (1. tydzień semestru letniego, po przerwie międzysemestralnej)
+const monFeb22 = getMonday(new Date(2027, 1, 24)); // 2027-02-22
+const resWinterInSummer = getLessonMeetingInfo(lessonWinterCourse, "ŚR", monFeb22, "2027-02-24");
+console.log("Przedmiot zimowy w semestrze letnim (24.02.2027):", resWinterInSummer);
+
+try {
+  assert.strictEqual(
+    resWinterInSummer.active,
+    false,
+    `Przedmiot z semestru zimowego NIE MOŻE być aktywny w semestrze letnim (po przerwie międzysemestralnej), a otrzymano active = ${resWinterInSummer.active}`
+  );
+} catch (err) {
+  console.error("❌ [FAIL]", err.message);
+  process.exit(1);
+}
+
+// 2. Przedmiot z semestru letniego (data_start w semestrze letnim 2027-02-24)
+const lessonSummerCourse = {
+  przedmiot: "Meteorologia Morska",
+  data_start: "2027-02-24", // Semestr letni
+  tygodnie: 15,
+  co_ile: 1
+};
+
+// Środa 16 grudnia 2026 (semestr zimowy, przed przerwą międzysemestralną)
+const resSummerInWinter = getLessonMeetingInfo(lessonSummerCourse, "ŚR", monDec, "2026-12-16");
+console.log("Przedmiot letni w semestrze zimowym (16.12.2026):", resSummerInWinter);
+
+try {
+  assert.strictEqual(
+    resSummerInWinter.active,
+    false,
+    `Przedmiot z semestru letniego NIE MOŻE być aktywny w semestrze zimowym (przed przerwą międzysemestralną), a otrzymano active = ${resSummerInWinter.active}`
+  );
+  console.log("✅ [PASS] Granice semestralne są ściśle przestrzegane.");
+} catch (err) {
+  console.error("❌ [FAIL]", err.message);
+  process.exit(1);
+}
+
+
 
 
 

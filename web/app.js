@@ -873,6 +873,29 @@ function isTeachingDay(iso) {
   return true;
 }
 
+// Determine the academic semester teaching period for a given lesson
+function getLessonSemesterPeriod(lesson) {
+  if (!lesson || !lesson.data_start || !ACADEMIC_CALENDAR.periods) return null;
+  const startIso = lesson.data_start;
+  const teachingPeriods = ACADEMIC_CALENDAR.periods.filter(p => p.type === "teaching");
+  if (!teachingPeriods.length) return null;
+
+  if (typeof lesson.semestr === "number") {
+    const isSummer = lesson.semestr % 2 === 0;
+    return teachingPeriods.find(
+      p => isSummer ? p.name.includes("letni") : p.name.includes("zimowy")
+    ) || null;
+  }
+
+  const directMatch = teachingPeriods.find(p => p.start <= startIso && p.end >= startIso);
+  if (directMatch) return directMatch;
+
+  if (startIso <= "2027-02-21") {
+    return teachingPeriods.find(p => p.name.includes("zimowy")) || teachingPeriods[0];
+  }
+  return teachingPeriods.find(p => p.name.includes("letni")) || teachingPeriods[1];
+}
+
 // Calculate lesson meeting occurrence info accounting for calendar holidays, day swaps, and breaks
 function getLessonMeetingInfo(lesson, baseDay, targetMonday, targetDate = null) {
   if (!lesson.data_start) return { active: true, meetingNum: 1, total: lesson.tygodnie || 15 };
@@ -886,6 +909,24 @@ function getLessonMeetingInfo(lesson, baseDay, targetMonday, targetDate = null) 
     // Hard semester end: days outside teaching periods, holidays, or exam sessions cannot have active classes
     if (targetDate && !isTeachingDay(targetDate)) {
       return { active: false, meetingNum: 0, total: totalWeeks };
+    }
+
+    // Semester boundaries: classes from odd (winter) semesters cannot occur after inter-semester break,
+    // and classes from even (summer) semesters cannot occur before it.
+    const semPeriod = getLessonSemesterPeriod(lesson);
+    if (semPeriod) {
+      if (targetDate && (targetDate < semPeriod.start || targetDate > semPeriod.end)) {
+        return { active: false, meetingNum: 0, total: totalWeeks };
+      }
+      if (!targetDate) {
+        const monIso = formatDateISO(targetMonday);
+        const sun = new Date(targetMonday);
+        sun.setDate(sun.getDate() + 6);
+        const sunIso = formatDateISO(sun);
+        if (sunIso < semPeriod.start || monIso > semPeriod.end) {
+          return { active: false, meetingNum: 0, total: totalWeeks };
+        }
+      }
     }
 
     if (targetDate && targetDate < formatDateISO(startDate)) {
@@ -924,6 +965,9 @@ function getLessonMeetingInfo(lesson, baseDay, targetMonday, targetDate = null) 
 
           // Skip if before subject start date
           if (iso < lesson.data_start) continue;
+
+          // Skip if outside this lesson's semester teaching window
+          if (semPeriod && (iso < semPeriod.start || iso > semPeriod.end)) continue;
 
           // Skip if not an official teaching day (holiday, break, or exam session)
           if (!isTeachingDay(iso)) continue;
@@ -2107,6 +2151,7 @@ if (typeof module !== "undefined" && module.exports) {
     formatDateISO,
     getMonday,
     isTeachingDay,
+    getLessonSemesterPeriod,
     getLessonMeetingInfo,
     getLessonProgress,
     getSafeGroupName
