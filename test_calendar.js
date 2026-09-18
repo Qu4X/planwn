@@ -1,5 +1,5 @@
 const assert = require("assert");
-const { getLessonMeetingInfo, getMonday, getSafeGroupName, getRoomOccupancyAt, parsePlanInfo } = require("./web/app.js");
+const { getLessonMeetingInfo, getMonday, getSafeGroupName, getRoomOccupancyAt, parsePlanInfo, updateCalendarNotice, elements } = require("./web/app.js");
 
 console.log("\n🧪 Running Calendar Engine TDD Tests...\n");
 
@@ -639,4 +639,69 @@ assert.strictEqual(parsed3.isSecondDegree, true);
 
 console.log("✅ [PASS] parsePlanInfo precyzyjnie czyści nazwy planów i wyodrębnia wersję oraz datę publikacji.");
 
+// --- TEST 18: updateCalendarNotice (filtracja alertów, dni zamienne vs wolne vs przerwy) ---
+console.log("\n-- Test 18: updateCalendarNotice (dni zamienne, wykluczenie pojedynczych dni wolnych i ukrywanie w przerwach)");
 
+const mockNoticeEl = {
+  innerHTML: "",
+  className: "",
+  classList: {
+    classes: new Set(["hidden"]),
+    add(cls) { this.classes.add(cls); },
+    remove(cls) { this.classes.delete(cls); },
+    contains(cls) { return this.classes.has(cls); }
+  }
+};
+elements.calendarNotice = mockNoticeEl;
+
+// 1. Tydzień z dniem wolnym (11.11) i zamianą (13.11)
+// Górny baner powinien zawierać TYLKO dzień zamienny, a NIE dzień wolny
+const weekWithHolidayAndSwap = {
+  periodType: "teaching",
+  periodName: "Okres zajęć dydaktycznych",
+  daySwaps: [{ replaceWith: "ŚR", note: "Piątek 13.11 – zajęcia ze środy" }],
+  holidays: ["11.11 (Środa): Święto Niepodległości"]
+};
+
+updateCalendarNotice(weekWithHolidayAndSwap);
+assert.strictEqual(mockNoticeEl.classList.contains("hidden"), false, "Baner powinien być widoczny dla dnia zamiennego");
+assert.ok(mockNoticeEl.innerHTML.includes("Dzień zamienny"), "Powinien zawierać informację o dniu zamiennym");
+assert.ok(!mockNoticeEl.innerHTML.includes("Dzień wolny"), "NIE powinien powielać informacji o pojedynczym dniu wolnym");
+
+// 2. Tydzień tylko z dniem wolnym (np. Wszystkich Świętych)
+const weekOnlyHoliday = {
+  periodType: "teaching",
+  periodName: "Okres zajęć dydaktycznych",
+  daySwaps: [],
+  holidays: ["01.11 (Niedziela): Wszystkich Świętych"]
+};
+
+updateCalendarNotice(weekOnlyHoliday);
+assert.strictEqual(mockNoticeEl.classList.contains("hidden"), true, "Baner powinien być ukryty, gdy są tylko pojedyncze dni wolne");
+assert.strictEqual(mockNoticeEl.innerHTML, "", "Zawartość banera powinna być pusta");
+
+// 3. Pełna przerwa (np. Zimowa przerwa świąteczna)
+const weekBreak = {
+  periodType: "break",
+  periodName: "Zimowa przerwa świąteczna",
+  daySwaps: [],
+  holidays: ["24.12: Wigilia", "25.12: Boże Narodzenie"]
+};
+
+updateCalendarNotice(weekBreak);
+assert.strictEqual(mockNoticeEl.classList.contains("hidden"), true, "Baner powinien być ukryty podczas pełnej przerwy dydaktycznej");
+
+// 4. Komunikat krytyczny / ogłoszenie
+const weekAnnouncement = {
+  periodType: "teaching",
+  periodName: "Okres zajęć dydaktycznych",
+  daySwaps: [],
+  holidays: [],
+  announcements: ["Godziny rektorskie w dniu 15.10 od 12:00"]
+};
+
+updateCalendarNotice(weekAnnouncement);
+assert.strictEqual(mockNoticeEl.classList.contains("hidden"), false, "Baner powinien być widoczny dla ogłoszeń administracyjnych");
+assert.ok(mockNoticeEl.innerHTML.includes("Komunikat:"), "Powinien wyświetlać komunikat krytyczny");
+
+console.log("✅ [PASS] updateCalendarNotice poprawnie filtruje alerty i ukrywa baner w trakcie przerw.");

@@ -865,9 +865,16 @@ function getAcademicInfoForWeek(targetMonday) {
 function updateCalendarNotice(academicInfo) {
   if (!elements.calendarNotice) return;
 
-  const notices = [];
-  let isHoliday = false;
+  // During full break or exam periods, the schedule view displays a dedicated card; hide top banner
+  if (academicInfo.periodType === "break" || academicInfo.periodType === "exam") {
+    elements.calendarNotice.classList.add("hidden");
+    elements.calendarNotice.innerHTML = "";
+    return;
+  }
 
+  const notices = [];
+
+  // Retain day swaps and critical announcements
   if (academicInfo.daySwaps && academicInfo.daySwaps.length > 0) {
     for (const swap of academicInfo.daySwaps) {
       const cleanNote = (swap.note || "").replace(/\s*\(zarządzenie rektora\)/gi, "").trim();
@@ -880,30 +887,20 @@ function updateCalendarNotice(academicInfo) {
     }
   }
 
-  if (academicInfo.holidays && academicInfo.holidays.length > 0) {
-    isHoliday = true;
-    for (const hol of academicInfo.holidays) {
+  if (academicInfo.announcements && academicInfo.announcements.length > 0) {
+    for (const ann of academicInfo.announcements) {
       notices.push(`
         <div class="calendar-notice-item">
-          ${icon("celebration", "notice-icon")}
-          <span class="notice-text"><strong>Dzień wolny:</strong> ${escapeHtml(hol)}</span>
+          ${icon("info", "notice-icon")}
+          <span class="notice-text"><strong>Komunikat:</strong> ${escapeHtml(ann)}</span>
         </div>
       `);
     }
   }
 
-  if (academicInfo.periodType === "break" || academicInfo.periodType === "exam") {
-    notices.push(`
-      <div class="calendar-notice-item">
-        ${icon("info", "notice-icon")}
-        <span class="notice-text"><strong>${escapeHtml(academicInfo.periodName)}:</strong> W tym okresie mogą nie odbywać się regularne zajęcia dydaktyczne.</span>
-      </div>
-    `);
-  }
-
   if (notices.length > 0) {
     elements.calendarNotice.innerHTML = notices.join("");
-    elements.calendarNotice.className = `calendar-notice ${isHoliday ? "holiday" : ""}`;
+    elements.calendarNotice.className = "calendar-notice";
     elements.calendarNotice.classList.remove("hidden");
   } else {
     elements.calendarNotice.classList.add("hidden");
@@ -1410,8 +1407,6 @@ function renderSchedule() {
         const targetDayGen = DNI_DOPELNIACZ[dayData.swap.replaceWith] || dayData.swap.replaceWith;
         const cleanNote = (dayData.swap.note || "").replace(/\s*\(zarządzenie rektora\)/gi, "").trim();
         swapBadge = `<div class="grid-day-swap-badge" title="${escapeHtml(cleanNote)}">${icon("swap_horiz", "", "width: 1.1em; height: 1.1em; vertical-align: middle;")} Plan z ${targetDayGen}</div>`;
-      } else if (dayData.holiday) {
-        swapBadge = `<div class="grid-day-holiday-badge" title="${escapeHtml(dayData.holiday)}">${icon("celebration", "", "width: 1.1em; height: 1.1em; vertical-align: middle;")} ${escapeHtml(dayData.holiday)}</div>`;
       }
 
       let emptyDayContent = `<p class="placeholder-text" style="text-align:center; padding: 1rem;">Brak zajęć</p>`;
@@ -1506,9 +1501,17 @@ function showEmptyState() {
 }
 
 function escapeHtml(str) {
-  const div = document.createElement("div");
-  div.textContent = str;
-  return div.innerHTML;
+  if (typeof document !== "undefined") {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 // Calendar Modal Handlers
@@ -2435,7 +2438,9 @@ if (typeof module !== "undefined" && module.exports) {
     getLessonProgress,
     getSafeGroupName,
     getRoomOccupancyAt,
-    parsePlanInfo
+    parsePlanInfo,
+    updateCalendarNotice,
+    elements
   };
 }
 
