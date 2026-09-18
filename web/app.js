@@ -300,14 +300,19 @@ function setupEventListeners() {
     renderSchedule();
   });
 
-  // Calendar Modal
-  elements.calendarBtn.addEventListener("click", () => {
-    closeSidebar();
-    openCalendarModal();
-  });
-  elements.closeModalBtn.addEventListener("click", closeCalendarModal);
-  elements.calendarModal.querySelector(".modal-backdrop").addEventListener("click", closeCalendarModal);
-  elements.copyUrlBtn.addEventListener("click", copyCalendarUrl);
+  // Calendar Modal (optional / when enabled)
+  if (elements.calendarBtn) {
+    elements.calendarBtn.addEventListener("click", () => {
+      closeSidebar();
+      openCalendarModal();
+    });
+  }
+  if (elements.closeModalBtn) elements.closeModalBtn.addEventListener("click", closeCalendarModal);
+  if (elements.calendarModal) {
+    const backdrop = elements.calendarModal.querySelector(".modal-backdrop");
+    if (backdrop) backdrop.addEventListener("click", closeCalendarModal);
+  }
+  if (elements.copyUrlBtn) elements.copyUrlBtn.addEventListener("click", copyCalendarUrl);
 
   // Cross-reference Detail Modal
   elements.closeCrossModalBtn.addEventListener("click", closeCrossModal);
