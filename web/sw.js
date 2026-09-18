@@ -1,5 +1,5 @@
 // Service Worker for Plan UMG PWA
-const CACHE_NAME = 'plan-umg-v3.2';
+const CACHE_NAME = 'plan-umg-v3.3';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -10,6 +10,13 @@ const STATIC_ASSETS = [
   './icon-512.png',
   './icon-maskable-192.png',
   './icon-maskable-512.png',
+  './maskable_icon_x48.png',
+  './maskable_icon_x72.png',
+  './maskable_icon_x96.png',
+  './maskable_icon_x128.png',
+  './maskable_icon_x192.png',
+  './maskable_icon_x384.png',
+  './maskable_icon_x512.png',
   './screenshot-desktop.png',
   './screenshot-mobile.png',
   './apple-touch-icon.png'
