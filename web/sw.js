@@ -1,5 +1,5 @@
 // Service Worker for Plan UMG PWA
-const CACHE_NAME = 'plan-umg-v2.7';
+const CACHE_NAME = 'plan-umg-v2.8';
 const STATIC_ASSETS = [
   './',
   './index.html',

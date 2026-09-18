@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Plan Zajęć UMG</title>
-  <link rel="stylesheet" href="style.css?v=2.7">
+  <link rel="stylesheet" href="style.css?v=2.8">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
@@ -34,6 +34,9 @@
         </div>
       </div>
       <div class="header-actions">
+        <button id="header-install-btn" class="btn-icon hidden" title="Zainstaluj aplikację na telefonie" aria-label="Zainstaluj">
+          <span class="material-symbols-rounded">install_mobile</span>
+        </button>
         <button id="header-search-btn" class="btn-icon" title="Szukaj wykładowcy, sali lub przedmiotu" aria-label="Szukaj">
           <span class="material-symbols-rounded">search</span>
         </button>
@@ -222,35 +225,35 @@
     </div>
   </div>
 
-  <!-- iOS PWA Install Guide Modal -->
+  <!-- PWA Install Guide Modal (Android & iOS) -->
   <div id="ios-install-modal" class="modal hidden" role="dialog" aria-modal="true">
     <div class="modal-backdrop"></div>
     <div class="modal-content">
       <div class="modal-header">
-        <h3>Dodaj do ekranu początkowego</h3>
+        <h3 id="pwa-install-title">Zainstaluj Plan UMG</h3>
         <button id="close-ios-modal" class="btn-close" aria-label="Zamknij">
           <span class="material-symbols-rounded">close</span>
         </button>
       </div>
-      <div class="modal-body ios-install-body">
-        <p>Zainstaluj Plan UMG na swoim urządzeniu Apple (Safari), aby mieć błyskawiczny dostęp jak do natywnej aplikacji:</p>
+      <div class="modal-body ios-install-body" id="pwa-install-body">
+        <p>Zainstaluj Plan UMG na swoim urządzeniu, aby mieć błyskawiczny dostęp jak do natywnej aplikacji:</p>
         <ol class="ios-install-steps">
           <li>
             <span class="step-num">1</span>
             <div class="step-desc">
-              Kliknij ikonę <strong>Udostępnij</strong> (<span class="material-symbols-rounded ios-step-icon">ios_share</span>) na pasku Safari.
+              Kliknij menu z trzema kropkami (<strong>⋮</strong>) w prawym górnym rogu przeglądarki Chrome.
             </div>
           </li>
           <li>
             <span class="step-num">2</span>
             <div class="step-desc">
-              Przewiń w dół i wybierz <strong>„Do ekranu początkowego”</strong> (<span class="material-symbols-rounded ios-step-icon">add_box</span>).
+              Wybierz <strong>„Zainstaluj aplikację”</strong> lub <strong>„Dodaj do ekranu głównego”</strong> (<span class="material-symbols-rounded ios-step-icon">install_mobile</span>).
             </div>
           </li>
           <li>
             <span class="step-num">3</span>
             <div class="step-desc">
-              Potwierdź klikając <strong>„Dodaj”</strong> w prawym górnym rogu.
+              Potwierdź klikając <strong>„Zainstaluj”</strong>. Ikona kotwicy ⚓ pojawi się na pulpicie.
             </div>
           </li>
         </ol>
@@ -263,6 +266,6 @@
     <p>Projekt nieoficjalny dla studentów UMG. Dane pobierane z <a href="https://arktur.umg.edu.pl/planyzaj/strpza5.php" target="_blank" rel="noopener">arktur.umg.edu.pl</a>.</p>
   </footer>
 
-  <script src="app.js?v=2.7"></script>
+  <script src="app.js?v=2.8"></script>
 </body>
 </html>

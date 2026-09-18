@@ -171,6 +171,7 @@ const elements = typeof document !== "undefined" ? {
   closeCrossModalBtn: document.getElementById("close-cross-modal"),
   themeToggle: document.getElementById("theme-toggle"),
   lastUpdated: document.getElementById("last-updated"),
+  headerInstallBtn: document.getElementById("header-install-btn"),
   pwaInstallBtn: document.getElementById("pwa-install-btn"),
   pwaInstallBtnText: document.getElementById("pwa-install-btn-text"),
   iosInstallModal: document.getElementById("ios-install-modal"),
@@ -1356,10 +1357,79 @@ function isIosDevice() {
   return /iphone|ipad|ipod/.test(ua);
 }
 
-function openIosModal() {
-  if (elements.iosInstallModal) {
-    elements.iosInstallModal.classList.remove("hidden");
+function openPwaModal(platform = "android") {
+  const modal = elements.iosInstallModal;
+  const title = document.getElementById("pwa-install-title");
+  const body = document.getElementById("pwa-install-body");
+  if (!modal) return;
+
+  if (platform === "ios" || isIosDevice()) {
+    if (title) title.textContent = "Dodaj do ekranu początkowego (iOS)";
+    if (body) {
+      body.innerHTML = `
+        <p>Zainstaluj Plan UMG na swoim urządzeniu Apple (Safari), aby mieć błyskawiczny dostęp jak do natywnej aplikacji:</p>
+        <ol class="ios-install-steps">
+          <li>
+            <span class="step-num">1</span>
+            <div class="step-desc">
+              Kliknij ikonę <strong>Udostępnij</strong> (<span class="material-symbols-rounded ios-step-icon">ios_share</span>) na pasku Safari.
+            </div>
+          </li>
+          <li>
+            <span class="step-num">2</span>
+            <div class="step-desc">
+              Przewiń w dół i wybierz <strong>„Do ekranu początkowego”</strong> (<span class="material-symbols-rounded ios-step-icon">add_box</span>).
+            </div>
+          </li>
+          <li>
+            <span class="step-num">3</span>
+            <div class="step-desc">
+              Potwierdź klikając <strong>„Dodaj”</strong> w prawym górnym rogu.
+            </div>
+          </li>
+        </ol>
+        <button id="close-ios-modal-btn" class="btn-primary" style="width: 100%; justify-content: center; margin-top: 1.25rem;">Rozumiem</button>
+      `;
+      const btn = body.querySelector("#close-ios-modal-btn");
+      if (btn) btn.onclick = closeIosModal;
+    }
+  } else {
+    if (title) title.textContent = "Zainstaluj aplikację (Android / Chrome)";
+    if (body) {
+      body.innerHTML = `
+        <p>Zainstaluj Plan UMG jako aplikację na telefonie, aby korzystać z planu również offline i bez pasków przeglądarki:</p>
+        <ol class="ios-install-steps">
+          <li>
+            <span class="step-num">1</span>
+            <div class="step-desc">
+              Kliknij menu z trzema kropkami (<strong>⋮</strong>) w prawym górnym rogu przeglądarki Chrome.
+            </div>
+          </li>
+          <li>
+            <span class="step-num">2</span>
+            <div class="step-desc">
+              Wybierz <strong>„Zainstaluj aplikację”</strong> lub <strong>„Dodaj do ekranu głównego”</strong> (<span class="material-symbols-rounded ios-step-icon">install_mobile</span>).
+            </div>
+          </li>
+          <li>
+            <span class="step-num">3</span>
+            <div class="step-desc">
+              Potwierdź klikając <strong>„Zainstaluj”</strong>. Aplikacja z ikoną kotwicy ⚓ pojawi się na Twoim pulpicie.
+            </div>
+          </li>
+        </ol>
+        <button id="close-ios-modal-btn" class="btn-primary" style="width: 100%; justify-content: center; margin-top: 1.25rem;">Rozumiem</button>
+      `;
+      const btn = body.querySelector("#close-ios-modal-btn");
+      if (btn) btn.onclick = closeIosModal;
+    }
   }
+
+  modal.classList.remove("hidden");
+}
+
+function openIosModal() {
+  openPwaModal("ios");
 }
 
 function closeIosModal() {
@@ -1369,12 +1439,10 @@ function closeIosModal() {
 }
 
 function initPwaInstall() {
-  // Register Service Worker for PWA support
+  // Register Service Worker immediately for PWA support
   if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("./sw.js").catch((err) => {
-        console.warn("Service Worker registration failed:", err);
-      });
+    navigator.serviceWorker.register("./sw.js").catch((err) => {
+      console.warn("Service Worker registration failed:", err);
     });
   }
 
@@ -1383,54 +1451,60 @@ function initPwaInstall() {
     return;
   }
 
+  // Show install button by default when running in browser
+  if (elements.pwaInstallBtn) {
+    elements.pwaInstallBtn.classList.remove("hidden");
+    if (isIosDevice() && elements.pwaInstallBtnText) {
+      elements.pwaInstallBtnText.textContent = "Dodaj do ekranu początkowego";
+    }
+  }
+  if (elements.headerInstallBtn) {
+    elements.headerInstallBtn.classList.remove("hidden");
+  }
+
   // 1. Android / Chromium / Desktop PWA prompt listener
   window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault();
     deferredPrompt = e;
-    if (elements.pwaInstallBtn) {
-      elements.pwaInstallBtn.classList.remove("hidden");
-    }
+    if (elements.pwaInstallBtn) elements.pwaInstallBtn.classList.remove("hidden");
+    if (elements.headerInstallBtn) elements.headerInstallBtn.classList.remove("hidden");
   });
 
-  // 2. iOS Safari handling (Safari doesn't support beforeinstallprompt)
-  if (isIosDevice() && !isAppStandalone()) {
-    if (elements.pwaInstallBtn) {
-      elements.pwaInstallBtn.classList.remove("hidden");
-      if (elements.pwaInstallBtnText) {
-        elements.pwaInstallBtnText.textContent = "Dodaj do ekranu początkowego";
+  // 2. Install click handler (Header + Sidebar)
+  async function handleInstallTrigger() {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const choiceResult = await deferredPrompt.userChoice;
+      if (choiceResult && choiceResult.outcome === "accepted") {
+        if (elements.pwaInstallBtn) elements.pwaInstallBtn.classList.add("hidden");
+        if (elements.headerInstallBtn) elements.headerInstallBtn.classList.add("hidden");
       }
+      deferredPrompt = null;
+      closeSidebar();
+    } else if (isIosDevice()) {
+      closeSidebar();
+      openPwaModal("ios");
+    } else {
+      closeSidebar();
+      openPwaModal("android");
     }
   }
 
-  // 3. Button click event
   if (elements.pwaInstallBtn) {
-    elements.pwaInstallBtn.addEventListener("click", async () => {
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
-        const choiceResult = await deferredPrompt.userChoice;
-        if (choiceResult && choiceResult.outcome === "accepted") {
-          elements.pwaInstallBtn.classList.add("hidden");
-        }
-        deferredPrompt = null;
-        closeSidebar();
-      } else if (isIosDevice()) {
-        closeSidebar();
-        openIosModal();
-      } else {
-        alert("Aby zainstalować aplikację, użyj ikony instalacji na pasku adresu przeglądarki lub opcji w menu przeglądarki.");
-      }
-    });
+    elements.pwaInstallBtn.addEventListener("click", handleInstallTrigger);
+  }
+  if (elements.headerInstallBtn) {
+    elements.headerInstallBtn.addEventListener("click", handleInstallTrigger);
   }
 
-  // 4. Listen for successful installation
+  // 3. Listen for successful installation
   window.addEventListener("appinstalled", () => {
-    if (elements.pwaInstallBtn) {
-      elements.pwaInstallBtn.classList.add("hidden");
-    }
+    if (elements.pwaInstallBtn) elements.pwaInstallBtn.classList.add("hidden");
+    if (elements.headerInstallBtn) elements.headerInstallBtn.classList.add("hidden");
     deferredPrompt = null;
   });
 
-  // 5. iOS Modal Close Listeners
+  // 4. Modal Close Listeners
   if (elements.closeIosModalBtn) {
     elements.closeIosModalBtn.addEventListener("click", closeIosModal);
   }
