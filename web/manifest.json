@@ -1,10 +1,10 @@
 {
   "name": "Plan Zajęć UMG",
   "short_name": "Plan UMG",
-  "id": "plan-umg-pwa",
+  "id": "/planwn/",
   "description": "Szybki, nowoczesny i czytelny plan zajęć dla studentów Uniwersytetu Morskiego w Gdyni.",
-  "start_url": "./index.html",
-  "scope": "./",
+  "start_url": "/planwn/index.html",
+  "scope": "/planwn/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#0d233a",
