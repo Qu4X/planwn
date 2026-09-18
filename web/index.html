@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Plan Zajęć UMG</title>
-  <link rel="stylesheet" href="style.css?v=3.1">
+  <link rel="stylesheet" href="style.css?v=3.2">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
@@ -135,7 +135,7 @@
         <button id="prev-week" class="btn-nav" title="Poprzedni tydzień">‹</button>
         <div class="week-info">
           <span class="week-label" id="current-week-label" title="Kliknij, aby wybrać dzień z kalendarza">Ładowanie tygodnia...</span>
-          <input type="date" id="week-date-picker" class="visually-hidden-picker" tabindex="-1" aria-hidden="true">
+          <input type="date" id="week-date-picker" class="visually-hidden-picker" tabindex="-1" aria-hidden="true" aria-label="Wybierz datę z kalendarza">
           <button id="today-btn" class="btn-today">Dzisiaj</button>
         </div>
         <button id="next-week" class="btn-nav" title="Następny tydzień">›</button>
@@ -202,7 +202,7 @@
         </div>
 
         <div class="calendar-copy-box">
-          <label>Link bezpośredni (np. dla Kalendarza Google):</label>
+          <label for="calendar-url-input">Link bezpośredni (np. dla Kalendarza Google):</label>
           <div class="copy-input-group">
             <input type="text" id="calendar-url-input" readonly>
             <button id="copy-url-btn" class="btn-copy">Kopiuj</button>
@@ -273,6 +273,6 @@
     <p>Projekt nieoficjalny dla studentów UMG. Dane pobierane z <a href="https://arktur.umg.edu.pl/planyzaj/strpza5.php" target="_blank" rel="noopener">arktur.umg.edu.pl</a>.</p>
   </footer>
 
-  <script src="app.js?v=3.1"></script>
+  <script src="app.js?v=3.2"></script>
 </body>
 </html>
