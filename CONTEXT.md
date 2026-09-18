@@ -33,6 +33,14 @@ _Avoid_: Wolne, przerwa.
 Ciągły wielodniowy okres w roku akademickim wolny od zajęć dydaktycznych (np. przerwa świąteczna, międzysemestralna).
 _Avoid_: Wakacje, ferie, urlop.
 
+**Okres zajęć dydaktycznych**:
+Część semestru przeznaczona na regularne prowadzenie zajęć z siatki planu, trwająca od pierwszego dnia nauki do dnia poprzedzającego sesję egzaminacyjną.
+_Avoid_: Semestr, okres nauki, czas trwania semestru.
+
+**Sesja egzaminacyjna**:
+Okres w roku akademickim następujący bezpośrednio po okresie zajęć dydaktycznych, przeznaczony na egzaminy i zaliczenia końcowe, wyłączony z regularnej siatki zajęć.
+_Avoid_: Sesja, okres egzaminów.
+
 ## Jednostki i Czas Zajęć
 
 **Spotkanie**:
@@ -76,3 +84,24 @@ _Avoid_: Grupa średnia, grupa łączona.
 **Grupa kierunkowa**:
 Zbiorcza grupa obejmująca wszystkich studentów danego kierunku i rocznika, uczestnicząca wspólnie w wykładach.
 _Avoid_: Cały rok, grupa wykładowa, audytorium.
+
+**Zajęcia zdalne**:
+Forma prowadzenia zajęć w przestrzeni wirtualnej bez przydziału stacjonarnej sali dydaktycznej (oznaczana w planie symbolem OL).
+_Avoid_: Zajęcia online, e-learning, brak sali.
+
+## Integracja i Dystrybucja
+
+**Subskrypcja kalendarza**:
+Dynamiczne połączenie za pośrednictwem protokołu `webcal://`, zapewniające automatyczne odświeżanie terminów zajęć w zewnętrznym kalendarzu użytkownika (np. Google Calendar, Apple Calendar).
+_Avoid_: Eksport, synchronizacja planu, dodanie do kalendarza.
+
+**Plik kalendarza**:
+Statyczny plik w formacie iCalendar (`.ics`), reprezentujący jednorazową migawkę terminów zajęć w chwili pobrania, bez możliwości automatycznych aktualizacji.
+_Avoid_: Zrzut planu, backup kalendarza, eksport offline.
+
+
+## Granice systemu / Scope & Constraints
+
+**Zakres wydziałowy (Faculty Scope)**:
+Wydział Nawigacyjny (WN) — jedyny zakres: Aplikacja celowo obsługuje wyłącznie plany Wydziału Nawigacyjnego UMG. Grupy innych wydziałów (np. INF, M, E z Wydziału Elektrycznego lub Mechanicznego) znajdują się poza systemem arktur.umg.edu.pl/planyzaj/ i są celowo pomijane w scraperze.
+_Avoid_: Wszystkie wydziały, ogólnouczelniany, brak grup WE/WM jako błąd.

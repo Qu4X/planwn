@@ -65,7 +65,8 @@ const DNI_PRZYIMEK = {
 let ACADEMIC_CALENDAR = {
   // Day replacements: format 'YYYY-MM-DD': { replaceWith: 'DAY_CODE', note: 'Description' }
   daySwaps: {
-    "2026-12-18": { replaceWith: "ŚR", note: "Piątek 18.12 – zajęcia ze środy" },
+    "2026-11-05": { replaceWith: "PON", note: "Czwartek 05.11 – zajęcia z poniedziałku" },
+    "2026-11-13": { replaceWith: "ŚR", note: "Piątek 13.11 – zajęcia ze środy" },
     "2027-01-04": { replaceWith: "ŚR", note: "Poniedziałek 04.01 – zajęcia ze środy" },
     "2027-03-31": { replaceWith: "PON", note: "Środa 31.03 – zajęcia z poniedziałku" },
     "2027-05-25": { replaceWith: "PT", note: "Wtorek 25.05 – zajęcia z piątku" },
@@ -77,12 +78,21 @@ let ACADEMIC_CALENDAR = {
     "2026-10-31": "Dzień wolny od zajęć",
     "2026-11-01": "Wszystkich Świętych",
     "2026-11-02": "Dzień wolny od zajęć",
-    "2026-11-10": "Dzień rektorski (wolny od zajęć)",
     "2026-11-11": "Święto Niepodległości",
+    "2026-12-21": "Dzień wolny od zajęć (zimowa przerwa świąteczna)",
+    "2026-12-22": "Dzień wolny od zajęć (zimowa przerwa świąteczna)",
+    "2026-12-23": "Dzień wolny od zajęć (zimowa przerwa świąteczna)",
     "2026-12-24": "Wigilia Bożego Narodzenia",
     "2026-12-25": "Boże Narodzenie",
     "2026-12-26": "Drugi dzień Świąt",
+    "2026-12-27": "Dzień wolny od zajęć (zimowa przerwa świąteczna)",
+    "2026-12-28": "Dzień wolny od zajęć (zimowa przerwa świąteczna)",
+    "2026-12-29": "Dzień wolny od zajęć (zimowa przerwa świąteczna)",
+    "2026-12-30": "Dzień wolny od zajęć (zimowa przerwa świąteczna)",
+    "2026-12-31": "Dzień wolny od zajęć (zimowa przerwa świąteczna)",
     "2027-01-01": "Nowy Rok",
+    "2027-01-02": "Dzień wolny od zajęć (zimowa przerwa świąteczna)",
+    "2027-01-03": "Dzień wolny od zajęć (zimowa przerwa świąteczna)",
     "2027-01-06": "Święto Trzech Króli",
     "2027-03-28": "Wielkanoc",
     "2027-03-29": "Poniedziałek Wielkanocny",
@@ -96,15 +106,15 @@ let ACADEMIC_CALENDAR = {
   // Periods (teaching, breaks, exam sessions)
   // Specific breaks and exam sessions are listed first so they take priority
   periods: [
-    { name: "Zimowa przerwa świąteczna", type: "break", start: "2026-12-23", end: "2027-01-03" },
-    { name: "Sesja egzaminacyjna zimowa", type: "exam", start: "2027-02-01", end: "2027-02-07" },
-    { name: "Zimowa sesja poprawkowa", type: "exam", start: "2027-02-08", end: "2027-02-14" },
-    { name: "Przerwa międzysemestralna", type: "break", start: "2027-02-15", end: "2027-02-21" },
+    { name: "Zimowa przerwa świąteczna", type: "break", start: "2026-12-21", end: "2027-01-03" },
+    { name: "Sesja egzaminacyjna zimowa", type: "exam", start: "2027-02-02", end: "2027-02-08" },
+    { name: "Zimowa sesja poprawkowa", type: "exam", start: "2027-02-09", end: "2027-02-15" },
+    { name: "Przerwa międzysemestralna", type: "break", start: "2027-02-16", end: "2027-02-21" },
     { name: "Przerwa wielkanocna", type: "break", start: "2027-03-25", end: "2027-03-30" },
     { name: "Letnia sesja egzaminacyjna", type: "exam", start: "2027-06-16", end: "2027-06-28" },
     { name: "Letnia sesja poprawkowa", type: "exam", start: "2027-09-01", end: "2027-09-14" },
-    { name: "Semestr zimowy", type: "teaching", start: "2026-10-01", end: "2027-01-29" },
-    { name: "Semestr letni", type: "teaching", start: "2027-02-22", end: "2027-06-15" }
+    { name: "Okres zajęć dydaktycznych – semestr zimowy", type: "teaching", start: "2026-10-01", end: "2027-02-01" },
+    { name: "Okres zajęć dydaktycznych – semestr letni", type: "teaching", start: "2027-02-22", end: "2027-06-15" }
   ]
 };
 
@@ -151,6 +161,9 @@ const elements = typeof document !== "undefined" ? {
   clearSearchBtn: document.getElementById("clear-search-btn"),
   searchResults: document.getElementById("search-results"),
   planSelect: document.getElementById("plan-select"),
+  planMetaInfo: document.getElementById("plan-meta-info"),
+  planPubDate: document.getElementById("plan-pub-date"),
+  planVersionBadge: document.getElementById("plan-version-badge"),
   groupSelect: document.getElementById("group-select"),
   daysViewSelect: document.getElementById("days-view-select"),
   freeRoomsBtn: document.getElementById("free-rooms-btn"),
@@ -165,7 +178,6 @@ const elements = typeof document !== "undefined" ? {
   emptyState: document.getElementById("empty-state"),
   noClassesState: document.getElementById("no-classes-state"),
   scheduleContent: document.getElementById("schedule-content"),
-  headerCalendarBtn: document.getElementById("header-calendar-btn"),
   calendarBtn: document.getElementById("calendar-btn"),
   calendarModal: document.getElementById("calendar-modal"),
   closeModalBtn: document.getElementById("close-modal"),
@@ -342,11 +354,6 @@ function setupEventListeners() {
   if (elements.calendarBtn) {
     elements.calendarBtn.addEventListener("click", () => {
       closeSidebar();
-      openCalendarModal();
-    });
-  }
-  if (elements.headerCalendarBtn) {
-    elements.headerCalendarBtn.addEventListener("click", () => {
       openCalendarModal();
     });
   }
@@ -533,6 +540,47 @@ async function loadPlans() {
   }
 }
 
+function parsePlanInfo(rawName) {
+  if (!rawName) return { cleanName: "", publishedAt: null, version: null, isSecondDegree: false };
+
+  // 1. Extract publication date [YYYY-MM-DD HH:MM] or [YYYY-MM-DD]
+  const dateMatch = rawName.match(/\[(\d{4}-\d{2}-\d{2}(?:\s+\d{2}:\d{2})?)\]/);
+  const publishedAt = dateMatch ? dateMatch[1] : null;
+
+  // 2. Extract version (e.g. "wer. 2", "wer 1", "wersja 3")
+  const verMatch = rawName.match(/\b(?:wer\.?|wersja)\s*(\d+)\b/i);
+  const version = verMatch ? `wer. ${verMatch[1]}` : null;
+
+  // 3. Detect degree
+  const isSecondDegree = /drugiego\s+stopnia|II\s+st/i.test(rawName);
+
+  // 4. Strip prefix like [TM Sem 1] or [something]
+  let clean = rawName.replace(/^\[[^\]]+\]\s*/, "");
+
+  // 5. Strip suffix date and version: [2026-...] wer. ...
+  clean = clean.replace(/\s*\[\d{4}-\d{2}-\d{2}[^\]]*\]\s*(?:wer\.?\s*\d+)?/gi, "");
+  clean = clean.replace(/\s*\b(?:wer\.?|wersja)\s*\d+\b/gi, "");
+
+  // 6. Strip degree words ("pierwszego stopnia", "drugiego stopnia")
+  clean = clean.replace(/\s*(?:pierwszego|drugiego)\s+stopnia\s*/gi, " ");
+  clean = clean.replace(/\s*(?:I|II)\s+stopnia\s*/gi, " ");
+
+  // 7. Normalize whitespace
+  clean = clean.replace(/\s+/g, " ").trim();
+
+  // 8. Add suffix for 2nd degree if applicable
+  if (isSecondDegree && !clean.includes("II st")) {
+    clean += " (II st.)";
+  }
+
+  return {
+    cleanName: clean || rawName,
+    publishedAt,
+    version,
+    isSecondDegree
+  };
+}
+
 function getShortPlanCode(planName) {
   if (!planName) return "";
   let major = "";
@@ -561,8 +609,8 @@ function populatePlanSelect() {
   for (const [id, plan] of Object.entries(state.plansData.plans)) {
     const opt = document.createElement("option");
     opt.value = id;
-    const shortCode = getShortPlanCode(plan.name);
-    opt.textContent = shortCode ? `[${shortCode}] ${plan.name}` : plan.name;
+    const planInfo = parsePlanInfo(plan.clean_name || plan.name);
+    opt.textContent = planInfo.cleanName;
     elements.planSelect.appendChild(opt);
   }
 }
@@ -572,6 +620,7 @@ function onPlanChange(planId, preferredGroup = null) {
   state.selectedGroup = null;
 
   if (!planId) {
+    if (elements.planMetaInfo) elements.planMetaInfo.classList.add("hidden");
     elements.groupSelect.disabled = true;
     elements.groupSelect.innerHTML = '<option value="">Najpierw wybierz kierunek...</option>';
     elements.headerActiveGroup.textContent = "Wybierz grupę";
@@ -583,6 +632,25 @@ function onPlanChange(planId, preferredGroup = null) {
 
   localStorage.setItem("umg_selected_plan", planId);
   const plan = state.plansData.plans[planId];
+
+  // Update plan publication metadata in sidebar
+  const planInfo = parsePlanInfo(plan.name || "");
+  const publishedAt = plan.published_at || planInfo.publishedAt;
+  const version = plan.version || planInfo.version;
+  if (elements.planMetaInfo) {
+    if (publishedAt || version) {
+      elements.planMetaInfo.classList.remove("hidden");
+      elements.planPubDate.textContent = publishedAt ? `Aktualizacja: ${publishedAt}` : "";
+      if (version) {
+        elements.planVersionBadge.textContent = version;
+        elements.planVersionBadge.style.display = "inline-block";
+      } else {
+        elements.planVersionBadge.style.display = "none";
+      }
+    } else {
+      elements.planMetaInfo.classList.add("hidden");
+    }
+  }
 
   // Populate expandable group dropdown
   elements.groupSelect.innerHTML = "";
@@ -1912,13 +1980,25 @@ async function openTeacherSchedule(teacherName) {
         ? `<button class="lesson-room-btn" data-room="${escapeHtml(e.room)}">📍 Sala ${escapeHtml(e.room)}</button>`
         : `<span class="lesson-room-badge">${escapeHtml(e.room || "OL")}</span>`;
 
+      let cycleBadges = "";
+      if (e.polowa_sem) {
+        cycleBadges += `<span class="lesson-sem-badge">${e.polowa_sem}. poł. sem.</span>`;
+      }
+      if (e.co_ile === 2) {
+        const odStr = e.od_tyg === 2 ? "od 2 tyg" : "od 1 tyg";
+        cycleBadges += `<span class="lesson-cycle-badge">co 2 tyg (${odStr})</span>`;
+      }
+
       const groupsHtml = (e.groups || []).map(g => `<span class="modal-group-chip">${escapeHtml(g)}</span>`).join("");
 
       html += `
         <div class="modal-slot-item">
           <div class="modal-slot-header">
             <span class="modal-slot-time">${escapeHtml(e.hours)}</span>
-            ${roomBtn}
+            <div style="display:flex; gap:0.35rem; align-items:center;">
+              ${cycleBadges}
+              ${roomBtn}
+            </div>
           </div>
           <div class="modal-slot-subject">${escapeHtml(e.subject)}</div>
           <div class="modal-slot-meta">
@@ -1984,13 +2064,25 @@ async function openRoomSchedule(roomName) {
           ? `<button class="lesson-teacher-btn" data-teacher="${escapeHtml(e.teacher)}">👨‍🏫 ${escapeHtml(e.teacher)}</button>`
           : `<span style="font-style: italic; font-size: 0.8rem; color: var(--text-muted);">Brak danych prowadzącego</span>`;
 
+        let cycleBadges = "";
+        if (e.polowa_sem) {
+          cycleBadges += `<span class="lesson-sem-badge">${e.polowa_sem}. poł. sem.</span>`;
+        }
+        if (e.co_ile === 2) {
+          const odStr = e.od_tyg === 2 ? "od 2 tyg" : "od 1 tyg";
+          cycleBadges += `<span class="lesson-cycle-badge">co 2 tyg (${odStr})</span>`;
+        }
+
         const groupsHtml = (e.groups || []).map(g => `<span class="modal-group-chip">${escapeHtml(g)}</span>`).join("");
 
         html += `
           <div class="modal-slot-item">
             <div class="modal-slot-header">
               <span class="modal-slot-time">${escapeHtml(e.hours)}</span>
-              <span class="free-room-badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">Zajęta</span>
+              <div style="display:flex; gap:0.35rem; align-items:center;">
+                ${cycleBadges}
+                <span class="free-room-badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">Zajęta</span>
+              </div>
             </div>
             <div class="modal-slot-subject">${escapeHtml(e.subject)}</div>
             <div class="modal-slot-meta">
@@ -2089,6 +2181,73 @@ async function openSubjectDetail(subjectName) {
   openCrossModal(subjectName, "📚 Przedmiot", html);
 }
 
+// Pure function to determine room occupancy at a given date and time range
+function getRoomOccupancyAt(daySchedule, queryRange, targetDateIso, baseDay) {
+  if (!daySchedule || !daySchedule.length) {
+    return { isFree: true, occupyingClass: null, nextClass: null };
+  }
+
+  // If the target date is not a teaching day (holiday, break, exam session)
+  if (!isTeachingDay(targetDateIso)) {
+    return { isFree: true, occupyingClass: null, nextClass: null };
+  }
+
+  const qStart = queryRange.start;
+  const qEnd = queryRange.end;
+
+  let occupyingClass = null;
+  let nextClass = null;
+
+  const [y, m, d] = targetDateIso.split("-").map(Number);
+  const targetDateObj = new Date(y, m - 1, d);
+  const targetMonday = getMonday(targetDateObj);
+
+  for (const entry of daySchedule) {
+    if (!entry.hours || !entry.hours.includes(" - ")) continue;
+    const [startStr, endStr] = entry.hours.split(" - ");
+    const [sh, sm] = startStr.trim().split(":").map(Number);
+    const [eh, em] = endStr.trim().split(":").map(Number);
+    const cStart = sh * 60 + sm;
+    const cEnd = eh * 60 + em;
+
+    // Check if the lesson is active on targetDateIso
+    const lessonDesc = {
+      przedmiot: entry.subject,
+      data_start: entry.data_start,
+      tygodnie: entry.weeks || entry.tygodnie || 15,
+      co_ile: entry.co_ile || 1,
+      polowa_sem: entry.polowa_sem
+    };
+
+    const meetingInfo = getLessonMeetingInfo(lessonDesc, baseDay, targetMonday, targetDateIso);
+    if (!meetingInfo.active) {
+      continue;
+    }
+
+    if (cStart < qEnd && cEnd > qStart) {
+      occupyingClass = entry;
+      break;
+    }
+    if (cStart >= qEnd) {
+      if (!nextClass) {
+        nextClass = entry;
+      } else {
+        const [nsh, nsm] = nextClass.hours.split(" - ")[0].trim().split(":").map(Number);
+        if (cStart < nsh * 60 + nsm) {
+          nextClass = entry;
+        }
+      }
+    }
+  }
+
+  return {
+    isFree: !occupyingClass,
+    occupyingClass,
+    overlappingClass: occupyingClass,
+    nextClass
+  };
+}
+
 async function openFreeRoomsModal(customDay, customSlot) {
   closeSidebar();
   openCrossModal("Dostępność sal", "🔎 Wolne sale", `<div class="spinner" style="margin: 2rem auto;"></div><p style="text-align:center;">Sprawdzanie dostępności sal...</p>`);
@@ -2136,46 +2295,38 @@ async function openFreeRoomsModal(customDay, customSlot) {
     }
   }
 
+  // Determine target date for date-aware occupancy
+  const todayObj = new Date();
+  const todayIso = formatDateISO(todayObj);
+  let targetDateIso = todayIso;
+  let effectiveScheduleDay = day;
+
+  if (day !== todayCode) {
+    const curMon = getMonday(todayObj);
+    const dayIdx = DNI_MAP_SUNDAY_FIRST.indexOf(day);
+    const offset = (dayIdx === 0 ? 6 : dayIdx - 1);
+    const targetDayDate = new Date(curMon);
+    targetDayDate.setDate(curMon.getDate() + offset);
+    targetDateIso = formatDateISO(targetDayDate);
+  }
+
+  if (ACADEMIC_CALENDAR.daySwaps && ACADEMIC_CALENDAR.daySwaps[targetDateIso]) {
+    effectiveScheduleDay = ACADEMIC_CALENDAR.daySwaps[targetDateIso].replaceWith;
+  }
+
   const roomsList = data.room_list || [];
   const roomStatuses = [];
 
   for (const r of roomsList) {
-    const daySchedule = (data.rooms[r] && data.rooms[r][day]) || [];
-    let overlappingClass = null;
-    let nextClass = null;
+    const daySchedule = (data.rooms[r] && data.rooms[r][effectiveScheduleDay]) || [];
+    const occupancy = getRoomOccupancyAt(daySchedule, { start: qStart, end: qEnd }, targetDateIso, effectiveScheduleDay);
 
-    for (const entry of daySchedule) {
-      if (!entry.hours || !entry.hours.includes(" - ")) continue;
-      const [startStr, endStr] = entry.hours.split(" - ");
-      const cStart = parseMinutes(startStr);
-      const cEnd = parseMinutes(endStr);
-
-      if (cStart < qEnd && cEnd > qStart) {
-        overlappingClass = entry;
-        break;
-      }
-      if (cStart >= qEnd) {
-        if (!nextClass || cStart < parseMinutes(nextClass.hours.split(" - ")[0])) {
-          nextClass = entry;
-        }
-      }
-    }
-
-    if (overlappingClass) {
-      roomStatuses.push({
-        room: r,
-        isFree: false,
-        overlappingClass,
-        nextClass
-      });
-    } else {
-      roomStatuses.push({
-        room: r,
-        isFree: true,
-        overlappingClass: null,
-        nextClass
-      });
-    }
+    roomStatuses.push({
+      room: r,
+      isFree: occupancy.isFree,
+      overlappingClass: occupancy.occupyingClass,
+      nextClass: occupancy.nextClass
+    });
   }
 
   // Free rooms first, then by room name
@@ -2269,6 +2420,7 @@ if (typeof window !== "undefined") {
   window.openRoomSchedule = openRoomSchedule;
   window.openSubjectDetail = openSubjectDetail;
   window.openFreeRoomsModal = openFreeRoomsModal;
+  window.getRoomOccupancyAt = getRoomOccupancyAt;
   window.closeCrossModal = closeCrossModal;
 }
 
@@ -2281,9 +2433,12 @@ if (typeof module !== "undefined" && module.exports) {
     getLessonSemesterPeriod,
     getLessonMeetingInfo,
     getLessonProgress,
-    getSafeGroupName
+    getSafeGroupName,
+    getRoomOccupancyAt,
+    parsePlanInfo
   };
 }
+
 
 
 

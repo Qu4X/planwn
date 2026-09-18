@@ -48,7 +48,7 @@
 
   --badge-bg: #1e293b;
   --badge-text: #cbd5e1;
-  --badge-room-bg: #451a03;
+  --badge-room-bg: #271406;
   --badge-room-text: #fde68a;
 
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
@@ -365,6 +365,29 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+.plan-meta-info {
+  margin-top: 0.15rem;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.35rem 0.55rem;
+  background: var(--bg-card-subtle);
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+}
+
+.badge-version {
+  font-weight: 600;
+  font-size: 0.7rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--badge-bg);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
 }
 
 .calendar-sidebar-section {
@@ -919,7 +942,9 @@ body {
 }
 
 [data-theme="dark"] .lesson-room-btn:hover {
-  filter: brightness(1.2);
+  background: #3c1e09;
+  border-color: rgba(245, 158, 11, 0.6);
+  filter: none;
 }
 
 .lesson-cycle-badge {

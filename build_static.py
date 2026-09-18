@@ -12,19 +12,17 @@ import shutil
 import argparse
 import logging
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("build_static")
 
-# Import scraper modules
-from scrapper import (
-    pobierz_liste_planow,
-    pobierz_surowy_plan,
-    przetworz_plan_na_grafike,
-    generuj_ics,
-    load_academic_calendar
-)
+from arktur_client import pobierz_liste_planow, pobierz_surowy_plan
+from arktur_parser import przetworz_plan_na_grafike
+from ics_export import generuj_ics, load_academic_calendar
+from models import LessonDict, RoomScheduleEntry, TeacherScheduleEntry
+
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 WEB_DIR = os.path.join(BASE_DIR, "web")
@@ -110,6 +108,43 @@ def regenerate_all_ics():
     return count
 
 
+def parse_plan_title(raw_name: str) -> dict:
+    """
+    Ekstraktuje czystą nazwę kierunku/semestru, datę publikacji oraz wersję planu.
+    Przykład: '[TM Sem 1] Transport Morski pierwszego stopnia sem. 1 [2026-09-14 17:55] wer. 2'
+              -> {'clean_name': 'Transport Morski sem. 1', 'published_at': '2026-09-14 17:55', 'version': 'wer. 2'}
+    """
+    if not raw_name:
+        return {"clean_name": "", "published_at": None, "version": None}
+
+    # Data publikacji [YYYY-MM-DD HH:MM] lub [YYYY-MM-DD]
+    date_match = re.search(r'\[(\d{4}-\d{2}-\d{2}(?:\s+\d{2}:\d{2})?)\]', raw_name)
+    published_at = date_match.group(1) if date_match else None
+
+    # Wersja planu (np. wer. 1, wer. 2)
+    ver_match = re.search(r'\b(?:wer\.?|wersja)\s*(\d+)\b', raw_name, re.IGNORECASE)
+    version = f"wer. {ver_match.group(1)}" if ver_match else None
+
+    is_second_degree = bool(re.search(r'drugiego\s+stopnia|II\s+st', raw_name, re.IGNORECASE))
+
+    # Oczyszczenie nazwy
+    clean = re.sub(r'^\[[^\]]+\]\s*', '', raw_name)
+    clean = re.sub(r'\s*\[\d{4}-\d{2}-\d{2}[^\]]*\]\s*(?:wer\.?\s*\d+)?', '', clean, flags=re.IGNORECASE)
+    clean = re.sub(r'\s*\b(?:wer\.?|wersja)\s*\d+\b', '', clean, flags=re.IGNORECASE)
+    clean = re.sub(r'\s*(?:pierwszego|drugiego)\s+stopnia\s*', ' ', clean, flags=re.IGNORECASE)
+    clean = re.sub(r'\s*(?:I|II)\s+stopnia\s*', ' ', clean, flags=re.IGNORECASE)
+    clean = re.sub(r'\s+', ' ', clean).strip()
+
+    if is_second_degree and "II st" not in clean:
+        clean += " (II st.)"
+
+    return {
+        "clean_name": clean or raw_name,
+        "published_at": published_at,
+        "version": version
+    }
+
+
 def build(limit=None):
     """Main build process"""
     start_time = datetime.now()
@@ -153,8 +188,12 @@ def build(limit=None):
             logger.warning(f"No groups detected for plan {plan_id_str}. Skipping.")
             continue
 
+        parsed_title = parse_plan_title(plan_name)
         plans_metadata["plans"][plan_id_str] = {
             "name": plan_name,
+            "clean_name": parsed_title["clean_name"],
+            "published_at": parsed_title["published_at"],
+            "version": parsed_title["version"],
             "groups": grupy
         }
 
@@ -209,10 +248,7 @@ def build(limit=None):
 
     # Manual overrides take precedence over discovered
     final_subjects = {**discovered_subjects, **manual_subjects}
-    subjects_json_path = os.path.join(DATA_DIR, "subjects.json")
-    with open(subjects_json_path, "w", encoding="utf-8") as f:
-        json.dump(final_subjects, f, ensure_ascii=False, indent=2)
-    logger.info(f"Exported subjects dictionary with {len(final_subjects)} items to dist/data/subjects.json")
+
 
     # Warn about unresolved abbreviations
     for raw, res in final_subjects.items():
@@ -227,15 +263,31 @@ def build(limit=None):
     logger.info(f"Summary: {len(plans_metadata['plans'])} plans, {total_groups_processed} group schedules & calendars generated in dist/")
 
 
-def build_cross_reference_indexes(plans_metadata=None):
+def _is_same_cycle(
+    entry: dict,
+    co_ile: int,
+    od_tyg: int,
+    polowa_sem: Optional[int],
+    data_start: str
+) -> bool:
+    """Helper to verify if schedule entry belongs to the identical academic cycle/half."""
+    return (
+        entry.get("co_ile", 1) == co_ile
+        and entry.get("od_tyg", 1) == od_tyg
+        and entry.get("polowa_sem") == polowa_sem
+        and entry.get("data_start", "") == data_start
+    )
+
+
+def build_cross_reference_indexes(plans_metadata=None, schedules_dir=SCHEDULES_DIR, output_path=None):
     """
-    Scans all generated schedule files across every plan and group to produce
-    inverted indexes for:
-      - By Instructor: dist/data/teachers.json
-      - By Room: dist/data/rooms.json
-      - By Subject: dist/data/subjects_index.json
-      - Combined Cache: dist/data/cross_reference.json
+    Builds searchable indexes for Teachers, Rooms, and Subjects across all plans.
+    Exports to a single combined dist/data/cross_reference.json.
     """
+    if not os.path.exists(schedules_dir) or not any(f.endswith(".json") for f in os.listdir(schedules_dir)):
+        logger.error(f"Cannot build cross-reference indexes: '{schedules_dir}' is empty or does not exist.")
+        return False
+
     logger.info("Building cross-reference indexes (teachers, rooms, subjects)...")
     dni_order = {"PON": 1, "WT": 2, "ŚR": 3, "CZW": 4, "PT": 5, "SOB": 6}
 
@@ -249,6 +301,9 @@ def build_cross_reference_indexes(plans_metadata=None):
             plans_metadata = {"plans": {}}
 
     plans_dict = plans_metadata.get("plans", {})
+    if not plans_dict:
+        logger.error("Cannot build cross-reference indexes: plans metadata is empty or missing.")
+        return False
 
     # Load WN official subject catalog
     wn_catalog_path = os.path.join(BASE_DIR, "wn_subjects_catalog.json")
@@ -263,10 +318,10 @@ def build_cross_reference_indexes(plans_metadata=None):
 
     wn_lower = {k.lower(): (k, v) for k, v in wn_catalog.items()}
 
-    teachers_index = {}
-    rooms_index = {}
-    subjects_index = {}
-    room_set = set()
+    teachers_index: Dict[str, List[TeacherScheduleEntry]] = {}
+    rooms_index: Dict[str, Dict[str, List[RoomScheduleEntry]]] = {}
+    subjects_index: Dict[str, Dict[str, Any]] = {}
+    room_set: set = set()
 
     # Scan all schedule files in SCHEDULES_DIR
     for plan_id_str, plan_info in plans_dict.items():
@@ -276,7 +331,7 @@ def build_cross_reference_indexes(plans_metadata=None):
         for group in groups:
             safe_group = re.sub(r'[^\w-]', '_', group)
             schedule_filename = f"{plan_id_str}_{safe_group}.json"
-            schedule_path = os.path.join(SCHEDULES_DIR, schedule_filename)
+            schedule_path = os.path.join(schedules_dir, schedule_filename)
             if not os.path.exists(schedule_path):
                 continue
 
@@ -303,6 +358,9 @@ def build_cross_reference_indexes(plans_metadata=None):
                     hours = (lesson.get("godziny") or "").strip()
                     weeks = lesson.get("tygodnie", 1)
                     data_start = lesson.get("data_start", "")
+                    co_ile = int(lesson.get("co_ile", 1) or 1)
+                    od_tyg = int(lesson.get("od_tyg", 1) or 1)
+                    polowa_sem = lesson.get("polowa_sem")
 
                     if not subject:
                         continue
@@ -313,11 +371,13 @@ def build_cross_reference_indexes(plans_metadata=None):
                             teachers_index[teacher] = []
 
                         # Deduplicate multi-group lectures in the same room/time
+                        # ONLY if they occur in the same cycle, semester half, and start date
                         deduped = False
                         for entry in teachers_index[teacher]:
                             if (entry["day"] == day and entry["slot"] == slot and
                                 entry["hours"] == hours and entry["subject"] == subject and
-                                entry["room"] == room and entry["plan_id"] == plan_id_str):
+                                entry["room"] == room and entry["plan_id"] == plan_id_str and
+                                _is_same_cycle(entry, co_ile, od_tyg, polowa_sem, data_start)):
                                 if group not in entry["groups"]:
                                     entry["groups"].append(group)
                                 deduped = True
@@ -334,7 +394,10 @@ def build_cross_reference_indexes(plans_metadata=None):
                                 "plan_id": plan_id_str,
                                 "plan_name": plan_name,
                                 "weeks": weeks,
-                                "data_start": data_start
+                                "data_start": data_start,
+                                "co_ile": co_ile,
+                                "od_tyg": od_tyg,
+                                "polowa_sem": polowa_sem
                             })
 
                     # 2. Room index (exclude purely virtual 'OL' or blank)
@@ -347,7 +410,8 @@ def build_cross_reference_indexes(plans_metadata=None):
                             deduped = False
                             for entry in rooms_index[room][day]:
                                 if (entry["slot"] == slot and entry["hours"] == hours and
-                                    entry["subject"] == subject and entry["plan_id"] == plan_id_str):
+                                    entry["subject"] == subject and entry["plan_id"] == plan_id_str and
+                                    _is_same_cycle(entry, co_ile, od_tyg, polowa_sem, data_start)):
                                     if group not in entry["groups"]:
                                         entry["groups"].append(group)
                                     if not entry["teacher"] and teacher:
@@ -364,7 +428,10 @@ def build_cross_reference_indexes(plans_metadata=None):
                                     "plan_id": plan_id_str,
                                     "plan_name": plan_name,
                                     "weeks": weeks,
-                                    "data_start": data_start
+                                    "data_start": data_start,
+                                    "co_ile": co_ile,
+                                    "od_tyg": od_tyg,
+                                    "polowa_sem": polowa_sem
                                 })
 
                     # 3. Subject index
@@ -412,22 +479,6 @@ def build_cross_reference_indexes(plans_metadata=None):
     # Sort rooms list: Aula first, then alphanumerically
     room_list = sorted(list(room_set), key=lambda r: (0 if "aula" in r.lower() else 1, r))
 
-    # Save individual index files
-    teachers_path = os.path.join(DATA_DIR, "teachers.json")
-    with open(teachers_path, "w", encoding="utf-8") as f:
-        json.dump(teachers_index, f, ensure_ascii=False, indent=2)
-    logger.info(f"Exported teachers index: {len(teachers_index)} instructors -> {teachers_path}")
-
-    rooms_path = os.path.join(DATA_DIR, "rooms.json")
-    with open(rooms_path, "w", encoding="utf-8") as f:
-        json.dump(rooms_index, f, ensure_ascii=False, indent=2)
-    logger.info(f"Exported rooms index: {len(rooms_index)} rooms -> {rooms_path}")
-
-    subjects_path = os.path.join(DATA_DIR, "subjects_index.json")
-    with open(subjects_path, "w", encoding="utf-8") as f:
-        json.dump(subjects_index, f, ensure_ascii=False, indent=2)
-    logger.info(f"Exported subjects index: {len(subjects_index)} subjects -> {subjects_path}")
-
     # Save combined cross-reference cache
     cross_reference_data = {
         "teachers": teachers_index,
@@ -436,10 +487,11 @@ def build_cross_reference_indexes(plans_metadata=None):
         "room_list": room_list,
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M")
     }
-    cross_path = os.path.join(DATA_DIR, "cross_reference.json")
+    cross_path = output_path or os.path.join(DATA_DIR, "cross_reference.json")
     with open(cross_path, "w", encoding="utf-8") as f:
         json.dump(cross_reference_data, f, ensure_ascii=False, indent=2)
     logger.info(f"Exported combined cross_reference.json ({len(room_list)} rooms, {len(teachers_index)} teachers, {len(subjects_index)} subjects)")
+    return True
 
 
 if __name__ == "__main__":
@@ -458,7 +510,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.reindex_only:
         setup_dist_directories()
-        build_cross_reference_indexes()
+        if not build_cross_reference_indexes():
+            sys.exit(1)
     else:
         build(limit=args.limit)
 

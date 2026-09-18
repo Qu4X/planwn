@@ -118,12 +118,6 @@
         </div>
       </div>
       <div class="header-actions">
-        <button id="header-calendar-btn" class="btn-icon" title="Dodaj do kalendarza (Google / Apple / ICS)"
-          aria-label="Kalendarz">
-          <svg class="icon" aria-hidden="true">
-            <use href="#icon-calendar_month"></use>
-          </svg>
-        </button>
         <button id="header-install-btn" class="btn-icon hidden" title="Zainstaluj aplikację na telefonie"
           aria-label="Zainstaluj">
           <svg class="icon" aria-hidden="true">
@@ -181,6 +175,10 @@
           <select id="plan-select">
             <option value="">Wybierz kierunek studiów...</option>
           </select>
+        </div>
+        <div id="plan-meta-info" class="plan-meta-info hidden">
+          <span id="plan-pub-date"></span>
+          <span id="plan-version-badge" class="badge-version"></span>
         </div>
       </div>
 
@@ -305,8 +303,8 @@
     <div class="modal-content calendar-modal-content">
       <div class="modal-header">
         <div class="modal-header-titles">
-          <span class="cross-modal-badge">Kalendarz</span>
-          <h3 id="calendar-modal-title">Dodaj do kalendarza</h3>
+          <span class="cross-modal-badge">Subskrypcja</span>
+          <h3 id="calendar-modal-title">Subskrypcja kalendarza</h3>
         </div>
         <button id="close-modal" class="btn-close" aria-label="Zamknij">
           <svg class="icon" aria-hidden="true">
@@ -330,7 +328,7 @@
               </div>
             </div>
             <a id="cal-google-btn" href="#" target="_blank" rel="noopener" class="btn-cal-action btn-google">
-              Dodaj do Google
+              Subskrybuj w Google
             </a>
           </div>
 
@@ -344,7 +342,7 @@
               </div>
             </div>
             <a id="cal-apple-btn" href="#" class="btn-cal-action btn-apple">
-              Subskrybuj w iOS
+              Subskrybuj w Apple
             </a>
           </div>
         </div>
@@ -362,7 +360,7 @@
         <!-- Local file download (offline / fallback) -->
         <div class="calendar-download-box">
           <div class="calendar-download-note">
-            <span>Potrzebujesz pliku offline lub telefonu bez usług Google?</span>
+            <span>Jednorazowy eksport bez automatycznych aktualizacji:</span>
           </div>
           <a id="cal-download-btn" href="#" download class="btn-cal-download">
             <svg class="icon" aria-hidden="true">

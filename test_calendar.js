@@ -1,5 +1,5 @@
 const assert = require("assert");
-const { getLessonMeetingInfo, getMonday, getSafeGroupName } = require("./web/app.js");
+const { getLessonMeetingInfo, getMonday, getSafeGroupName, getRoomOccupancyAt, parsePlanInfo } = require("./web/app.js");
 
 console.log("\n🧪 Running Calendar Engine TDD Tests...\n");
 
@@ -14,14 +14,14 @@ const lessonMonday = {
   co_ile: 1
 };
 
-// Data: 1 lutego 2027 (Poniedziałek podczas sesji egzaminacyjnej 01.02 - 07.02.2027)
-// W semestrze zimowym 04.01 poniedziałek został zamieniony na środę, więc do 29.01 nie odbyło się 8 spotkań!
-const examMondayDate = "2027-02-01";
-const examMonday = getMonday(new Date(2027, 1, 1)); // 2027-02-01
+// Data: 8 lutego 2027 (Poniedziałek podczas sesji egzaminacyjnej 02.02 - 08.02.2027)
+// W semestrze zimowym 01.02 to ostatni dzień zajęć dydaktycznych (15. poniedziałek w związku z zamianą dnia z 04.01)
+const examMondayDate = "2027-02-08";
+const examMonday = getMonday(new Date(2027, 1, 8)); // 2027-02-08
 
 const result = getLessonMeetingInfo(lessonMonday, "PON", examMonday, examMondayDate);
 
-console.log("Wynik dla 2027-02-01:", result);
+console.log("Wynik dla 2027-02-08:", result);
 
 
 try {
@@ -36,8 +36,8 @@ try {
   process.exit(1);
 }
 
-// --- TEST 2: Święto (11.11) nie może przeskakiwać numeru fizycznego spotkania ---
-console.log("\n-- Test 2: Święto 11.11 nie może przeskakiwać numeru spotkania (04.11 = spotkanie 5, 18.11 = spotkanie 6)");
+// --- TEST 2: Święto (11.11) i zamiana dnia (13.11 Pt jako Śr) ---
+console.log("\n-- Test 2: Święto 11.11 jest nieaktywne, a zamiana 13.11 realizuje kolejne spotkanie (04.11 = 5, 13.11 = 6)");
 
 const lessonWed = {
   przedmiot: "Matematyka",
@@ -58,50 +58,50 @@ const res11 = getLessonMeetingInfo(lessonWed, "ŚR", mon11, "2026-11-11");
 console.log("11.11 (Święto Niepodległości):", res11);
 assert.strictEqual(res11.active, false, `11.11 powinno być active = false`);
 
-// 3. Środa 18.11.2026 -> powinno być 6. spotkanie (a NIE 7. tydzień kalendarzowy!)
+// 3. Piątek 13.11.2026 (zamiana rektorska na środę) -> 6. spotkanie!
+const res13 = getLessonMeetingInfo(lessonWed, "ŚR", mon11, "2026-11-13");
+console.log("13.11 (Piątek realizujący środę):", res13);
+assert.strictEqual(res13.active, true, `13.11 powinno być active = true`);
+assert.strictEqual(res13.meetingNum, 6, `13.11 powinno być spotkanie 6, a jest: ${res13.meetingNum}`);
+
+// 4. Środa 18.11.2026 -> 7. spotkanie
 const mon18 = getMonday(new Date(2026, 10, 18));
 const res18 = getLessonMeetingInfo(lessonWed, "ŚR", mon18, "2026-11-18");
-console.log("18.11 (Śr po święcie):", res18);
+console.log("18.11 (Śr po święcie i zamianie):", res18);
 
 try {
   assert.strictEqual(
     res18.meetingNum,
-    6,
-    `18.11 powinno być 6. fizyczne spotkanie (po wolnym 11.11), a system zwrócił: ${res18.meetingNum}`
+    7,
+    `18.11 powinno być 7. fizyczne spotkanie, a system zwrócił: ${res18.meetingNum}`
   );
-  console.log("✅ [PASS] Licznik spotkań prawidłowo uwzględnia dzień wolny.");
+  console.log("✅ [PASS] Licznik spotkań prawidłowo uwzględnia dzień wolny i zamianę dnia.");
 } catch (err) {
   console.error("❌ [FAIL]", err.message);
   process.exit(1);
 }
 
-// --- TEST 3: Dwa spotkania ze środy w jednym tygodniu (16.12 i 18.12) ---
-console.log("\n-- Test 3: Zamiana dnia (Piątek 18.12 jako Środa): dwa spotkania w jednym tygodniu");
+// --- TEST 3: Zamiana dnia (Piątek 13.11 jako Środa): realizacja zajęć w dniu zamiany ---
+console.log("\n-- Test 3: Zamiana dnia (Piątek 13.11 jako Środa): realizacja zajęć w dniu zamiany");
 
-// 1. Środa 16.12.2026 (normalna środa w 11. tygodniu semestru)
-const monDec = getMonday(new Date(2026, 11, 16)); // 2026-12-14
-const res16 = getLessonMeetingInfo(lessonWed, "ŚR", monDec, "2026-12-16");
-console.log("16.12 (Środa w tygodniu 11):", res16);
-
-// 2. Piątek 18.12.2026 (piątek z zamianą rektorską na środę)
-const res18Dec = getLessonMeetingInfo(lessonWed, "ŚR", monDec, "2026-12-18");
-console.log("18.12 (Piątek realizujący środę):", res18Dec);
+const resSwap13 = getLessonMeetingInfo(lessonWed, "ŚR", mon11, "2026-11-13");
+console.log("13.11 (Piątek realizujący środę):", resSwap13);
 
 try {
-  assert.strictEqual(res18Dec.active, true, "18.12 zajęcia ze środy powinny być aktywne");
+  assert.strictEqual(resSwap13.active, true, "13.11 zajęcia ze środy powinny być aktywne");
   assert.strictEqual(
-    res18Dec.meetingNum,
-    res16.meetingNum + 1,
-    `18.12 powinno być kolejne spotkanie (${res16.meetingNum + 1}), a otrzymano: ${res18Dec.meetingNum}`
+    resSwap13.meetingNum,
+    res04.meetingNum + 1,
+    `13.11 powinno być kolejne spotkanie (${res04.meetingNum + 1}), a otrzymano: ${resSwap13.meetingNum}`
   );
-  console.log(`✅ [PASS] Prawidłowo policzono 2 spotkania w jednym tygodniu (16.12 = spotkanie ${res16.meetingNum}, 18.12 = spotkanie ${res18Dec.meetingNum}).`);
+  console.log(`✅ [PASS] Prawidłowo zrealizowano spotkanie ze środy w dniu zamiany 13.11 (spotkanie ${resSwap13.meetingNum}).`);
 } catch (err) {
   console.error("❌ [FAIL]", err.message);
   process.exit(1);
 }
 
-// --- TEST 4: Przedmiot z 1. połowy semestru (7 spotkań) z uwzględnieniem świąt ---
-console.log("\n-- Test 4: Przedmiot 1. połowy semestru (7 spotkań) ze świętem 11.11 kończy się dopiero 25.11");
+// --- TEST 4: Przedmiot z 1. połowy semestru (7 spotkań) z uwzględnieniem świąt i zamiany ---
+console.log("\n-- Test 4: Przedmiot 1. połowy semestru (7 spotkań) kończy się na 18.11 dzięki zamianie 13.11");
 
 const lessonHalf1 = {
   przedmiot: "BHP",
@@ -111,26 +111,25 @@ const lessonHalf1 = {
   co_ile: 1
 };
 
-// 1. Środa 18.11.2026 -> 6. spotkanie (mimo że to 7. tydzień kalendarzowy!)
-const resHalf1_18 = getLessonMeetingInfo(lessonHalf1, "ŚR", mon18, "2026-11-18");
-console.log("18.11 (Śr - 6. spotkanie BHP):", resHalf1_18);
-assert.strictEqual(resHalf1_18.active, true, "18.11 BHP powinno być aktywne");
-assert.strictEqual(resHalf1_18.meetingNum, 6, "18.11 BHP to 6. spotkanie");
+// 1. Piątek 13.11.2026 -> 6. spotkanie BHP (zamiana za 11.11)
+const resHalf1_13 = getLessonMeetingInfo(lessonHalf1, "ŚR", mon11, "2026-11-13");
+console.log("13.11 (Pt - 6. spotkanie BHP z zamiany):", resHalf1_13);
+assert.strictEqual(resHalf1_13.active, true, "13.11 BHP powinno być aktywne");
+assert.strictEqual(resHalf1_13.meetingNum, 6, "13.11 BHP to 6. spotkanie");
 
-// 2. Środa 25.11.2026 -> 7. spotkanie (ostatnie!)
+// 2. Środa 18.11.2026 -> 7. spotkanie (ostatnie!)
+const resHalf1_18 = getLessonMeetingInfo(lessonHalf1, "ŚR", mon18, "2026-11-18");
+console.log("18.11 (Śr - 7. spotkanie BHP, ostatnie):", resHalf1_18);
+assert.strictEqual(resHalf1_18.active, true, "18.11 BHP powinno być aktywne");
+assert.strictEqual(resHalf1_18.meetingNum, 7, "18.11 BHP to 7. spotkanie");
+
+// 3. Środa 25.11.2026 -> BHP zakończone (active = false)
 const mon25 = getMonday(new Date(2026, 10, 25));
 const resHalf1_25 = getLessonMeetingInfo(lessonHalf1, "ŚR", mon25, "2026-11-25");
-console.log("25.11 (Śr - 7. spotkanie BHP, ostatnie):", resHalf1_25);
-assert.strictEqual(resHalf1_25.active, true, "25.11 BHP powinno być aktywne");
-assert.strictEqual(resHalf1_25.meetingNum, 7, "25.11 BHP to 7. spotkanie");
-
-// 3. Środa 02.12.2026 -> 8. tydzień, BHP zakończone (active = false)
-const mon02Dec = getMonday(new Date(2026, 11, 2));
-const resHalf1_02 = getLessonMeetingInfo(lessonHalf1, "ŚR", mon02Dec, "2026-12-02");
-console.log("02.12 (Śr po zakończeniu BHP):", resHalf1_02);
+console.log("25.11 (Śr po zakończeniu BHP):", resHalf1_25);
 
 try {
-  assert.strictEqual(resHalf1_02.active, false, "02.12 BHP powinno być nieaktywne (zakończyło 7 spotkań)");
+  assert.strictEqual(resHalf1_25.active, false, "25.11 BHP powinno być nieaktywne (zakończyło 7 spotkań)");
   console.log("✅ [PASS] Przedmiot z 1. połowy semestru zrealizował dokładnie 7 fizycznych spotkań.");
 } catch (err) {
   console.error("❌ [FAIL]", err.message);
@@ -162,12 +161,14 @@ console.log("14.10 (Tydzień 2, tydzień wolny od przedmiotu):", resBi_14);
 assert.strictEqual(resBi_14.active, false, "14.10 powinien być nieaktywny dla cyklu od 1. tyg");
 
 // 3. Tydzień 9 (02.12) -> aktywne, spotkanie 5 (ostatnie!)
+const mon02Dec = getMonday(new Date(2026, 11, 2));
 const resBi_02Dec = getLessonMeetingInfo(lessonBi, "ŚR", mon02Dec, "2026-12-02");
 console.log("02.12 (Tydzień 9, spotkanie 5 - ostatnie):", resBi_02Dec);
 assert.strictEqual(resBi_02Dec.active, true);
 assert.strictEqual(resBi_02Dec.meetingNum, 5);
 
 // 4. Tydzień 11 (16.12) -> zakończone (active = false)
+const monDec = getMonday(new Date(2026, 11, 16));
 const resBi_16Dec = getLessonMeetingInfo(lessonBi, "ŚR", monDec, "2026-12-16");
 console.log("16.12 (Tydzień 11, po zrealizowaniu 5 spotkań):", resBi_16Dec);
 
@@ -179,8 +180,8 @@ try {
   process.exit(1);
 }
 
-// --- TEST 6: Przedmiot co 2 tygodnie trafiający na dzień wolny (11.11) ---
-console.log("\n-- Test 6: Przedmiot co 2 tygodnie trafia na dzień wolny 11.11");
+// --- TEST 6: Przedmiot co 2 tygodnie (cykl parzysty): 11.11 to święto, ale 13.11 realizuje spotkanie 3 w ramach zamiany dnia ---
+console.log("\n-- Test 6: Przedmiot co 2 tygodnie (cykl parzysty): 11.11 to święto, ale 13.11 realizuje spotkanie 3 w ramach zamiany dnia");
 
 const lessonBiWithHoliday = {
   przedmiot: "Łączność Morska",
@@ -208,23 +209,29 @@ const resBiH_11 = getLessonMeetingInfo(lessonBiWithHoliday, "ŚR", mon11, "2026-
 console.log("11.11 (Tydz 6 - Święto Niepodległości):", resBiH_11);
 assert.strictEqual(resBiH_11.active, false, "11.11 zajęcia nie mogą się odbyć (Święto)");
 
-// 4. Tydzień 7 (18.11 - Tydzień grupy przeciwnej): wolne od tego przedmiotu
+// 4. Tydzień 6 (13.11 - Piątek realizujący środę): realizacja spotkania 3!
+const resBiH_13 = getLessonMeetingInfo(lessonBiWithHoliday, "ŚR", mon11, "2026-11-13");
+console.log("13.11 (Tydz 6 - Piątek realizujący środę):", resBiH_13);
+assert.strictEqual(resBiH_13.active, true, "13.11 zajęcia powinny się odbyć");
+assert.strictEqual(resBiH_13.meetingNum, 3, "13.11 to 3. spotkanie");
+
+// 5. Tydzień 7 (18.11 - Tydzień grupy przeciwnej): wolne od tego przedmiotu
 const resBiH_18 = getLessonMeetingInfo(lessonBiWithHoliday, "ŚR", mon18, "2026-11-18");
 console.log("18.11 (Tydz 7 - Tydzień grupy przeciwnej):", resBiH_18);
 assert.strictEqual(resBiH_18.active, false, "18.11 powinno być nieaktywne dla grupy z parzystego cyklu");
-assert.strictEqual(resBiH_18.meetingNum, 2, `18.11 powinno wskazywać 2 dotychczas odbyte spotkania, a jest: ${resBiH_18.meetingNum}`);
+assert.strictEqual(resBiH_18.meetingNum, 3, `18.11 powinno wskazywać 3 dotychczas odbyte spotkania, a jest: ${resBiH_18.meetingNum}`);
 
-// 5. Tydzień 8 (25.11 - Kolejny termin grupy): spotkanie 3!
+// 6. Tydzień 8 (25.11 - Kolejny termin grupy): spotkanie 4!
 const resBiH_25 = getLessonMeetingInfo(lessonBiWithHoliday, "ŚR", mon25, "2026-11-25");
-console.log("25.11 (Tydz 8 - Spotkanie 3 po święcie):", resBiH_25);
+console.log("25.11 (Tydz 8 - Spotkanie 4):", resBiH_25);
 try {
   assert.strictEqual(resBiH_25.active, true, "25.11 zajęcia powinny się odbyć");
   assert.strictEqual(
     resBiH_25.meetingNum,
-    3,
-    `25.11 powinno być 3. spotkanie (po wolnym 11.11), a jest: ${resBiH_25.meetingNum}`
+    4,
+    `25.11 powinno być 4. spotkanie, a jest: ${resBiH_25.meetingNum}`
   );
-  console.log("✅ [PASS] Przedmiot co 2 tygodnie po święcie prawidłowo realizuje kolejne spotkanie.");
+  console.log("✅ [PASS] Przedmiot co 2 tygodnie po święcie i zamianie prawidłowo realizuje kolejne spotkanie.");
 } catch (err) {
   console.error("❌ [FAIL]", err.message);
   process.exit(1);
@@ -403,23 +410,23 @@ console.log("✅ [PASS] Przedmioty co 2 tygodnie precyzyjnie respektują swój c
 console.log("\n-- Test 11: Format licznika spotkań w UI (x/y oraz 'Ostatnie zajęcia')");
 const { getLessonProgress } = require("./web/app.js");
 
-// 1. Zwykłe spotkanie w trakcie cyklu (np. 6. z 7 spotkań BHP)
-const prog6 = getLessonProgress(lessonHalf1, "ŚR", mon18, "2026-11-18");
+// 1. Zwykłe spotkanie w trakcie cyklu (np. 6. z 7 spotkań BHP w zamieniony piątek 13.11)
+const prog6 = getLessonProgress(lessonHalf1, "ŚR", mon11, "2026-11-13");
 console.log("Postęp BHP dla spotkania 6/7:", prog6);
 assert.strictEqual(prog6.text, "6/7", `Oczekiwano tekstu '6/7', a otrzymano: ${prog6.text}`);
 assert.strictEqual(prog6.isFinal, false);
 
-// 2. Ostatnie spotkanie w cyklu (7. z 7 spotkań BHP) -> powinno wyświetlać 'Ostatnie zajęcia'
-const prog7 = getLessonProgress(lessonHalf1, "ŚR", mon25, "2026-11-25");
+// 2. Ostatnie spotkanie w cyklu (7. z 7 spotkań BHP w środę 18.11) -> powinno wyświetlać 'Ostatnie zajęcia'
+const prog7 = getLessonProgress(lessonHalf1, "ŚR", mon18, "2026-11-18");
 console.log("Postęp BHP dla spotkania 7/7 (ostatnie):", prog7);
 assert.strictEqual(prog7.text, "Ostatnie zajęcia", `Oczekiwano 'Ostatnie zajęcia', a otrzymano: ${prog7.text}`);
 assert.strictEqual(prog7.isFinal, true);
 
-// 3. Przedmiot pełnosemestralny (np. 10. spotkanie z 15) -> '10/15'
-const prog10 = getLessonProgress(lessonWed, "ŚR", monDec, "2026-12-16");
-console.log("Postęp Matematyki 10/15:", prog10);
-assert.strictEqual(prog10.text, "10/15", `Oczekiwano '10/15', a otrzymano: ${prog10.text}`);
-assert.strictEqual(prog10.isFinal, false);
+// 3. Przedmiot pełnosemestralny (np. 11. spotkanie z 15) -> '11/15'
+const prog11 = getLessonProgress(lessonWed, "ŚR", monDec, "2026-12-16");
+console.log("Postęp Matematyki 11/15:", prog11);
+assert.strictEqual(prog11.text, "11/15", `Oczekiwano '11/15', a otrzymano: ${prog11.text}`);
+assert.strictEqual(prog11.isFinal, false);
 
 console.log("✅ [PASS] Format licznika w UI wyświetla czyste 'x/y' oraz wyróżnia 'Ostatnie zajęcia'.");
 
@@ -482,15 +489,154 @@ try {
   process.exit(1);
 }
 
+// --- TEST 14: Odporność na nieprawidłowy baseDay ("Inny") ---
+console.log("\n-- Test 14: Odporność na nieprawidłowy baseDay (np. 'Inny')");
+const testLessonInny = {
+  przedmiot: "Projekt Zespołowy",
+  data_start: "2026-10-05",
+  tygodnie: 15,
+  co_ile: 1
+};
+const monOct = getMonday(new Date(2026, 9, 5));
+const resInny = getLessonMeetingInfo(testLessonInny, "Inny", monOct, "2026-10-05");
+console.log("Wynik dla baseDay = 'Inny':", resInny);
+try {
+  assert.ok(resInny && typeof resInny.active === "boolean");
+  console.log("✅ [PASS] getLessonMeetingInfo bezpiecznie i natychmiast obsługuje nieobsługiwany dzień.");
+} catch (err) {
+  console.error("❌ [FAIL]", err.message);
+  process.exit(1);
+}
 
+// --- TEST 15: Ciągłość kalendarza (brak luki między semestrem zimowym a sesją egzaminacyjną) ---
+console.log("\n-- Test 15: Brak luki między semestrem zimowym (koniec 31.01) a sesją (początek 01.02)");
+const lessonWeekend = {
+  przedmiot: "Ćwiczenia Morskie",
+  data_start: "2026-10-03", // Sobota
+  tygodnie: 15,
+  co_ile: 1
+};
+const monEndJan = getMonday(new Date(2027, 0, 30));
+const resJan30 = getLessonMeetingInfo(lessonWeekend, "SOB", monEndJan, "2027-01-30");
+console.log("Wynik dla 2027-01-30 (sobota przed sesją):", resJan30);
+try {
+  assert.strictEqual(
+    resJan30.active,
+    true,
+    "Data 2027-01-30 musi mieścić się w semestrze zimowym (brak 2-dniowej luki przed sesją 01.02)"
+  );
+  console.log("✅ [PASS] Semestr zimowy poprawnie obejmuje 30-31 stycznia, zamykając lukę przed sesją.");
+} catch (err) {
+  console.error("❌ [FAIL]", err.message);
+  process.exit(1);
+}
 
+// --- TEST 16: Dostępność sal z uwzględnieniem dat, świąt i modułów (getRoomOccupancyAt) ---
+console.log("\n-- Test 16: getRoomOccupancyAt poprawnie zwalnia salę po zakończeniu modułu i w święta");
 
+const bhpClass = {
+  subject: "BHP",
+  hours: "10:15 - 11:45",
+  data_start: "2026-10-07",
+  weeks: 7,
+  polowa_sem: 1,
+  co_ile: 1
+};
 
+const fullSemesterClass = {
+  subject: "Matematyka",
+  hours: "12:15 - 13:45",
+  data_start: "2026-10-07",
+  weeks: 15,
+  co_ile: 1
+};
 
+const daySchedule = [bhpClass, fullSemesterClass];
 
+// 1. W trakcie trwania modułu (07.10.2026, 10:30) -> sala zajęta przez BHP
+const queryBhp = { start: 10 * 60 + 30, end: 10 * 60 + 31 }; // 10:30
+const resOct07 = getRoomOccupancyAt(daySchedule, queryBhp, "2026-10-07", "ŚR");
+console.log("Wynik 07.10 (BHP w trakcie):", resOct07);
+assert.strictEqual(resOct07.isFree, false, "Sala powinna być zajęta przez BHP w dniu 07.10");
+assert.strictEqual(resOct07.occupyingClass.subject, "BHP");
 
+// 2. Po zakończeniu modułu 7 spotkań (02.12.2026, 10:30) -> sala WOLNA
+const resDec02 = getRoomOccupancyAt(daySchedule, queryBhp, "2026-12-02", "ŚR");
+console.log("Wynik 02.12 (po zakończeniu BHP):", resDec02);
+assert.strictEqual(resDec02.isFree, true, "Sala powinna być wolna po zakończeniu 7 spotkań BHP");
+assert.strictEqual(resDec02.occupyingClass, null);
 
+// 3. W święto 11.11.2026 (12:30, normalnie Matematyka) -> sala WOLNA
+const queryMath = { start: 12 * 60 + 30, end: 12 * 60 + 31 }; // 12:30
+const resNov11 = getRoomOccupancyAt(daySchedule, queryMath, "2026-11-11", "ŚR");
+console.log("Wynik 11.11 (Święto Niepodległości):", resNov11);
+assert.strictEqual(resNov11.isFree, true, "Sala powinna być wolna w święto państwowe 11.11");
 
+// 4. Sala z dwoma grupami naprzemiennymi co 2 tygodnie
+const altClassA = {
+  subject: "Fizyka (Gr 1)",
+  hours: "08:00 - 09:30",
+  data_start: "2026-10-07", // Tydzień 1
+  weeks: 8,
+  co_ile: 2
+};
+const altClassB = {
+  subject: "Chemia (Gr 2)",
+  hours: "08:00 - 09:30",
+  data_start: "2026-10-14", // Tydzień 2
+  weeks: 7,
+  co_ile: 2
+};
+const alternatingSchedule = [altClassA, altClassB];
+const queryMorning = { start: 8 * 60 + 30, end: 8 * 60 + 31 }; // 08:30
 
+// 07.10 (Tydzień 1) -> zajęte przez Fizykę (Gr 1)
+const resAltOct07 = getRoomOccupancyAt(alternatingSchedule, queryMorning, "2026-10-07", "ŚR");
+console.log("Wynik 07.10 (Tydz 1, naprzemiennie):", resAltOct07);
+assert.strictEqual(resAltOct07.isFree, false);
+assert.strictEqual(resAltOct07.occupyingClass.subject, "Fizyka (Gr 1)");
+
+// 14.10 (Tydzień 2) -> zajęte przez Chemię (Gr 2)
+const resAltOct14 = getRoomOccupancyAt(alternatingSchedule, queryMorning, "2026-10-14", "ŚR");
+console.log("Wynik 14.10 (Tydz 2, naprzemiennie):", resAltOct14);
+assert.strictEqual(resAltOct14.isFree, false);
+assert.strictEqual(resAltOct14.occupyingClass.subject, "Chemia (Gr 2)");
+
+// 5. Sala z pojedynczym przedmiotem co 2 tygodnie (brak grupy na zmianę)
+const singleAltSchedule = [altClassA]; // Tylko Gr 1 co 2 tyg
+// 14.10 (Tydzień 2 - off-week dla Gr 1) -> sala WOLNA
+const resSingleOct14 = getRoomOccupancyAt(singleAltSchedule, queryMorning, "2026-10-14", "ŚR");
+console.log("Wynik 14.10 (off-week pojedynczego przedmiotu co 2 tyg):", resSingleOct14);
+assert.strictEqual(resSingleOct14.isFree, true, "Sala bez zajęć w danym tygodniu powinna być wolna");
+assert.strictEqual(resSingleOct14.occupyingClass, null);
+
+console.log("✅ [PASS] getRoomOccupancyAt prawidłowo weryfikuje dostępność sal (w tym cykle naprzemienne).");
+
+// --- TEST 17: parsePlanInfo (oczyszczanie nazw planów, wersja i data publikacji) ---
+console.log("\n-- Test 17: parsePlanInfo (oczyszczanie nazw planów, wersja i data)");
+
+const rawPlan1 = "[TM Sem 1] Transport Morski pierwszego stopnia sem. 1 [2026-09-14 17:55] wer. 2";
+const parsed1 = parsePlanInfo(rawPlan1);
+console.log("Wynik dla planu 1:", parsed1);
+assert.strictEqual(parsed1.cleanName, "Transport Morski sem. 1");
+assert.strictEqual(parsed1.publishedAt, "2026-09-14 17:55");
+assert.strictEqual(parsed1.version, "wer. 2");
+
+const rawPlan2 = "Transport i Logistyka pierwszego stopnia sem. 1 [2026-09-15 19:52] wer. 1";
+const parsed2 = parsePlanInfo(rawPlan2);
+console.log("Wynik dla planu 2:", parsed2);
+assert.strictEqual(parsed2.cleanName, "Transport i Logistyka sem. 1");
+assert.strictEqual(parsed2.publishedAt, "2026-09-15 19:52");
+assert.strictEqual(parsed2.version, "wer. 1");
+
+const rawPlan3 = "Nawigacja drugiego stopnia sem. 2 [2026-09-14 12:00] wer. 3";
+const parsed3 = parsePlanInfo(rawPlan3);
+console.log("Wynik dla planu 3 (II stopień):", parsed3);
+assert.strictEqual(parsed3.cleanName, "Nawigacja sem. 2 (II st.)");
+assert.strictEqual(parsed3.publishedAt, "2026-09-14 12:00");
+assert.strictEqual(parsed3.version, "wer. 3");
+assert.strictEqual(parsed3.isSecondDegree, true);
+
+console.log("✅ [PASS] parsePlanInfo precyzyjnie czyści nazwy planów i wyodrębnia wersję oraz datę publikacji.");
 
 
