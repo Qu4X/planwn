@@ -34,8 +34,8 @@
   --bg-card: #131d2e;
   --bg-card-subtle: #19263c;
   --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
 
   --brand-navy: #0b1828;
   --brand-primary: #2563eb;
@@ -186,25 +186,18 @@ body {
   height: 100%;
 }
 
-/* Material Symbols MD3 */
+/* Inline SVG Icons & Material Symbols */
+.icon,
 .material-symbols-rounded {
-  font-family: 'Material Symbols Rounded', sans-serif;
-  font-weight: normal;
-  font-style: normal;
-  font-size: 24px;
-  line-height: 1;
-  letter-spacing: normal;
-  text-transform: none;
+  width: 1.25em;
+  height: 1.25em;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  white-space: nowrap;
-  word-wrap: normal;
-  direction: ltr;
-  -webkit-font-feature-settings: 'liga';
-  -webkit-font-smoothing: antialiased;
+  fill: currentColor;
   user-select: none;
   vertical-align: middle;
+  flex-shrink: 0;
 }
 
 /* Header icon buttons - borderless, transparent, just the pure icon */
@@ -237,8 +230,8 @@ body {
   transform: scale(0.92);
 }
 
-.app-header .btn-icon .material-symbols-rounded {
-  font-size: 24px;
+.app-header .btn-icon .material-symbols-rounded,
+.app-header .btn-icon .icon {
   width: 24px;
   height: 24px;
   display: flex;
@@ -1160,8 +1153,10 @@ body {
   color: #ffffff;
 }
 
-.btn-close .material-symbols-rounded {
-  font-size: 22px;
+.btn-close .material-symbols-rounded,
+.btn-close .icon {
+  width: 22px;
+  height: 22px;
 }
 
 .modal-body {
@@ -1354,8 +1349,10 @@ body {
   transition: background-color 0.15s, color 0.15s;
 }
 
-.clear-search-btn .material-symbols-rounded {
-  font-size: 18px;
+.clear-search-btn .material-symbols-rounded,
+.clear-search-btn .icon {
+  width: 18px;
+  height: 18px;
 }
 
 .clear-search-btn:hover {
@@ -1746,13 +1743,16 @@ body {
   border-color: #78350f;
 }
 
-.day-swap-banner .material-symbols-rounded {
-  font-size: 1.25rem;
+.day-swap-banner .material-symbols-rounded,
+.day-swap-banner .icon {
+  width: 1.25rem;
+  height: 1.25rem;
   flex-shrink: 0;
   color: #d97706;
 }
 
-[data-theme="dark"] .day-swap-banner .material-symbols-rounded {
+[data-theme="dark"] .day-swap-banner .material-symbols-rounded,
+[data-theme="dark"] .day-swap-banner .icon {
   color: #f59e0b;
 }
 

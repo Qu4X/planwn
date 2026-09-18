@@ -1,3 +1,11 @@
+
+// SVG Icon helper using inline sprite
+function icon(name, extraClass = "", style = "") {
+  const cls = extraClass ? `icon ${extraClass}` : "icon";
+  const styleAttr = style ? ` style="${style}"` : "";
+  return `<svg class="${cls}"${styleAttr} aria-hidden="true"><use href="#icon-${name}"></use></svg>`;
+}
+
 // UMG Static Schedule Web Application
 
 const DNI_TYGODNIA = ["PON", "WT", "ŚR", "CZW", "PT", "SOB", "ND"];
@@ -196,7 +204,7 @@ function initTheme() {
   if (elements.themeToggle) {
     const isDark = state.theme === "dark";
     const iconName = isDark ? "light_mode" : "dark_mode";
-    elements.themeToggle.innerHTML = `<span class="material-symbols-rounded">${iconName}</span>`;
+    elements.themeToggle.innerHTML = icon(iconName);
     const label = isDark ? "Przełącz na jasny motyw" : "Przełącz na ciemny motyw";
     elements.themeToggle.setAttribute("title", label);
     elements.themeToggle.setAttribute("aria-label", label);
@@ -713,7 +721,7 @@ function updateCalendarNotice(academicInfo) {
       const cleanNote = (swap.note || "").replace(/\s*\(zarządzenie rektora\)/gi, "").trim();
       notices.push(`
         <div class="calendar-notice-item">
-          <span class="material-symbols-rounded notice-icon">warning</span>
+          ${icon("warning", "notice-icon")}
           <span class="notice-text"><strong>Dzień zamienny:</strong> ${escapeHtml(cleanNote)}</span>
         </div>
       `);
@@ -725,7 +733,7 @@ function updateCalendarNotice(academicInfo) {
     for (const hol of academicInfo.holidays) {
       notices.push(`
         <div class="calendar-notice-item">
-          <span class="material-symbols-rounded notice-icon">celebration</span>
+          ${icon("celebration", "notice-icon")}
           <span class="notice-text"><strong>Dzień wolny:</strong> ${escapeHtml(hol)}</span>
         </div>
       `);
@@ -735,7 +743,7 @@ function updateCalendarNotice(academicInfo) {
   if (academicInfo.periodType === "break" || academicInfo.periodType === "exam") {
     notices.push(`
       <div class="calendar-notice-item">
-        <span class="material-symbols-rounded notice-icon">info</span>
+        ${icon("info", "notice-icon")}
         <span class="notice-text"><strong>${escapeHtml(academicInfo.periodName)}:</strong> W tym okresie mogą nie odbywać się regularne zajęcia dydaktyczne.</span>
       </div>
     `);
@@ -1130,7 +1138,7 @@ function renderSchedule() {
     const academicInfo = getAcademicInfoForWeek(targetMonday);
 
     if (minStartDate && formatDateISO(targetMonday) < minStartDate) {
-      if (iconEl) iconEl.innerHTML = `<span class="material-symbols-rounded" style="font-size: 3rem; color: var(--brand-primary);">event_upcoming</span>`;
+      if (iconEl) iconEl.innerHTML = icon("event_upcoming", "", "width: 3rem; height: 3rem; color: var(--brand-primary);");
       if (titleEl) titleEl.textContent = "Przed rozpoczęciem zajęć";
       if (descEl) {
         descEl.innerHTML = `W tym tygodniu nie masz zaplanowanych zajęć (przed rozpoczęciem semestru).<br><button id="jump-to-first-btn" class="btn-primary" style="margin-top: 1rem; font-size: 0.85rem; padding: 0.5rem 1rem; width: 100%; justify-content: center;">Przejdź do pierwszego tygodnia zajęć</button>`;
@@ -1144,11 +1152,11 @@ function renderSchedule() {
         }
       }
     } else if (academicInfo.periodType === "break") {
-      if (iconEl) iconEl.innerHTML = `<span class="material-symbols-rounded" style="font-size: 3rem; color: #3b82f6;">beach_access</span>`;
+      if (iconEl) iconEl.innerHTML = icon("beach_access", "", "width: 3rem; height: 3rem; color: #3b82f6;");
       if (titleEl) titleEl.textContent = academicInfo.periodName;
       if (descEl) descEl.textContent = "W tym tygodniu trwa przerwa wolna od zajęć dydaktycznych.";
     } else if (academicInfo.periodType === "exam") {
-      if (iconEl) iconEl.innerHTML = `<span class="material-symbols-rounded" style="font-size: 3rem; color: #8b5cf6;">school</span>`;
+      if (iconEl) iconEl.innerHTML = icon("school", "", "width: 3rem; height: 3rem; color: #8b5cf6;");
       if (titleEl) titleEl.textContent = academicInfo.periodName;
       if (descEl) descEl.textContent = "Trwa sesja egzaminacyjna – brak regularnych zajęć w siatce.";
     } else {
@@ -1197,13 +1205,13 @@ function renderSchedule() {
 
       if (dayData.swap) {
         const targetDayGen = DNI_DOPELNIACZ[dayData.swap.replaceWith] || dayData.swap.replaceWith;
-        if (iconEl) iconEl.innerHTML = `<span class="material-symbols-rounded" style="font-size: 3rem; color: #d97706;">swap_horiz</span>`;
+        if (iconEl) iconEl.innerHTML = icon("swap_horiz", "", "width: 3rem; height: 3rem; color: #d97706;");
         if (titleEl) titleEl.textContent = `Dzień zamienny (plan z ${targetDayGen})`;
         if (descEl) {
           descEl.innerHTML = `${prep.charAt(0).toUpperCase() + prep.slice(1)} ${dayAcc} (${dayDateFormatted}) zajęcia odbywają się według planu z <strong>${targetDayGen}</strong>.<br>Twoja grupa nie ma zaplanowanych zajęć w tym planie.`;
         }
       } else if (dayData.holiday) {
-        if (iconEl) iconEl.innerHTML = `<span class="material-symbols-rounded" style="font-size: 3rem; color: #0284c7;">celebration</span>`;
+        if (iconEl) iconEl.innerHTML = icon("celebration", "", "width: 3rem; height: 3rem; color: #0284c7;");
         if (titleEl) titleEl.textContent = dayData.holiday;
         if (descEl) {
           descEl.textContent = `${prep.charAt(0).toUpperCase() + prep.slice(1)} ${dayAcc} (${dayDateFormatted}) jest dniem wolnym od zajęć dydaktycznych.`;
@@ -1223,7 +1231,7 @@ function renderSchedule() {
       const targetDayGen = DNI_DOPELNIACZ[dayData.swap.replaceWith] || dayData.swap.replaceWith;
       swapBanner = `
         <div class="day-swap-banner">
-          <span class="material-symbols-rounded">swap_horiz</span>
+          ${icon("swap_horiz")}
           <span>Dziś zajęcia według planu z <strong>${targetDayGen}</strong></span>
         </div>
       `;
@@ -1249,9 +1257,9 @@ function renderSchedule() {
       if (dayData.swap) {
         const targetDayGen = DNI_DOPELNIACZ[dayData.swap.replaceWith] || dayData.swap.replaceWith;
         const cleanNote = (dayData.swap.note || "").replace(/\s*\(zarządzenie rektora\)/gi, "").trim();
-        swapBadge = `<div class="grid-day-swap-badge" title="${escapeHtml(cleanNote)}"><span class="material-symbols-rounded" style="font-size: 0.95em; vertical-align: middle;">swap_horiz</span> Plan z ${targetDayGen}</div>`;
+        swapBadge = `<div class="grid-day-swap-badge" title="${escapeHtml(cleanNote)}">${icon("swap_horiz", "", "width: 1.1em; height: 1.1em; vertical-align: middle;")} Plan z ${targetDayGen}</div>`;
       } else if (dayData.holiday) {
-        swapBadge = `<div class="grid-day-holiday-badge" title="${escapeHtml(dayData.holiday)}"><span class="material-symbols-rounded" style="font-size: 0.95em; vertical-align: middle;">celebration</span> ${escapeHtml(dayData.holiday)}</div>`;
+        swapBadge = `<div class="grid-day-holiday-badge" title="${escapeHtml(dayData.holiday)}">${icon("celebration", "", "width: 1.1em; height: 1.1em; vertical-align: middle;")} ${escapeHtml(dayData.holiday)}</div>`;
       }
 
       let emptyDayContent = `<p class="placeholder-text" style="text-align:center; padding: 1rem;">Brak zajęć</p>`;
@@ -1259,14 +1267,14 @@ function renderSchedule() {
         const targetDayAdj = DNI_PRZYMIOTNIK[dayData.swap.replaceWith] || "zamiennym";
         emptyDayContent = `
           <div class="grid-day-empty-state">
-            <span class="material-symbols-rounded grid-empty-icon">swap_horiz</span>
+            ${icon("swap_horiz", "grid-empty-icon")}
             <span class="grid-empty-text">Brak zajęć w planie ${targetDayAdj}</span>
           </div>
         `;
       } else if (dayData.holiday) {
         emptyDayContent = `
           <div class="grid-day-empty-state holiday">
-            <span class="material-symbols-rounded grid-empty-icon">celebration</span>
+            ${icon("celebration", "grid-empty-icon")}
             <span class="grid-empty-text">${escapeHtml(dayData.holiday)}</span>
           </div>
         `;
@@ -1416,13 +1424,13 @@ function openPwaModal(platform = "android") {
           <li>
             <span class="step-num">1</span>
             <div class="step-desc">
-              Kliknij ikonę <strong>Udostępnij</strong> (<span class="material-symbols-rounded ios-step-icon">ios_share</span>) na pasku Safari.
+              Kliknij ikonę <strong>Udostępnij</strong> (${icon("ios_share", "ios-step-icon")}) na pasku Safari.
             </div>
           </li>
           <li>
             <span class="step-num">2</span>
             <div class="step-desc">
-              Przewiń w dół i wybierz <strong>„Do ekranu początkowego”</strong> (<span class="material-symbols-rounded ios-step-icon">add_box</span>).
+              Przewiń w dół i wybierz <strong>„Do ekranu początkowego”</strong> (${icon("add_box", "ios-step-icon")}).
             </div>
           </li>
           <li>
@@ -1452,7 +1460,7 @@ function openPwaModal(platform = "android") {
           <li>
             <span class="step-num">2</span>
             <div class="step-desc">
-              Wybierz <strong>„Zainstaluj aplikację”</strong> lub <strong>„Dodaj do ekranu głównego”</strong> (<span class="material-symbols-rounded ios-step-icon">install_mobile</span>).
+              Wybierz <strong>„Zainstaluj aplikację”</strong> lub <strong>„Dodaj do ekranu głównego”</strong> (${icon("install_mobile", "ios-step-icon")}).
             </div>
           </li>
           <li>
