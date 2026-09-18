@@ -1472,14 +1472,20 @@ function initPwaInstall() {
 
   // 2. Install click handler (Header + Sidebar)
   async function handleInstallTrigger() {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const choiceResult = await deferredPrompt.userChoice;
-      if (choiceResult && choiceResult.outcome === "accepted") {
-        if (elements.pwaInstallBtn) elements.pwaInstallBtn.classList.add("hidden");
-        if (elements.headerInstallBtn) elements.headerInstallBtn.classList.add("hidden");
+    const promptEvent = window.deferredPrompt || deferredPrompt;
+    if (promptEvent) {
+      try {
+        await promptEvent.prompt();
+        const choiceResult = await promptEvent.userChoice;
+        if (choiceResult && choiceResult.outcome === "accepted") {
+          if (elements.pwaInstallBtn) elements.pwaInstallBtn.classList.add("hidden");
+          if (elements.headerInstallBtn) elements.headerInstallBtn.classList.add("hidden");
+        }
+      } catch (err) {
+        console.warn("PWA prompt error:", err);
       }
       deferredPrompt = null;
+      window.deferredPrompt = null;
       closeSidebar();
     } else if (isIosDevice()) {
       closeSidebar();
