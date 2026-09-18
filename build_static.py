@@ -58,7 +58,9 @@ def setup_dist_directories():
         "maskable_icon_x512.png",
         "screenshot-desktop.png",
         "screenshot-mobile.png",
-        "apple-touch-icon.png"
+        "apple-touch-icon.png",
+        "monochrome.svg",
+        "planwn.svg"
     ]
     for filename in web_assets:
         src = os.path.join(WEB_DIR, filename)

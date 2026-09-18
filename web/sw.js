@@ -1,5 +1,5 @@
 // Service Worker for Plan UMG PWA
-const CACHE_NAME = 'plan-umg-v3.3';
+const CACHE_NAME = 'plan-umg-v3.4';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -19,7 +19,9 @@ const STATIC_ASSETS = [
   './maskable_icon_x512.png',
   './screenshot-desktop.png',
   './screenshot-mobile.png',
-  './apple-touch-icon.png'
+  './apple-touch-icon.png',
+  './monochrome.svg',
+  './planwn.svg'
 ];
 
 self.addEventListener('install', (event) => {
