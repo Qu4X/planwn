@@ -1,4 +1,4 @@
-// Service Worker for Plan UMG PWA
+// Service Worker for Plan WN PWA
 const CACHE_NAME = 'plan-umg-v3.8';
 const STATIC_ASSETS = [
   './',

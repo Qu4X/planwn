@@ -62,7 +62,7 @@ const DNI_PRZYIMEK = {
 // Academic calendar configuration for UMG
 // Based on Zarządzenie nr 30 Rektora Uniwersytetu Morskiego w Gdyni z dnia 25 maja 2026 r.
 // Rok akademicki 2026/2027
-const ACADEMIC_CALENDAR = {
+let ACADEMIC_CALENDAR = {
   // Day replacements: format 'YYYY-MM-DD': { replaceWith: 'DAY_CODE', note: 'Description' }
   daySwaps: {
     "2026-12-18": { replaceWith: "ŚR", note: "Piątek 18.12 – zajęcia ze środy" },
@@ -165,10 +165,15 @@ const elements = typeof document !== "undefined" ? {
   emptyState: document.getElementById("empty-state"),
   noClassesState: document.getElementById("no-classes-state"),
   scheduleContent: document.getElementById("schedule-content"),
+  headerCalendarBtn: document.getElementById("header-calendar-btn"),
   calendarBtn: document.getElementById("calendar-btn"),
   calendarModal: document.getElementById("calendar-modal"),
   closeModalBtn: document.getElementById("close-modal"),
-  webcalBtn: document.getElementById("webcal-btn"),
+  calGoogleBtn: document.getElementById("cal-google-btn"),
+  calAppleBtn: document.getElementById("cal-apple-btn"),
+  calDownloadBtn: document.getElementById("cal-download-btn"),
+  calGoogleCard: document.getElementById("cal-google-card"),
+  calAppleCard: document.getElementById("cal-apple-card"),
   calendarUrlInput: document.getElementById("calendar-url-input"),
   copyUrlBtn: document.getElementById("copy-url-btn"),
   copyFeedback: document.getElementById("copy-feedback"),
@@ -184,7 +189,12 @@ const elements = typeof document !== "undefined" ? {
   pwaInstallBtnText: document.getElementById("pwa-install-btn-text"),
   iosInstallModal: document.getElementById("ios-install-modal"),
   closeIosModalBtn: document.getElementById("close-ios-modal"),
-  closeIosModalActionBtn: document.getElementById("close-ios-modal-btn")
+  closeIosModalActionBtn: document.getElementById("close-ios-modal-btn"),
+  aboutAppBtn: document.getElementById("about-app-btn"),
+  footerAboutBtn: document.getElementById("footer-about-btn"),
+  aboutModal: document.getElementById("about-modal"),
+  closeAboutModalBtn: document.getElementById("close-about-modal"),
+  reportMailBtn: document.getElementById("report-mail-btn")
 } : {};
 
 // Initialize App
@@ -193,10 +203,29 @@ if (typeof document !== "undefined") {
     initTheme();
     setupEventListeners();
     initPwaInstall();
+    loadAcademicCalendarConfig();
     updateDayTabsUI();
     loadPlans();
     loadCrossRefData(); // Preload cross-reference data in background
   });
+}
+
+async function loadAcademicCalendarConfig() {
+  try {
+    const res = await fetch("data/academic_calendar.json");
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.periods) {
+        ACADEMIC_CALENDAR = data;
+        updateDayTabsUI();
+        if (state.scheduleData) {
+          renderSchedule();
+        }
+      }
+    }
+  } catch (e) {
+    // Keep inline defaults if offline or file unavailable
+  }
 }
 
 function initTheme() {
@@ -309,10 +338,15 @@ function setupEventListeners() {
     renderSchedule();
   });
 
-  // Calendar Modal (optional / when enabled)
+  // Calendar Modal
   if (elements.calendarBtn) {
     elements.calendarBtn.addEventListener("click", () => {
       closeSidebar();
+      openCalendarModal();
+    });
+  }
+  if (elements.headerCalendarBtn) {
+    elements.headerCalendarBtn.addEventListener("click", () => {
       openCalendarModal();
     });
   }
@@ -326,6 +360,56 @@ function setupEventListeners() {
   // Cross-reference Detail Modal
   elements.closeCrossModalBtn.addEventListener("click", closeCrossModal);
   elements.crossModal.querySelector(".modal-backdrop").addEventListener("click", closeCrossModal);
+
+  // About App Modal
+  if (elements.aboutAppBtn) {
+    elements.aboutAppBtn.addEventListener("click", () => {
+      closeSidebar();
+      openAboutModal();
+    });
+  }
+  if (elements.footerAboutBtn) {
+    elements.footerAboutBtn.addEventListener("click", openAboutModal);
+  }
+  if (elements.closeAboutModalBtn) {
+    elements.closeAboutModalBtn.addEventListener("click", closeAboutModal);
+  }
+  if (elements.aboutModal) {
+    const aboutBackdrop = elements.aboutModal.querySelector(".modal-backdrop");
+    if (aboutBackdrop) aboutBackdrop.addEventListener("click", closeAboutModal);
+  }
+  if (elements.reportMailBtn) {
+    elements.reportMailBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const currentGroup = state.activeGroup || "Brak (nie wybrano)";
+      const currentPlan = state.activePlanName || "Brak";
+      const subject = encodeURIComponent("[Plan WN] Zgłoszenie błędu / uwaga");
+      const body = encodeURIComponent(
+        `Cześć,\n\nOpis problemu lub uwagi:\n\n\n---\nDane diagnostyczne:\nGrupa: ${currentGroup}\nKierunek: ${currentPlan}\nPrzeglądarka: ${navigator.userAgent}\nRozdzielczość: ${window.innerWidth}x${window.innerHeight}\n`
+      );
+      window.location.href = `mailto:?subject=${subject}&body=${body}`;
+    });
+  }
+
+  // Fallback for Tally modal: if Tally embed script is blocked by adblockers, open form directly
+  document.addEventListener("click", (e) => {
+    const tallyLink = e.target.closest("a[data-tally-open], a[href*='tally-open=']");
+    if (tallyLink && (!window.Tally || typeof window.Tally.openPopup !== "function")) {
+      e.preventDefault();
+      const formId = tallyLink.getAttribute("data-tally-open") || "2E2vNj";
+      window.open(`https://tally.so/r/${formId}`, "_blank", "noopener");
+    }
+  });
+
+  // Global Escape key handler to close any active modal
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      closeAboutModal();
+      closeCrossModal();
+      closeCalendarModal();
+      if (typeof closeIosModal === "function") closeIosModal();
+    }
+  });
 
   // Search & Filter Listeners
   if (elements.headerSearchBtn) {
@@ -1373,16 +1457,51 @@ function openCalendarModal() {
   const icsPath = `${pathname}/calendars/${state.selectedPlanId}_${safeGroup}.ics`;
   const fullHttpUrl = `${origin}${icsPath}`;
   const webcalUrl = fullHttpUrl.replace(/^https?:\/\//, "webcal://");
+  const googleCalUrl = `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(webcalUrl)}`;
 
-  elements.webcalBtn.href = webcalUrl;
-  elements.calendarUrlInput.value = fullHttpUrl;
-  elements.copyFeedback.classList.add("hidden");
+  if (elements.calAppleBtn) {
+    elements.calAppleBtn.href = webcalUrl;
+  }
+  if (elements.calGoogleBtn) {
+    elements.calGoogleBtn.href = googleCalUrl;
+  }
+  if (elements.calDownloadBtn) {
+    elements.calDownloadBtn.href = fullHttpUrl;
+    elements.calDownloadBtn.setAttribute("download", `${state.selectedPlanId}_${safeGroup}.ics`);
+  }
+  if (elements.calendarUrlInput) {
+    elements.calendarUrlInput.value = fullHttpUrl;
+  }
+  if (elements.copyFeedback) {
+    elements.copyFeedback.classList.add("hidden");
+  }
+
+  // Device detection to recommend appropriate ecosystem (iOS vs Android / other)
+  const isApple = /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent) && !window.MSStream;
+  if (elements.calAppleCard && elements.calGoogleCard) {
+    elements.calAppleCard.classList.toggle("recommended", isApple);
+    elements.calGoogleCard.classList.toggle("recommended", !isApple);
+  }
 
   elements.calendarModal.classList.remove("hidden");
+  document.body.classList.add("modal-open");
 }
 
 function closeCalendarModal() {
   elements.calendarModal.classList.add("hidden");
+  document.body.classList.remove("modal-open");
+}
+
+function openAboutModal() {
+  if (!elements.aboutModal) return;
+  elements.aboutModal.classList.remove("hidden");
+  document.body.classList.add("modal-open");
+}
+
+function closeAboutModal() {
+  if (!elements.aboutModal) return;
+  elements.aboutModal.classList.add("hidden");
+  document.body.classList.remove("modal-open");
 }
 
 function copyCalendarUrl() {
@@ -1419,7 +1538,7 @@ function openPwaModal(platform = "android") {
     if (title) title.textContent = "Dodaj do ekranu początkowego (iOS)";
     if (body) {
       body.innerHTML = `
-        <p>Zainstaluj Plan UMG na swoim urządzeniu Apple (Safari), aby mieć błyskawiczny dostęp jak do natywnej aplikacji:</p>
+        <p>Zainstaluj Plan WN na swoim urządzeniu Apple (Safari), aby mieć błyskawiczny dostęp jak do natywnej aplikacji:</p>
         <ol class="ios-install-steps">
           <li>
             <span class="step-num">1</span>
@@ -1449,7 +1568,7 @@ function openPwaModal(platform = "android") {
     if (title) title.textContent = "Zainstaluj aplikację (Android / Chrome)";
     if (body) {
       body.innerHTML = `
-        <p>Zainstaluj Plan UMG jako aplikację na telefonie, aby korzystać z planu również offline i bez pasków przeglądarki:</p>
+        <p>Zainstaluj Plan WN jako aplikację na telefonie, aby korzystać z planu również offline i bez pasków przeglądarki:</p>
         <ol class="ios-install-steps">
           <li>
             <span class="step-num">1</span>

@@ -433,26 +433,79 @@ def przetworz_plan_na_grafike(html_text, wybrana_grupa, lista_grup):
     return dane_plaskie, min_slot, max_slot
 
 
-def generuj_ics(dane_planu, nazwa_grupy):
+ACADEMIC_CALENDAR_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "academic_calendar.json")
+
+def load_academic_calendar():
+    """Wczytuje konfigurację kalendarza akademickiego UMG z academic_calendar.json"""
+    if os.path.exists(ACADEMIC_CALENDAR_PATH):
+        try:
+            with open(ACADEMIC_CALENDAR_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            logger.warning(f"Nie udało się wczytać academic_calendar.json: {e}")
+    return {}
+
+WEEKDAY_TO_CODE = {0: "PON", 1: "WT", 2: "ŚR", 3: "CZW", 4: "PT", 5: "SOB", 6: "ND"}
+
+
+def _is_teaching_day(iso_str, cal_config):
+    if not cal_config:
+        return True
+    holidays = cal_config.get("holidays", {})
+    if iso_str in holidays:
+        return False
+    periods = cal_config.get("periods", [])
+    if periods:
+        for p in periods:
+            if p.get("type") in ("break", "exam") and p.get("start") <= iso_str <= p.get("end"):
+                return False
+        teaching_periods = [p for p in periods if p.get("type") == "teaching"]
+        if teaching_periods:
+            min_teach = min(p["start"] for p in teaching_periods)
+            max_teach = max(p["end"] for p in teaching_periods)
+            if min_teach <= iso_str <= max_teach:
+                return any(p["start"] <= iso_str <= p["end"] for p in teaching_periods)
+            return True
+    return True
+
+
+def _get_semester_period(lesson_start_iso, cal_config):
+    if not cal_config or not lesson_start_iso:
+        return None
+    teaching = [p for p in cal_config.get("periods", []) if p.get("type") == "teaching"]
+    for p in teaching:
+        if p["start"] <= lesson_start_iso <= p["end"]:
+            return p
+    return None
+
+
+def generuj_ics(dane_planu, nazwa_grupy, academic_calendar=None):
+    if academic_calendar is None:
+        academic_calendar = load_academic_calendar()
+
+    day_swaps = academic_calendar.get("daySwaps", {}) if academic_calendar else {}
+
     cal = Calendar()
     cal.add('prodid', f'-//UMG Navigator//{nazwa_grupy}//')
     cal.add('version', '2.0')
-    cal.add('x-wr-calname', f'Plan {nazwa_grupy}') # Automatyczna nazwa w apce
+    cal.add('x-wr-calname', f'Plan {nazwa_grupy}')  # Automatyczna nazwa w apce
     cal.add('x-wr-timezone', 'Europe/Warsaw')
 
-    def _dodaj_event(info):
-        if not info.get("data_start"): return
+    def _dodaj_event(info, base_day):
+        if not info.get("data_start"):
+            return
         try:
-            # Poprawione parsowanie godzin
+            # Parsowanie godzin
             g_start, g_koniec = info['godziny'].split(' - ')
-            start_dt = datetime.strptime(f"{info['data_start']} {g_start}", "%Y-%m-%d %H:%M")
-            koniec_dt = datetime.strptime(f"{info['data_start']} {g_koniec}", "%Y-%m-%d %H:%M")
+            start_date = datetime.strptime(info['data_start'], "%Y-%m-%d").date()
+            start_t = datetime.strptime(g_start, "%H:%M").time()
+            end_t = datetime.strptime(g_koniec, "%H:%M").time()
 
-            # Format location nicely
+            # Format location
             sala = str(info.get('sala', '')).strip()
             if sala.upper() == 'OL':
                 loc = "Zdalnie / Online"
-            elif sala.lower().startswith('sala') or sala.lower().startswith('aula') or sala.lower().startswith('basen'):
+            elif sala.lower().startswith(('sala', 'aula', 'basen')):
                 loc = sala
             elif sala:
                 loc = f"Sala {sala}"
@@ -460,38 +513,91 @@ def generuj_ics(dane_planu, nazwa_grupy):
                 loc = ""
 
             prow = str(info.get('prowadzacy', '')).strip()
-            desc = f"Prowadzący: {prow}" if prow else "Brak danych prowadzącego"
+            desc_lines = []
+            if prow:
+                desc_lines.append(f"Prowadzący: {prow}")
+            else:
+                desc_lines.append("Brak danych prowadzącego")
             if nazwa_grupy:
-                desc += f"\nGrupa: {nazwa_grupy}"
+                desc_lines.append(f"Grupa: {nazwa_grupy}")
 
+            total_meetings = int(info.get("tygodnie", 1) or 1)
             step = int(info.get("co_ile", 1) or 1)
-            for t in range(info.get("tygodnie", 1)):
-                event = Event()
-                event_start = start_dt + timedelta(weeks=t * step)
-                event_end   = koniec_dt + timedelta(weeks=t * step)
-                event.add('summary', info['przedmiot'])
-                event.add('dtstart', event_start)
-                event.add('dtend', event_end)
-                # RFC 5545 §3.6.1 — both UID and DTSTAMP are required
-                uid = (f"{nazwa_grupy}_{event_start.strftime('%Y%m%dT%H%M%S')}"
-                       f"_{info['przedmiot']}@umg.edu.pl")
-                event.add('uid', uid)
-                event.add('dtstamp', datetime.utcnow())
-                if loc:
-                    event.add('location', loc)
-                event.add('description', desc)
-                cal.add_component(event)
+
+            sem_period = _get_semester_period(info['data_start'], academic_calendar)
+
+            start_mon = start_date - timedelta(days=start_date.weekday())
+            cur_mon = start_mon
+            meeting_count = 0
+            max_iter_weeks = 50
+            w_iter = 0
+
+            while meeting_count < total_meetings and w_iter < max_iter_weeks:
+                is_cycle_week = (step != 2) or (w_iter % 2 == 0)
+                if is_cycle_week:
+                    for d_off in range(7):
+                        day_date = cur_mon + timedelta(days=d_off)
+                        day_iso = day_date.isoformat()
+
+                        if day_iso < info['data_start']:
+                            continue
+                        if sem_period and (day_iso < sem_period['start'] or day_iso > sem_period['end']):
+                            continue
+                        if not _is_teaching_day(day_iso, academic_calendar):
+                            continue
+
+                        weekday_code = WEEKDAY_TO_CODE.get(day_date.weekday())
+                        if day_iso in day_swaps:
+                            effective_day = day_swaps[day_iso].get("replaceWith", weekday_code)
+                            swap_note = day_swaps[day_iso].get("note")
+                        else:
+                            effective_day = weekday_code
+                            swap_note = None
+
+                        if effective_day == base_day:
+                            meeting_count += 1
+                            event_start = datetime.combine(day_date, start_t)
+                            event_end = datetime.combine(day_date, end_t)
+
+                            event = Event()
+                            event.add('summary', info['przedmiot'])
+                            event.add('dtstart', event_start)
+                            event.add('dtend', event_end)
+
+                            clean_subj = re.sub(r'[^a-zA-Z0-9_-]', '_', info.get('raw_przedmiot') or info['przedmiot'])
+                            uid = (f"{nazwa_grupy}_{event_start.strftime('%Y%m%dT%H%M%S')}"
+                                   f"_{clean_subj}@umg.edu.pl")
+                            event.add('uid', uid)
+                            event.add('dtstamp', datetime.utcnow())
+
+                            if loc:
+                                event.add('location', loc)
+
+                            event_desc = list(desc_lines)
+                            event_desc.append(f"Spotkanie: {meeting_count} z {total_meetings}")
+                            if swap_note:
+                                event_desc.append(f"ℹ️ {swap_note}")
+                            event.add('description', "\n".join(event_desc))
+
+                            cal.add_component(event)
+
+                            if meeting_count >= total_meetings:
+                                break
+
+                cur_mon += timedelta(days=7)
+                w_iter += 1
+
         except (ValueError, KeyError) as e:
             logger.warning(f"ICS - pominięto ({e}): {info.get('przedmiot', '?')} @ {info.get('data_start', '?')}")
 
     for dzien_nazwa, sloty in dane_planu.items():
         for slot, slot_data in sloty.items():
             if "przedmiot" in slot_data:
-                _dodaj_event(slot_data)
+                _dodaj_event(slot_data, dzien_nazwa)
             else:
                 for col_idx, info in slot_data.items():
                     if isinstance(info, dict) and "przedmiot" in info:
-                        _dodaj_event(info)
+                        _dodaj_event(info, dzien_nazwa)
 
     output = cal.to_ical()
     if isinstance(output, bytes):

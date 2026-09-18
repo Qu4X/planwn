@@ -22,7 +22,8 @@ from scrapper import (
     pobierz_liste_planow,
     pobierz_surowy_plan,
     przetworz_plan_na_grafike,
-    generuj_ics
+    generuj_ics,
+    load_academic_calendar
 )
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -70,6 +71,43 @@ def setup_dist_directories():
             logger.info(f"Copied {filename} -> dist/")
         else:
             logger.warning(f"File {src} not found!")
+
+    # Copy academic_calendar.json to dist/data/
+    cal_src = os.path.join(BASE_DIR, "academic_calendar.json")
+    cal_dst = os.path.join(DATA_DIR, "academic_calendar.json")
+    if os.path.exists(cal_src):
+        shutil.copy2(cal_src, cal_dst)
+        logger.info("Copied academic_calendar.json -> dist/data/")
+
+
+def regenerate_all_ics():
+    """Regeneruje pliki .ics w dist/calendars/ na podstawie istniejących plików JSON w dist/data/schedules/"""
+    os.makedirs(CALENDARS_DIR, exist_ok=True)
+    academic_cal = load_academic_calendar()
+    count = 0
+    if not os.path.exists(SCHEDULES_DIR):
+        logger.warning(f"Brak katalogu {SCHEDULES_DIR}")
+        return 0
+
+    for filename in os.listdir(SCHEDULES_DIR):
+        if filename.endswith(".json"):
+            json_path = os.path.join(SCHEDULES_DIR, filename)
+            base_name = os.path.splitext(filename)[0]
+            parts = base_name.split("_", 1)
+            group_name = parts[1] if len(parts) > 1 else base_name
+            try:
+                with open(json_path, "r", encoding="utf-8") as f:
+                    dane_plaskie = json.load(f)
+                ics_text = generuj_ics(dane_plaskie, group_name, academic_calendar=academic_cal)
+                ics_path = os.path.join(CALENDARS_DIR, f"{base_name}.ics")
+                with open(ics_path, "w", encoding="utf-8") as f:
+                    f.write(ics_text)
+                count += 1
+            except Exception as e:
+                logger.error(f"Błąd generowania ICS dla {filename}: {e}")
+
+    logger.info(f"Zregenerowano {count} plików .ics w dist/calendars/")
+    return count
 
 
 def build(limit=None):

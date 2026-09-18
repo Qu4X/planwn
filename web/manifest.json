@@ -1,8 +1,8 @@
 {
-  "name": "Plan Zajęć UMG",
-  "short_name": "Plan UMG",
+  "name": "Plan Zajęć WN",
+  "short_name": "Plan WN",
   "id": "/planwn/",
-  "description": "Szybki, nowoczesny i czytelny plan zajęć dla studentów Uniwersytetu Morskiego w Gdyni.",
+  "description": "Szybki, nowoczesny i czytelny plan zajęć dla studentów Wydziału Nawigacyjnego Uniwersytetu Morskiego w Gdyni.",
   "start_url": "/planwn/index.html",
   "scope": "/planwn/",
   "display": "standalone",

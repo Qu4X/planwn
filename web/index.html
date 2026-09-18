@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="pl">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Plan Zajęć UMG</title>
+  <title>Plan Zajęć WN</title>
   <link rel="stylesheet" href="style.css?v=3.8">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚓</text></svg>">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚓</text></svg>">
   <link rel="manifest" href="manifest.json?v=3.8">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -13,60 +15,131 @@
   <meta name="apple-mobile-web-app-title" content="Plan UMG">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#0d233a">
-  <meta name="description" content="Szybki, nowoczesny i czytelny plan zajęć dla studentów Uniwersytetu Morskiego w Gdyni.">
+  <meta name="description" content="Szybki, nowoczesny i czytelny plan zajęć dla studentów Wydziału Nawigacyjnego.">
   <script>
     window.deferredPrompt = null;
-    window.addEventListener('beforeinstallprompt', function(e) {
+    window.addEventListener('beforeinstallprompt', function (e) {
       e.preventDefault();
       window.deferredPrompt = e;
     });
   </script>
 </head>
+
 <body>
 
-<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
-    <symbol id="icon-menu" viewBox="0 -960 960 960"><path d="M160-240q-17 0-28.5-11.5T120-280q0-17 11.5-28.5T160-320h640q17 0 28.5 11.5T840-280q0 17-11.5 28.5T800-240H160Zm0-200q-17 0-28.5-11.5T120-480q0-17 11.5-28.5T160-520h640q17 0 28.5 11.5T840-480q0 17-11.5 28.5T800-440H160Zm0-200q-17 0-28.5-11.5T120-680q0-17 11.5-28.5T160-720h640q17 0 28.5 11.5T840-680q0 17-11.5 28.5T800-640H160Z"/></symbol>
-    <symbol id="icon-close" viewBox="0 -960 960 960"><path d="M480-424 284-228q-11 11-28 11t-28-11q-11-11-11-28t11-28l196-196-196-196q-11-11-11-28t11-28q11-11 28-11t28 11l196 196 196-196q11-11 28-11t28 11q11 11 11 28t-11 28L536-480l196 196q11 11 11 28t-11 28q-11 11-28 11t-28-11L480-424Z"/></symbol>
-    <symbol id="icon-search" viewBox="0 -960 960 960"><path d="M380-320q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l224 224q11 11 11 28t-11 28q-11 11-28 11t-28-11L532-372q-30 24-69 38t-83 14Zm0-80q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></symbol>
-    <symbol id="icon-dark_mode" viewBox="0 -960 960 960"><path d="M480-120q-151 0-255.5-104.5T120-480q0-138 90-239.5T440-838q13-2 23 3.5t16 14.5q6 9 6.5 21t-7.5 23q-17 26-25.5 55t-8.5 61q0 90 63 153t153 63q31 0 61.5-9t54.5-25q11-7 22.5-6.5T819-479q10 5 15.5 15t3.5 24q-14 138-117.5 229T480-120Zm0-80q88 0 158-48.5T740-375q-20 5-40 8t-40 3q-123 0-209.5-86.5T364-660q0-20 3-40t8-40q-78 32-126.5 102T200-480q0 116 82 198t198 82Zm-10-270Z"/></symbol>
-    <symbol id="icon-light_mode" viewBox="0 -960 960 960"><path d="M480-360q50 0 85-35t35-85q0-50-35-85t-85-35q-50 0-85 35t-35 85q0 50 35 85t85 35Zm0 80q-83 0-141.5-58.5T280-480q0-83 58.5-141.5T480-680q83 0 141.5 58.5T680-480q0 83-58.5 141.5T480-280ZM80-440q-17 0-28.5-11.5T40-480q0-17 11.5-28.5T80-520h80q17 0 28.5 11.5T200-480q0 17-11.5 28.5T160-440H80Zm720 0q-17 0-28.5-11.5T760-480q0-17 11.5-28.5T800-520h80q17 0 28.5 11.5T920-480q0 17-11.5 28.5T880-440h-80ZM480-760q-17 0-28.5-11.5T440-800v-80q0-17 11.5-28.5T480-920q17 0 28.5 11.5T520-880v80q0 17-11.5 28.5T480-760Zm0 720q-17 0-28.5-11.5T440-80v-80q0-17 11.5-28.5T480-200q17 0 28.5 11.5T520-160v80q0 17-11.5 28.5T480-40ZM226-678l-43-42q-12-11-11.5-28t11.5-29q12-12 29-12t28 12l42 43q11 12 11 28t-11 28q-11 12-27.5 11.5T226-678Zm494 495-42-43q-11-12-11-28.5t11-27.5q11-12 27.5-11.5T734-282l43 42q12 11 11.5 28T777-183q-12 12-29 12t-28-12Zm-42-495q-12-11-11.5-27.5T678-734l42-43q11-12 28-11.5t29 11.5q12 12 12 29t-12 28l-43 42q-12 11-28 11t-28-11ZM183-183q-12-12-12-29t12-28l43-42q12-11 28.5-11t27.5 11q12 11 11.5 27.5T282-226l-42 43q-11 12-28 11.5T183-183Zm297-297Z"/></symbol>
-    <symbol id="icon-install_mobile" viewBox="0 -960 960 960"><path d="M280-40q-33 0-56.5-23.5T200-120v-720q0-33 23.5-56.5T280-920h240q17 0 28.5 11.5T560-880q0 17-11.5 28.5T520-840H280v40h240q17 0 28.5 11.5T560-760q0 17-11.5 28.5T520-720H280v480h400v-40q0-17 11.5-28.5T720-320q17 0 28.5 11.5T760-280v160q0 33-23.5 56.5T680-40H280Zm0-120v40h400v-40H280Zm400-392v-248q0-17 11.5-28.5T720-840q17 0 28.5 11.5T760-800v248l76-76q11-11 28-11t28 11q11 11 11 28t-11 28L748-428q-12 12-28 12t-28-12L548-572q-11-11-11-28t11-28q11-11 28-11t28 11l76 76ZM280-800v-40 40Zm0 640v40-40Z"/></symbol>
-    <symbol id="icon-meeting_room" viewBox="0 -960 960 960"><path d="M160-120q-17 0-28.5-11.5T120-160q0-17 11.5-28.5T160-200h40v-600q0-17 11.5-28.5T240-840h320q17 0 28.5 11.5T600-800h120q17 0 28.5 11.5T760-760v560h40q17 0 28.5 11.5T840-160q0 17-11.5 28.5T800-120h-80q-17 0-28.5-11.5T680-160v-560h-80v560q0 17-11.5 28.5T560-120H160Zm120-640v560-560Zm200 280q0-17-11.5-28.5T440-520q-17 0-28.5 11.5T400-480q0 17 11.5 28.5T440-440q17 0 28.5-11.5T480-480ZM280-200h240v-560H280v560Z"/></symbol>
-    <symbol id="icon-calendar_month" viewBox="0 -960 960 960"><path d="M200-80q-33 0-56.5-23.5T120-160v-560q0-33 23.5-56.5T200-800h40v-40q0-17 11.5-28.5T280-880q17 0 28.5 11.5T320-840v40h320v-40q0-17 11.5-28.5T680-880q17 0 28.5 11.5T720-840v40h40q33 0 56.5 23.5T840-720v560q0 33-23.5 56.5T760-80H200Zm0-80h560v-400H200v400Zm0-480h560v-80H200v80Zm0 0v-80 80Zm280 240q-17 0-28.5-11.5T440-440q0-17 11.5-28.5T480-480q17 0 28.5 11.5T520-440q0 17-11.5 28.5T480-400Zm-160 0q-17 0-28.5-11.5T280-440q0-17 11.5-28.5T320-480q17 0 28.5 11.5T360-440q0 17-11.5 28.5T320-400Zm320 0q-17 0-28.5-11.5T600-440q0-17 11.5-28.5T640-480q17 0 28.5 11.5T680-440q0 17-11.5 28.5T640-400ZM480-240q-17 0-28.5-11.5T440-280q0-17 11.5-28.5T480-320q17 0 28.5 11.5T520-280q0 17-11.5 28.5T480-240Zm-160 0q-17 0-28.5-11.5T280-280q0-17 11.5-28.5T320-320q17 0 28.5 11.5T360-280q0 17-11.5 28.5T320-240Zm320 0q-17 0-28.5-11.5T600-280q0-17 11.5-28.5T640-320q17 0 28.5 11.5T680-280q0 17-11.5 28.5T640-240Z"/></symbol>
-    <symbol id="icon-warning" viewBox="0 -960 960 960"><path d="M109-120q-11 0-20-5.5T75-140q-5-9-5.5-19.5T75-180l370-640q6-10 15.5-15t19.5-5q10 0 19.5 5t15.5 15l370 640q6 10 5.5 20.5T885-140q-5 9-14 14.5t-20 5.5H109Zm69-80h604L480-720 178-200Zm302-40q17 0 28.5-11.5T520-280q0-17-11.5-28.5T480-320q-17 0-28.5 11.5T440-280q0 17 11.5 28.5T480-240Zm0-120q17 0 28.5-11.5T520-400v-120q0-17-11.5-28.5T480-560q-17 0-28.5 11.5T440-520v120q0 17 11.5 28.5T480-360Zm0-100Z"/></symbol>
-    <symbol id="icon-celebration" viewBox="0 -960 960 960"><path d="m212-212 282-100-182-182-100 282Zm709-467q-9 9-21 9t-21-9l-3-3q-14-14-35-14t-35 14L603-479q-9 9-21 9t-21-9q-9-9-9-21t9-21l203-203q32-32 77-32t77 32l3 3q9 9 9 21t-9 21ZM399-799q9-9 21-9t21 9l5 5q32 32 32 76t-32 76l-3 3q-9 9-21 9t-21-9q-9-9-9-21t9-21l3-3q14-14 14-34t-14-34l-5-5q-9-9-9-21t9-21Zm162-80q9-9 21-9t21 9l43 43q32 32 32 77t-32 77L523-559q-9 9-21 9t-21-9q-9-9-9-21t9-21l123-123q14-14 14-35t-14-35l-43-43q-9-9-9-21t9-21Zm320 480q-9 9-21 9t-21-9l-43-43q-14-14-35-14t-35 14l-43 43q-9 9-21 9t-21-9q-9-9-9-21t9-21l43-43q32-32 77-32t77 32l43 43q9 9 9 21t-9 21ZM212-212Zm-104 52 151-420q5-13 15.5-20t22.5-7q8 0 15 3t13 9l270 270q6 6 9 13t3 15q0 12-7 22.5T580-259L160-108q-12 5-23 1.5T118-118q-8-8-11.5-19t1.5-23Z"/></symbol>
-    <symbol id="icon-info" viewBox="0 -960 960 960"><path d="M480-280q17 0 28.5-11.5T520-320v-160q0-17-11.5-28.5T480-520q-17 0-28.5 11.5T440-480v160q0 17 11.5 28.5T480-280Zm0-320q17 0 28.5-11.5T520-640q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640q0 17 11.5 28.5T480-600Zm0 520q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/></symbol>
-    <symbol id="icon-event_upcoming" viewBox="0 -960 960 960"><path d="M760-80H640q-17 0-28.5-11.5T600-120q0-17 11.5-28.5T640-160h120v-400H200v120q0 17-11.5 28.5T160-400q-17 0-28.5-11.5T120-440v-280q0-33 23.5-56.5T200-800h40v-40q0-17 11.5-28.5T280-880q17 0 28.5 11.5T320-840v40h320v-40q0-17 11.5-28.5T680-880q17 0 28.5 11.5T720-840v40h40q33 0 56.5 23.5T840-720v560q0 33-23.5 56.5T760-80Zm-393-80H80q-17 0-28.5-11.5T40-200q0-17 11.5-28.5T80-240h287l-75-76q-11-11-11.5-27.5T292-372q11-11 28-11t28 11l144 144q12 12 12 28t-12 28L348-28q-11 11-27.5 11.5T292-28q-11-11-11-28t11-28l75-76ZM200-640h560v-80H200v80Zm0 0v-80 80Z"/></symbol>
-    <symbol id="icon-beach_access" viewBox="0 -960 960 960"><path d="M756-148 558-346q-11-11-11-28t11-28q11-11 28-11t28 11l198 198q11 11 11 28t-11 28q-11 11-28 11t-28-11Zm-575-72q-31-50-46-104.5T120-436q0-78 29-152t89-134q60-60 134.5-89.5T525-841q57 0 111.5 15.5T740-779q31 20 33 57t-26 65L303-213q-28 28-65.5 26T181-220Zm65-50 54-54q-16-21-30.5-43T243-411q-12-22-21-44t-16-43q-11 59-1.5 118T246-270Zm112-110 222-224q-43-33-86.5-53.5t-81.5-28q-38-7.5-68.5-2.5T296-666q-17 18-22 48.5t2.5 69q7.5 38.5 28 81.5t53.5 87Zm334-334q-53-32-112-42t-118 2q22 7 44 16t44 20.5q22 11.5 43.5 26T636-660l56-54Z"/></symbol>
-    <symbol id="icon-school" viewBox="0 -960 960 960"><path d="M242-249q-20-11-31-29.5T200-320v-192l-96-53q-11-6-16-15t-5-20q0-11 5-20t16-15l338-184q9-5 18.5-7.5T480-829q10 0 19.5 2.5T518-819l381 208q10 5 15.5 14.5T920-576v256q0 17-11.5 28.5T880-280q-17 0-28.5-11.5T840-320v-236l-80 44v192q0 23-11 41.5T718-249L518-141q-9 5-18.5 7.5T480-131q-10 0-19.5-2.5T442-141L242-249Zm238-203 274-148-274-148-274 148 274 148Zm0 241 200-108v-151l-161 89q-9 5-19 7.5t-20 2.5q-10 0-20-2.5t-19-7.5l-161-89v151l200 108Zm0-241Zm0 121Zm0 0Z"/></symbol>
-    <symbol id="icon-swap_horiz" viewBox="0 -960 960 960"><path d="m233-320 75 75q11 11 11 27.5T308-189q-12 12-28.5 12T251-189L108-332q-6-6-8.5-13T97-360q0-8 2.5-15t8.5-13l144-144q12-12 28-11.5t28 12.5q11 12 11.5 28T308-475l-75 75h247q17 0 28.5 11.5T520-360q0 17-11.5 28.5T480-320H233Zm494-240H480q-17 0-28.5-11.5T440-600q0-17 11.5-28.5T480-640h247l-75-75q-11-11-11-27.5t11-28.5q12-12 28.5-12t28.5 12l143 143q6 6 8.5 13t2.5 15q0 8-2.5 15t-8.5 13L708-428q-12 12-28 11.5T652-429q-11-12-11.5-28t11.5-28l75-75Z"/></symbol>
-    <symbol id="icon-ios_share" viewBox="0 -960 960 960"><path d="M240-40q-33 0-56.5-23.5T160-120v-440q0-33 23.5-56.5T240-640h80q17 0 28.5 11.5T360-600q0 17-11.5 28.5T320-560h-80v440h480v-440h-80q-17 0-28.5-11.5T600-600q0-17 11.5-28.5T640-640h80q33 0 56.5 23.5T800-560v440q0 33-23.5 56.5T720-40H240Zm200-727-36 36q-12 12-28 11.5T348-732q-11-12-11.5-28t11.5-28l104-104q12-12 28-12t28 12l104 104q11 11 11 27.5T612-732q-12 12-28.5 12T555-732l-35-35v407q0 17-11.5 28.5T480-320q-17 0-28.5-11.5T440-360v-407Z"/></symbol>
-    <symbol id="icon-add_box" viewBox="0 -960 960 960"><path d="M440-440v120q0 17 11.5 28.5T480-280q17 0 28.5-11.5T520-320v-120h120q17 0 28.5-11.5T680-480q0-17-11.5-28.5T640-520H520v-120q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640v120H320q-17 0-28.5 11.5T280-480q0 17 11.5 28.5T320-440h120ZM200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm0-560v560-560Z"/></symbol>
+  <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+    <symbol id="icon-menu" viewBox="0 -960 960 960">
+      <path
+        d="M160-240q-17 0-28.5-11.5T120-280q0-17 11.5-28.5T160-320h640q17 0 28.5 11.5T840-280q0 17-11.5 28.5T800-240H160Zm0-200q-17 0-28.5-11.5T120-480q0-17 11.5-28.5T160-520h640q17 0 28.5 11.5T840-480q0 17-11.5 28.5T800-440H160Zm0-200q-17 0-28.5-11.5T120-680q0-17 11.5-28.5T160-720h640q17 0 28.5 11.5T840-680q0 17-11.5 28.5T800-640H160Z" />
+    </symbol>
+    <symbol id="icon-close" viewBox="0 -960 960 960">
+      <path
+        d="M480-424 284-228q-11 11-28 11t-28-11q-11-11-11-28t11-28l196-196-196-196q-11-11-11-28t11-28q11-11 28-11t28 11l196 196 196-196q11-11 28-11t28 11q11 11 11 28t-11 28L536-480l196 196q11 11 11 28t-11 28q-11 11-28 11t-28-11L480-424Z" />
+    </symbol>
+    <symbol id="icon-search" viewBox="0 -960 960 960">
+      <path
+        d="M380-320q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l224 224q11 11 11 28t-11 28q-11 11-28 11t-28-11L532-372q-30 24-69 38t-83 14Zm0-80q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z" />
+    </symbol>
+    <symbol id="icon-dark_mode" viewBox="0 -960 960 960">
+      <path
+        d="M480-120q-151 0-255.5-104.5T120-480q0-138 90-239.5T440-838q13-2 23 3.5t16 14.5q6 9 6.5 21t-7.5 23q-17 26-25.5 55t-8.5 61q0 90 63 153t153 63q31 0 61.5-9t54.5-25q11-7 22.5-6.5T819-479q10 5 15.5 15t3.5 24q-14 138-117.5 229T480-120Zm0-80q88 0 158-48.5T740-375q-20 5-40 8t-40 3q-123 0-209.5-86.5T364-660q0-20 3-40t8-40q-78 32-126.5 102T200-480q0 116 82 198t198 82Zm-10-270Z" />
+    </symbol>
+    <symbol id="icon-light_mode" viewBox="0 -960 960 960">
+      <path
+        d="M480-360q50 0 85-35t35-85q0-50-35-85t-85-35q-50 0-85 35t-35 85q0 50 35 85t85 35Zm0 80q-83 0-141.5-58.5T280-480q0-83 58.5-141.5T480-680q83 0 141.5 58.5T680-480q0 83-58.5 141.5T480-280ZM80-440q-17 0-28.5-11.5T40-480q0-17 11.5-28.5T80-520h80q17 0 28.5 11.5T200-480q0 17-11.5 28.5T160-440H80Zm720 0q-17 0-28.5-11.5T760-480q0-17 11.5-28.5T800-520h80q17 0 28.5 11.5T920-480q0 17-11.5 28.5T880-440h-80ZM480-760q-17 0-28.5-11.5T440-800v-80q0-17 11.5-28.5T480-920q17 0 28.5 11.5T520-880v80q0 17-11.5 28.5T480-760Zm0 720q-17 0-28.5-11.5T440-80v-80q0-17 11.5-28.5T480-200q17 0 28.5 11.5T520-160v80q0 17-11.5 28.5T480-40ZM226-678l-43-42q-12-11-11.5-28t11.5-29q12-12 29-12t28 12l42 43q11 12 11 28t-11 28q-11 12-27.5 11.5T226-678Zm494 495-42-43q-11-12-11-28.5t11-27.5q11-12 27.5-11.5T734-282l43 42q12 11 11.5 28T777-183q-12 12-29 12t-28-12Zm-42-495q-12-11-11.5-27.5T678-734l42-43q11-12 28-11.5t29 11.5q12 12 12 29t-12 28l-43 42q-12 11-28 11t-28-11ZM183-183q-12-12-12-29t12-28l43-42q12-11 28.5-11t27.5 11q12 11 11.5 27.5T282-226l-42 43q-11 12-28 11.5T183-183Zm297-297Z" />
+    </symbol>
+    <symbol id="icon-install_mobile" viewBox="0 -960 960 960">
+      <path
+        d="M280-40q-33 0-56.5-23.5T200-120v-720q0-33 23.5-56.5T280-920h240q17 0 28.5 11.5T560-880q0 17-11.5 28.5T520-840H280v40h240q17 0 28.5 11.5T560-760q0 17-11.5 28.5T520-720H280v480h400v-40q0-17 11.5-28.5T720-320q17 0 28.5 11.5T760-280v160q0 33-23.5 56.5T680-40H280Zm0-120v40h400v-40H280Zm400-392v-248q0-17 11.5-28.5T720-840q17 0 28.5 11.5T760-800v248l76-76q11-11 28-11t28 11q11 11 11 28t-11 28L748-428q-12 12-28 12t-28-12L548-572q-11-11-11-28t11-28q11-11 28-11t28 11l76 76ZM280-800v-40 40Zm0 640v40-40Z" />
+    </symbol>
+    <symbol id="icon-meeting_room" viewBox="0 -960 960 960">
+      <path
+        d="M160-120q-17 0-28.5-11.5T120-160q0-17 11.5-28.5T160-200h40v-600q0-17 11.5-28.5T240-840h320q17 0 28.5 11.5T600-800h120q17 0 28.5 11.5T760-760v560h40q17 0 28.5 11.5T840-160q0 17-11.5 28.5T800-120h-80q-17 0-28.5-11.5T680-160v-560h-80v560q0 17-11.5 28.5T560-120H160Zm120-640v560-560Zm200 280q0-17-11.5-28.5T440-520q-17 0-28.5 11.5T400-480q0 17 11.5 28.5T440-440q17 0 28.5-11.5T480-480ZM280-200h240v-560H280v560Z" />
+    </symbol>
+    <symbol id="icon-calendar_month" viewBox="0 -960 960 960">
+      <path
+        d="M200-80q-33 0-56.5-23.5T120-160v-560q0-33 23.5-56.5T200-800h40v-40q0-17 11.5-28.5T280-880q17 0 28.5 11.5T320-840v40h320v-40q0-17 11.5-28.5T680-880q17 0 28.5 11.5T720-840v40h40q33 0 56.5 23.5T840-720v560q0 33-23.5 56.5T760-80H200Zm0-80h560v-400H200v400Zm0-480h560v-80H200v80Zm0 0v-80 80Zm280 240q-17 0-28.5-11.5T440-440q0-17 11.5-28.5T480-480q17 0 28.5 11.5T520-440q0 17-11.5 28.5T480-400Zm-160 0q-17 0-28.5-11.5T280-440q0-17 11.5-28.5T320-480q17 0 28.5 11.5T360-440q0 17-11.5 28.5T320-400Zm320 0q-17 0-28.5-11.5T600-440q0-17 11.5-28.5T640-480q17 0 28.5 11.5T680-440q0 17-11.5 28.5T640-400ZM480-240q-17 0-28.5-11.5T440-280q0-17 11.5-28.5T480-320q17 0 28.5 11.5T520-280q0 17-11.5 28.5T480-240Zm-160 0q-17 0-28.5-11.5T280-280q0-17 11.5-28.5T320-320q17 0 28.5 11.5T360-280q0 17-11.5 28.5T320-240Zm320 0q-17 0-28.5-11.5T600-280q0-17 11.5-28.5T640-320q17 0 28.5 11.5T680-280q0 17-11.5 28.5T640-240Z" />
+    </symbol>
+    <symbol id="icon-warning" viewBox="0 -960 960 960">
+      <path
+        d="M109-120q-11 0-20-5.5T75-140q-5-9-5.5-19.5T75-180l370-640q6-10 15.5-15t19.5-5q10 0 19.5 5t15.5 15l370 640q6 10 5.5 20.5T885-140q-5 9-14 14.5t-20 5.5H109Zm69-80h604L480-720 178-200Zm302-40q17 0 28.5-11.5T520-280q0-17-11.5-28.5T480-320q-17 0-28.5 11.5T440-280q0 17 11.5 28.5T480-240Zm0-120q17 0 28.5-11.5T520-400v-120q0-17-11.5-28.5T480-560q-17 0-28.5 11.5T440-520v120q0 17 11.5 28.5T480-360Zm0-100Z" />
+    </symbol>
+    <symbol id="icon-celebration" viewBox="0 -960 960 960">
+      <path
+        d="m212-212 282-100-182-182-100 282Zm709-467q-9 9-21 9t-21-9l-3-3q-14-14-35-14t-35 14L603-479q-9 9-21 9t-21-9q-9-9-9-21t9-21l203-203q32-32 77-32t77 32l3 3q9 9 9 21t-9 21ZM399-799q9-9 21-9t21 9l5 5q32 32 32 76t-32 76l-3 3q-9 9-21 9t-21-9q-9-9-9-21t9-21l3-3q14-14 14-34t-14-34l-5-5q-9-9-9-21t9-21Zm162-80q9-9 21-9t21 9l43 43q32 32 32 77t-32 77L523-559q-9 9-21 9t-21-9q-9-9-9-21t9-21l123-123q14-14 14-35t-14-35l-43-43q-9-9-9-21t9-21Zm320 480q-9 9-21 9t-21-9l-43-43q-14-14-35-14t-35 14l-43 43q-9 9-21 9t-21-9q-9-9-9-21t9-21l43-43q32-32 77-32t77 32l43 43q9 9 9 21t-9 21ZM212-212Zm-104 52 151-420q5-13 15.5-20t22.5-7q8 0 15 3t13 9l270 270q6 6 9 13t3 15q0 12-7 22.5T580-259L160-108q-12 5-23 1.5T118-118q-8-8-11.5-19t1.5-23Z" />
+    </symbol>
+    <symbol id="icon-info" viewBox="0 -960 960 960">
+      <path
+        d="M480-280q17 0 28.5-11.5T520-320v-160q0-17-11.5-28.5T480-520q-17 0-28.5 11.5T440-480v160q0 17 11.5 28.5T480-280Zm0-320q17 0 28.5-11.5T520-640q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640q0 17 11.5 28.5T480-600Zm0 520q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z" />
+    </symbol>
+    <symbol id="icon-event_upcoming" viewBox="0 -960 960 960">
+      <path
+        d="M760-80H640q-17 0-28.5-11.5T600-120q0-17 11.5-28.5T640-160h120v-400H200v120q0 17-11.5 28.5T160-400q-17 0-28.5-11.5T120-440v-280q0-33 23.5-56.5T200-800h40v-40q0-17 11.5-28.5T280-880q17 0 28.5 11.5T320-840v40h320v-40q0-17 11.5-28.5T680-880q17 0 28.5 11.5T720-840v40h40q33 0 56.5 23.5T840-720v560q0 33-23.5 56.5T760-80Zm-393-80H80q-17 0-28.5-11.5T40-200q0-17 11.5-28.5T80-240h287l-75-76q-11-11-11.5-27.5T292-372q11-11 28-11t28 11l144 144q12 12 12 28t-12 28L348-28q-11 11-27.5 11.5T292-28q-11-11-11-28t11-28l75-76ZM200-640h560v-80H200v80Zm0 0v-80 80Z" />
+    </symbol>
+    <symbol id="icon-beach_access" viewBox="0 -960 960 960">
+      <path
+        d="M756-148 558-346q-11-11-11-28t11-28q11-11 28-11t28 11l198 198q11 11 11 28t-11 28q-11 11-28 11t-28-11Zm-575-72q-31-50-46-104.5T120-436q0-78 29-152t89-134q60-60 134.5-89.5T525-841q57 0 111.5 15.5T740-779q31 20 33 57t-26 65L303-213q-28 28-65.5 26T181-220Zm65-50 54-54q-16-21-30.5-43T243-411q-12-22-21-44t-16-43q-11 59-1.5 118T246-270Zm112-110 222-224q-43-33-86.5-53.5t-81.5-28q-38-7.5-68.5-2.5T296-666q-17 18-22 48.5t2.5 69q7.5 38.5 28 81.5t53.5 87Zm334-334q-53-32-112-42t-118 2q22 7 44 16t44 20.5q22 11.5 43.5 26T636-660l56-54Z" />
+    </symbol>
+    <symbol id="icon-school" viewBox="0 -960 960 960">
+      <path
+        d="M242-249q-20-11-31-29.5T200-320v-192l-96-53q-11-6-16-15t-5-20q0-11 5-20t16-15l338-184q9-5 18.5-7.5T480-829q10 0 19.5 2.5T518-819l381 208q10 5 15.5 14.5T920-576v256q0 17-11.5 28.5T880-280q-17 0-28.5-11.5T840-320v-236l-80 44v192q0 23-11 41.5T718-249L518-141q-9 5-18.5 7.5T480-131q-10 0-19.5-2.5T442-141L242-249Zm238-203 274-148-274-148-274 148 274 148Zm0 241 200-108v-151l-161 89q-9 5-19 7.5t-20 2.5q-10 0-20-2.5t-19-7.5l-161-89v151l200 108Zm0-241Zm0 121Zm0 0Z" />
+    </symbol>
+    <symbol id="icon-swap_horiz" viewBox="0 -960 960 960">
+      <path
+        d="m233-320 75 75q11 11 11 27.5T308-189q-12 12-28.5 12T251-189L108-332q-6-6-8.5-13T97-360q0-8 2.5-15t8.5-13l144-144q12-12 28-11.5t28 12.5q11 12 11.5 28T308-475l-75 75h247q17 0 28.5 11.5T520-360q0 17-11.5 28.5T480-320H233Zm494-240H480q-17 0-28.5-11.5T440-600q0-17 11.5-28.5T480-640h247l-75-75q-11-11-11-27.5t11-28.5q12-12 28.5-12t28.5 12l143 143q6 6 8.5 13t2.5 15q0 8-2.5 15t-8.5 13L708-428q-12 12-28 11.5T652-429q-11-12-11.5-28t11.5-28l75-75Z" />
+    </symbol>
+    <symbol id="icon-ios_share" viewBox="0 -960 960 960">
+      <path
+        d="M240-40q-33 0-56.5-23.5T160-120v-440q0-33 23.5-56.5T240-640h80q17 0 28.5 11.5T360-600q0 17-11.5 28.5T320-560h-80v440h480v-440h-80q-17 0-28.5-11.5T600-600q0-17 11.5-28.5T640-640h80q33 0 56.5 23.5T800-560v440q0 33-23.5 56.5T720-40H240Zm200-727-36 36q-12 12-28 11.5T348-732q-11-12-11.5-28t11.5-28l104-104q12-12 28-12t28 12l104 104q11 11 11 27.5T612-732q-12 12-28.5 12T555-732l-35-35v407q0 17-11.5 28.5T480-320q-17 0-28.5-11.5T440-360v-407Z" />
+    </symbol>
+    <symbol id="icon-add_box" viewBox="0 -960 960 960">
+      <path
+        d="M440-440v120q0 17 11.5 28.5T480-280q17 0 28.5-11.5T520-320v-120h120q17 0 28.5-11.5T680-480q0-17-11.5-28.5T640-520H520v-120q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640v120H320q-17 0-28.5 11.5T280-480q0 17 11.5 28.5T320-440h120ZM200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm0-560v560-560Z" />
+    <symbol id="icon-github" viewBox="0 0 24 24">
+      <path fill="currentColor"
+        d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+    </symbol>
   </svg>
 
   <header class="app-header">
     <div class="header-content">
       <div class="header-left">
         <button id="menu-toggle" class="btn-icon" title="Otwórz menu wyboru planu" aria-label="Menu">
-          <svg class="icon" aria-hidden="true"><use href="#icon-menu"></use></svg>
+          <svg class="icon" aria-hidden="true">
+            <use href="#icon-menu"></use>
+          </svg>
         </button>
         <div class="brand">
           <span class="logo">⚓</span>
           <div class="brand-titles">
-            <h1>Plan Zajęć UMG</h1>
+            <h1>Plan Zajęć WN</h1>
             <span class="header-group-badge" id="header-active-group">Wybierz grupę</span>
           </div>
         </div>
       </div>
       <div class="header-actions">
-        <button id="header-install-btn" class="btn-icon hidden" title="Zainstaluj aplikację na telefonie" aria-label="Zainstaluj">
-          <svg class="icon" aria-hidden="true"><use href="#icon-install_mobile"></use></svg>
+        <button id="header-calendar-btn" class="btn-icon" title="Dodaj do kalendarza (Google / Apple / ICS)"
+          aria-label="Kalendarz">
+          <svg class="icon" aria-hidden="true">
+            <use href="#icon-calendar_month"></use>
+          </svg>
         </button>
-        <button id="header-search-btn" class="btn-icon" title="Szukaj wykładowcy, sali lub przedmiotu" aria-label="Szukaj">
-          <svg class="icon" aria-hidden="true"><use href="#icon-search"></use></svg>
+        <button id="header-install-btn" class="btn-icon hidden" title="Zainstaluj aplikację na telefonie"
+          aria-label="Zainstaluj">
+          <svg class="icon" aria-hidden="true">
+            <use href="#icon-install_mobile"></use>
+          </svg>
+        </button>
+        <button id="header-search-btn" class="btn-icon" title="Szukaj wykładowcy, sali lub przedmiotu"
+          aria-label="Szukaj">
+          <svg class="icon" aria-hidden="true">
+            <use href="#icon-search"></use>
+          </svg>
         </button>
         <button id="theme-toggle" class="btn-icon" title="Przełącz motyw" aria-label="Przełącz motyw">
-          <svg class="icon" aria-hidden="true"><use href="#icon-dark_mode"></use></svg>
+          <svg class="icon" aria-hidden="true">
+            <use href="#icon-dark_mode"></use>
+          </svg>
         </button>
       </div>
     </div>
@@ -78,7 +151,9 @@
     <div class="sidebar-header">
       <h2>Ustawienia Planu</h2>
       <button id="close-sidebar" class="btn-icon close-sidebar-btn" title="Zamknij" aria-label="Zamknij">
-        <svg class="icon" aria-hidden="true"><use href="#icon-close"></use></svg>
+        <svg class="icon" aria-hidden="true">
+          <use href="#icon-close"></use>
+        </svg>
       </button>
     </div>
 
@@ -87,10 +162,14 @@
       <div class="sidebar-section search-sidebar-section">
         <label for="sidebar-search-input" class="control-label">Szybkie wyszukiwanie:</label>
         <div class="search-input-wrapper">
-          <svg class="icon search-icon" aria-hidden="true"><use href="#icon-search"></use></svg>
+          <svg class="icon search-icon" aria-hidden="true">
+            <use href="#icon-search"></use>
+          </svg>
           <input type="text" id="sidebar-search-input" placeholder="Wykładowca, sala, przedmiot..." autocomplete="off">
           <button id="clear-search-btn" class="btn-icon clear-search-btn hidden" aria-label="Wyczyść">
-            <svg class="icon" aria-hidden="true"><use href="#icon-close"></use></svg>
+            <svg class="icon" aria-hidden="true">
+              <use href="#icon-close"></use>
+            </svg>
           </button>
         </div>
         <div id="search-results" class="search-results-dropdown hidden"></div>
@@ -117,15 +196,27 @@
       <div class="sidebar-section tools-sidebar-section">
         <span class="control-label">Narzędzia:</span>
         <button id="free-rooms-btn" class="btn-secondary btn-sidebar-tool" title="Znajdź wolną salę">
-          <svg class="icon btn-tool-icon" aria-hidden="true"><use href="#icon-meeting_room"></use></svg> <span class="btn-text">Znajdź wolną salę</span>
+          <svg class="icon btn-tool-icon" aria-hidden="true">
+            <use href="#icon-meeting_room"></use>
+          </svg> <span class="btn-text">Znajdź wolną salę</span>
         </button>
-        <!-- Ukryte do czasu pełnych testów kalendarza
-        <button id="calendar-btn" class="btn-primary btn-sidebar-calendar" title="Subskrybuj kalendarz" style="margin-top: 0.5rem;">
-          <svg class="icon btn-tool-icon" aria-hidden="true"><use href="#icon-calendar_month"></use></svg> <span class="btn-text">Subskrybuj kalendarz</span>
+        <button id="calendar-btn" class="btn-secondary btn-sidebar-tool" title="Dodaj do kalendarza"
+          style="margin-top: 0.5rem;">
+          <svg class="icon btn-tool-icon" aria-hidden="true">
+            <use href="#icon-calendar_month"></use>
+          </svg> <span class="btn-text">Dodaj do kalendarza</span>
         </button>
-        -->
-        <button id="pwa-install-btn" class="btn-secondary btn-sidebar-tool hidden" title="Zainstaluj aplikację" style="margin-top: 0.5rem;">
-          <svg class="icon btn-tool-icon" aria-hidden="true"><use href="#icon-install_mobile"></use></svg> <span class="btn-text" id="pwa-install-btn-text">Zainstaluj aplikację</span>
+        <button id="pwa-install-btn" class="btn-secondary btn-sidebar-tool hidden" title="Zainstaluj aplikację"
+          style="margin-top: 0.5rem;">
+          <svg class="icon btn-tool-icon" aria-hidden="true">
+            <use href="#icon-install_mobile"></use>
+          </svg> <span class="btn-text" id="pwa-install-btn-text">Zainstaluj aplikację</span>
+        </button>
+        <button id="about-app-btn" class="btn-secondary btn-sidebar-tool" title="O aplikacji"
+          style="margin-top: 0.5rem;">
+          <svg class="icon btn-tool-icon" aria-hidden="true">
+            <use href="#icon-info"></use>
+          </svg> <span class="btn-text">O aplikacji</span>
         </button>
       </div>
 
@@ -152,8 +243,10 @@
       <div class="week-nav-controls">
         <button id="prev-week" class="btn-nav" title="Poprzedni tydzień">‹</button>
         <div class="week-info">
-          <span class="week-label" id="current-week-label" title="Kliknij, aby wybrać dzień z kalendarza">Ładowanie tygodnia...</span>
-          <input type="date" id="week-date-picker" class="visually-hidden-picker" tabindex="-1" aria-hidden="true" aria-label="Wybierz datę z kalendarza">
+          <span class="week-label" id="current-week-label" title="Kliknij, aby wybrać dzień z kalendarza">Ładowanie
+            tygodnia...</span>
+          <input type="date" id="week-date-picker" class="visually-hidden-picker" tabindex="-1" aria-hidden="true"
+            aria-label="Wybierz datę z kalendarza">
           <button id="today-btn" class="btn-today">Dzisiaj</button>
         </div>
         <button id="next-week" class="btn-nav" title="Następny tydzień">›</button>
@@ -185,8 +278,13 @@
       <div id="empty-state" class="state-card hidden">
         <span class="state-icon">🗓️</span>
         <h3>Wybierz kierunek i grupę</h3>
-        <p>Kliknij ikonę menu <svg class="icon" style="vertical-align: middle; font-size: 1.15em;" aria-hidden="true"><use href="#icon-menu"></use></svg> w lewym górnym rogu, aby wybrać swój kierunek i grupę.</p>
-        <button id="open-menu-cta" class="btn-primary" style="margin: 1rem auto 0;"><svg class="icon" aria-hidden="true"><use href="#icon-menu"></use></svg> Otwórz menu</button>
+        <p>Kliknij ikonę menu <svg class="icon" style="vertical-align: middle; font-size: 1.15em;" aria-hidden="true">
+            <use href="#icon-menu"></use>
+          </svg> w lewym górnym rogu, aby wybrać swój kierunek i grupę.</p>
+        <button id="open-menu-cta" class="btn-primary" style="margin: 1rem auto 0;"><svg class="icon"
+            aria-hidden="true">
+            <use href="#icon-menu"></use>
+          </svg> Otwórz menu</button>
       </div>
 
       <div id="no-classes-state" class="state-card hidden">
@@ -201,31 +299,77 @@
   </main>
 
   <!-- Calendar subscription modal -->
-  <div id="calendar-modal" class="modal hidden">
+  <!-- Subscription / Calendar Modal -->
+  <div id="calendar-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="calendar-modal-title">
     <div class="modal-backdrop"></div>
-    <div class="modal-content">
+    <div class="modal-content calendar-modal-content">
       <div class="modal-header">
-        <h3>Subskrypcja kalendarza</h3>
+        <div class="modal-header-titles">
+          <span class="cross-modal-badge">Kalendarz</span>
+          <h3 id="calendar-modal-title">Dodaj do kalendarza</h3>
+        </div>
         <button id="close-modal" class="btn-close" aria-label="Zamknij">
-          <svg class="icon" aria-hidden="true"><use href="#icon-close"></use></svg>
+          <svg class="icon" aria-hidden="true">
+            <use href="#icon-close"></use>
+          </svg>
         </button>
       </div>
-      <div class="modal-body">
-        <p>Dodaj plan do aplikacji Kalendarza w telefonie lub na komputerze (Apple Calendar, Google, Outlook). Zajęcia będą aktualizować się automatycznie.</p>
-        
-        <div class="calendar-actions">
-          <a id="webcal-btn" href="#" class="btn-modal-action primary">
-            📲 Dodaj do Kalendarza w telefonie / PC
-          </a>
+      <div class="modal-body calendar-modal-body">
+        <p class="calendar-intro">
+          Zasubskrybuj plan w swojej aplikacji kalendarza. Nowe zajęcia, zmiany sal i zamiany dni będą aktualizować się automatycznie.
+        </p>
+
+        <div class="calendar-options-grid">
+          <!-- Google Calendar -->
+          <div id="cal-google-card" class="calendar-option-card">
+            <div class="cal-card-info">
+              <span class="cal-card-icon">📅</span>
+              <div>
+                <strong>Google Calendar</strong>
+                <span class="cal-card-sub">Android, PC, przeglądarka</span>
+              </div>
+            </div>
+            <a id="cal-google-btn" href="#" target="_blank" rel="noopener" class="btn-cal-action btn-google">
+              Dodaj do Google
+            </a>
+          </div>
+
+          <!-- Apple Calendar -->
+          <div id="cal-apple-card" class="calendar-option-card">
+            <div class="cal-card-info">
+              <span class="cal-card-icon">🍏</span>
+              <div>
+                <strong>Apple Kalendarz</strong>
+                <span class="cal-card-sub">iPhone, iPad, Mac</span>
+              </div>
+            </div>
+            <a id="cal-apple-btn" href="#" class="btn-cal-action btn-apple">
+              Subskrybuj w iOS
+            </a>
+          </div>
         </div>
 
+        <!-- Other apps / Direct link -->
         <div class="calendar-copy-box">
-          <label for="calendar-url-input">Link bezpośredni (np. dla Kalendarza Google):</label>
+          <label for="calendar-url-input">Inna aplikacja (Outlook, Samsung Kalendarz, Thunderbird):</label>
           <div class="copy-input-group">
-            <input type="text" id="calendar-url-input" readonly>
-            <button id="copy-url-btn" class="btn-copy">Kopiuj</button>
+            <input type="text" id="calendar-url-input" readonly spellcheck="false">
+            <button id="copy-url-btn" class="btn-copy">Kopiuj link</button>
           </div>
-          <span id="copy-feedback" class="copy-feedback hidden">Skopiowano do schowka!</span>
+          <span id="copy-feedback" class="copy-feedback hidden">Skopiowano link subskrypcji do schowka!</span>
+        </div>
+
+        <!-- Local file download (offline / fallback) -->
+        <div class="calendar-download-box">
+          <div class="calendar-download-note">
+            <span>Potrzebujesz pliku offline lub telefonu bez usług Google?</span>
+          </div>
+          <a id="cal-download-btn" href="#" download class="btn-cal-download">
+            <svg class="icon" aria-hidden="true">
+              <use href="#icon-install_mobile"></use>
+            </svg>
+            <span>Pobierz plik kalendarza (.ics)</span>
+          </a>
         </div>
       </div>
     </div>
@@ -241,7 +385,9 @@
           <h3 id="cross-modal-title">Szczegóły</h3>
         </div>
         <button id="close-cross-modal" class="btn-close" aria-label="Zamknij">
-          <svg class="icon" aria-hidden="true"><use href="#icon-close"></use></svg>
+          <svg class="icon" aria-hidden="true">
+            <use href="#icon-close"></use>
+          </svg>
         </button>
       </div>
       <div id="cross-modal-body" class="modal-body cross-modal-body">
@@ -255,13 +401,15 @@
     <div class="modal-backdrop"></div>
     <div class="modal-content">
       <div class="modal-header">
-        <h3 id="pwa-install-title">Zainstaluj Plan UMG</h3>
+        <h3 id="pwa-install-title">Zainstaluj Plan WN</h3>
         <button id="close-ios-modal" class="btn-close" aria-label="Zamknij">
-          <svg class="icon" aria-hidden="true"><use href="#icon-close"></use></svg>
+          <svg class="icon" aria-hidden="true">
+            <use href="#icon-close"></use>
+          </svg>
         </button>
       </div>
       <div class="modal-body ios-install-body" id="pwa-install-body">
-        <p>Zainstaluj Plan UMG na swoim urządzeniu, aby mieć błyskawiczny dostęp jak do natywnej aplikacji:</p>
+        <p>Zainstaluj Plan WN na swoim urządzeniu, aby mieć błyskawiczny dostęp jak do natywnej aplikacji:</p>
         <ol class="ios-install-steps">
           <li>
             <span class="step-num">1</span>
@@ -272,7 +420,10 @@
           <li>
             <span class="step-num">2</span>
             <div class="step-desc">
-              Wybierz <strong>„Zainstaluj aplikację”</strong> lub <strong>„Dodaj do ekranu głównego”</strong> (<svg class="icon ios-step-icon" aria-hidden="true"><use href="#icon-install_mobile"></use></svg>).
+              Wybierz <strong>„Zainstaluj aplikację”</strong> lub <strong>„Dodaj do ekranu głównego”</strong> (<svg
+                class="icon ios-step-icon" aria-hidden="true">
+                <use href="#icon-install_mobile"></use>
+              </svg>).
             </div>
           </li>
           <li>
@@ -282,15 +433,112 @@
             </div>
           </li>
         </ol>
-        <button id="close-ios-modal-btn" class="btn-primary" style="width: 100%; justify-content: center; margin-top: 1.25rem;">Rozumiem</button>
+        <button id="close-ios-modal-btn" class="btn-primary"
+          style="width: 100%; justify-content: center; margin-top: 1.25rem;">Rozumiem</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- About App Modal -->
+  <div id="about-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="about-modal-title">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-header-titles">
+          <span class="cross-modal-badge">Informacja</span>
+          <h3 id="about-modal-title">O aplikacji Plan WN</h3>
+        </div>
+        <button id="close-about-modal" class="btn-close" aria-label="Zamknij">
+          <svg class="icon" aria-hidden="true">
+            <use href="#icon-close"></use>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body about-modal-body">
+        <div class="about-card about-intro">
+          <div class="about-logo-badge">⚓</div>
+          <div>
+            <h4 style="margin: 0; font-size: 1.1rem; color: var(--text-primary);">Plan Zajęć WN</h4>
+            <p class="subtext" style="margin: 0.2rem 0 0; color: var(--text-muted); font-size: 0.8rem;">Wersja PWA v3.8
+            </p>
+          </div>
+        </div>
+
+        <div class="about-modal-grid">
+          <div class="about-grid-col">
+            <div class="about-section">
+              <h5>O projekcie</h5>
+              <p>Aplikacja powstała dla studentów jako szybka, responsywna i działająca offline alternatywa dla
+                klasycznego
+                planu. Dane pobierane są z publicznie dostępnego oficjalnego systemu <a
+                  href="https://arktur.umg.edu.pl/planyzaj/strpza5.php" target="_blank"
+                  rel="noopener">arktur.umg.edu.pl</a>
+                i odświeżane codziennie rano.</p>
+            </div>
+
+            <div class="about-section" style="margin-top: 1rem;">
+              <h5>Zgłaszanie uwag i błędów</h5>
+              <p>Zauważyłeś brakującą grupę, błąd w planie lub masz pomysł na nową funkcję?</p>
+              <div class="about-action-buttons">
+                <a href="#tally-open=2E2vNj&tally-layout=modal&tally-emoji-animation=none&tally-auto-close=5000"
+                  data-tally-open="2E2vNj" data-tally-layout="modal" data-tally-emoji-animation="none" data-tally-auto-close="5000"
+                  class="btn-about-action btn-tally-action">
+                  <svg class="icon" style="width: 1.15em; height: 1.15em;" aria-hidden="true">
+                    <use href="#icon-warning"></use>
+                  </svg>
+                  <span>Formularz zgłoszeń</span>
+                </a>
+                <a href="https://github.com/Qu4X/planwn/issues/new" target="_blank" rel="noopener"
+                  class="btn-about-action">
+                  <svg class="icon" style="width: 1.15em; height: 1.15em;" aria-hidden="true">
+                    <use href="#icon-github"></use>
+                  </svg>
+                  <span>Zgłoś na GitHubie</span>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div class="about-grid-col">
+            <div class="about-support-card">
+              <div class="support-card-header">
+                <span class="support-icon">🍺</span>
+                <h5>Podoba Ci się aplikacja?</h5>
+              </div>
+              <p class="support-description">Możesz wesprzeć dalszy rozwój projektu i postawić autorowi wirtualnego
+                browara!</p>
+              <a href="https://cuplink.to/qu4x" target="_blank" rel="noopener" class="btn-cuplink">
+                <span>🍺 Postaw browara na cuplink.to</span>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div class="about-disclaimer">
+          <h6>Zastrzeżenie prawne (Nota prawna)</h6>
+          <p>Niniejsza aplikacja jest <strong>nieoficjalnym projektem studenckim / open-source</strong> i nie jest w
+            żaden sposób powiązana, autoryzowana, wspierana ani prowadzona przez <strong>Uniwersytet Morski w Gdyni
+              (UMG)</strong>.</p>
+          <p>Wszelkie nazwy własne, skróty i znaki (w tym „UMG” oraz „Uniwersytet Morski w Gdyni”) należą do ich
+            prawnych właścicieli i zostały użyte wyłącznie w celach informacyjnych oraz identyfikacyjnych.</p>
+          <p>Dane pobierane są ze stron publicznych (<a href="https://arktur.umg.edu.pl/planyzaj/strpza5.php"
+              target="_blank" rel="noopener">arktur.umg.edu.pl</a>). Aplikacja udostępniana jest na zasadzie <em>„tak
+              jak jest” (as is)</em>. Jedynym oficjalnym i wiążącym źródłem informacji są komunikaty uczelni, dziekanaty
+            oraz system arktur.umg.edu.pl. Autor nie ponosi odpowiedzialności za ewentualne skutki wynikające z
+            rozbieżności lub opóźnień w synchronizacji.</p>
+        </div>
       </div>
     </div>
   </div>
 
   <footer class="app-footer">
-    <p>Projekt nieoficjalny dla studentów UMG. Dane pobierane z <a href="https://arktur.umg.edu.pl/planyzaj/strpza5.php" target="_blank" rel="noopener">arktur.umg.edu.pl</a>.</p>
+    <p>Projekt nieoficjalny dla studentów WN. Dane pobierane z <a href="https://arktur.umg.edu.pl/planyzaj/strpza5.php"
+        target="_blank" rel="noopener">arktur.umg.edu.pl</a>. • <button id="footer-about-btn" class="footer-link-btn">O
+        aplikacji</button></p>
   </footer>
 
+  <script async src="https://tally.so/widgets/embed.js"></script>
   <script src="app.js?v=3.8"></script>
 </body>
+
 </html>

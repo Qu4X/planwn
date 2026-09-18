@@ -1,4 +1,4 @@
-# Plan UMG
+# Plan WN
 
 Słownik pojęć domenowych dla systemu obsługi i prezentacji planów zajęć Uniwersytetu Morskiego w Gdyni.
 
