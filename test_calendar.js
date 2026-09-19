@@ -1,5 +1,5 @@
 const assert = require("assert");
-const { getLessonMeetingInfo, getMonday, getSafeGroupName, getRoomOccupancyAt, parsePlanInfo, updateCalendarNotice, elements } = require("./web/app.js");
+const { getLessonMeetingInfo, getMonday, getSafeGroupName, getRoomOccupancyAt, parsePlanInfo, updateCalendarNotice, renderSchedule, state, elements } = require("./web/app.js");
 
 console.log("\n🧪 Running Calendar Engine TDD Tests...\n");
 
@@ -705,3 +705,116 @@ assert.strictEqual(mockNoticeEl.classList.contains("hidden"), false, "Baner powi
 assert.ok(mockNoticeEl.innerHTML.includes("Komunikat:"), "Powinien wyświetlać komunikat krytyczny");
 
 console.log("✅ [PASS] updateCalendarNotice poprawnie filtruje alerty i ukrywa baner w trakcie przerw.");
+
+// --- TEST 19: renderSchedule - umiejscowienie plakietki zamiany dnia oraz karta święta ---
+console.log("\n-- Test 19: renderSchedule - umiejscowienie plakietki zamiany dnia oraz karta święta");
+
+const mockScheduleContent = {
+  innerHTML: "",
+  classList: {
+    classes: new Set(),
+    add(cls) { this.classes.add(cls); },
+    remove(cls) { this.classes.delete(cls); },
+    contains(cls) { return this.classes.has(cls); }
+  }
+};
+elements.scheduleContent = mockScheduleContent;
+elements.noClassesState = {
+  classList: {
+    classes: new Set(["hidden"]),
+    add(cls) { this.classes.add(cls); },
+    remove(cls) { this.classes.delete(cls); },
+    contains(cls) { return this.classes.has(cls); }
+  }
+};
+elements.dayTabs = {
+  innerHTML: "",
+  querySelectorAll() { return []; },
+  querySelector() {
+    return { classList: { add() {}, remove() {}, contains() { return false; } } };
+  }
+};
+
+// Mock global document if not present
+if (typeof document === "undefined") {
+  global.document = {
+    getElementById(id) {
+      return { innerHTML: "", textContent: "", classList: { add() {}, remove() {}, contains() { return false; } } };
+    },
+    createElement(tag) {
+      const el = { _text: "" };
+      Object.defineProperty(el, "textContent", {
+        set(val) {
+          this._text = val;
+          this.innerHTML = String(val).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        },
+        get() { return this._text; }
+      });
+      return el;
+    }
+  };
+}
+
+// Przygotuj dane planu dla widoku tygodnia z dniem zamiennym i świętem
+state.scheduleData = {
+  "ŚR": {
+    "08:00": {
+      przedmiot: "Matematyka",
+      godziny: "08:00 - 09:30",
+      sala: "201",
+      prowadzacy: "Dr Kowalski",
+      co_ile: 1,
+      od_tyg: 1,
+      tygodnie: 15,
+      grupa: "1"
+    }
+  }
+};
+state.selectedDayTab = "ALL";
+state.daysView = "workdays";
+// 13.11.2026 to tydzień 6 (weekOffset = calculate from targetMonday)
+// Monday 09.11.2026: Środa 11.11 święto, Piątek 13.11 zamiana na Środę
+const testMonDate = new Date(2026, 10, 9);
+const curMon = getMonday(new Date());
+state.weekOffset = Math.round((testMonDate - curMon) / (7 * 86400000));
+
+renderSchedule();
+
+const renderedHtml = mockScheduleContent.innerHTML;
+
+// 1. Sprawdź, czy święto renderuje się jako .lesson-card.holiday-card
+assert.ok(
+  renderedHtml.includes("lesson-card holiday-card"),
+  "Święto (11.11) powinno być renderowane jako dedykowana karta .lesson-card.holiday-card"
+);
+assert.ok(
+  renderedHtml.includes("holiday-card-icon") && renderedHtml.includes("Święto Niepodległości"),
+  "Karta święta powinna zawierać ikonę oraz nazwę święta"
+);
+
+// 2. Sprawdź, czy plakietka zamiany dnia znajduje się w nagłówku dnia (widok tygodnia)
+assert.ok(
+  renderedHtml.includes("grid-day-header") && renderedHtml.includes("grid-day-swap-badge"),
+  "Plakietka zamiany dnia powinna być osadzona wewnątrz nagłówka dnia w widoku tygodnia"
+);
+assert.ok(
+  renderedHtml.includes("Plan z środy"),
+  "Plakietka zamiany powinna wskazywać 'Plan z środy'"
+);
+
+// 3. Sprawdź widok pojedynczego dnia (single-day view)
+state.selectedDayTab = "PT"; // Piątek z zamianą na środę
+renderSchedule();
+
+const renderedSingleDayHtml = mockScheduleContent.innerHTML;
+assert.ok(
+  renderedSingleDayHtml.includes("day-header") && renderedSingleDayHtml.includes("day-swap-badge"),
+  "Plakietka zamiany dnia powinna być osadzona wewnątrz nagłówka .day-header w widoku pojedynczego dnia"
+);
+assert.ok(
+  renderedSingleDayHtml.includes("Plan z środy"),
+  "Plakietka zamiany w widoku pojedynczego dnia powinna wskazywać 'Plan z środy'"
+);
+
+console.log("✅ [PASS] renderSchedule poprawnie umieszcza plakietkę zamiany w nagłówku (mobile + desktop) i renderuje kartę święta.");
+

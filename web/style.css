@@ -826,24 +826,24 @@ body {
 
 /* Schedule Content: Mobile Day View */
 .day-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
 }
 
 .day-header {
   font-size: 1rem;
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 0.75rem;
+  margin-bottom: 1rem;
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
-.day-header::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--border-subtle);
+.day-header-title {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
 }
 
 .lessons-list {
@@ -1088,10 +1088,20 @@ body {
   .grid-day-header {
     font-size: 0.95rem;
     font-weight: 700;
-    text-align: center;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.35rem 0.5rem;
     padding-bottom: 0.5rem;
-    margin-bottom: 0.75rem;
+    margin-bottom: 1rem;
     border-bottom: 2px solid var(--brand-primary);
+  }
+
+  .grid-day-header-title {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.3rem;
   }
 
   .grid-day-header.today {
@@ -1965,8 +1975,9 @@ body {
   color: #f59e0b;
 }
 
-/* Grid day swap & holiday badges */
-.grid-day-swap-badge {
+/* Day swap & holiday badges */
+.grid-day-swap-badge,
+.day-swap-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1978,10 +1989,12 @@ body {
   border: 1px solid #fde68a;
   border-radius: 4px;
   padding: 0.15rem 0.45rem;
-  margin-top: 0.35rem;
+  margin: 0;
+  white-space: nowrap;
 }
 
-[data-theme="dark"] .grid-day-swap-badge {
+[data-theme="dark"] .grid-day-swap-badge,
+[data-theme="dark"] .day-swap-badge {
   color: #fde68a;
   background: #451a03;
   border-color: #78350f;
@@ -1999,13 +2012,51 @@ body {
   border: 1px solid #bae6fd;
   border-radius: 4px;
   padding: 0.15rem 0.45rem;
-  margin-top: 0.35rem;
+  margin: 0;
+  white-space: nowrap;
 }
 
 [data-theme="dark"] .grid-day-holiday-badge {
   color: #7dd3fc;
   background: #082f49;
   border-color: #0369a1;
+}
+
+/* Holiday lesson card variant */
+.lesson-card.holiday-card {
+  border-left: 4px solid #0284c7;
+  padding: 1.25rem 1rem;
+  justify-content: center;
+  align-items: center;
+}
+
+[data-theme="dark"] .lesson-card.holiday-card {
+  border-left-color: #38bdf8;
+}
+
+.holiday-card-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  text-align: center;
+}
+
+.holiday-card-icon {
+  font-size: 1.6rem;
+  color: #0284c7;
+}
+
+[data-theme="dark"] .holiday-card-icon {
+  color: #38bdf8;
+}
+
+.holiday-card-text {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.35;
 }
 
 /* Grid contextual empty states */

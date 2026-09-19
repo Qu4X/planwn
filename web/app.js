@@ -1375,20 +1375,18 @@ function renderSchedule() {
 
     let headerTitle = dayDateFormatted ? `${DNI_PELNE[day]} <span style="font-size: 0.85em; font-weight: normal; opacity: 0.8;">(${dayDateFormatted})</span>` : DNI_PELNE[day];
 
-    let swapBanner = "";
+    let swapBadge = "";
     if (dayData.swap) {
       const targetDayGen = DNI_DOPELNIACZ[dayData.swap.replaceWith] || dayData.swap.replaceWith;
-      swapBanner = `
-        <div class="day-swap-banner">
-          ${icon("swap_horiz")}
-          <span>Dziś zajęcia według planu z <strong>${targetDayGen}</strong></span>
-        </div>
-      `;
+      const cleanNote = (dayData.swap.note || "").replace(/\s*\(zarządzenie rektora\)/gi, "").trim();
+      swapBadge = `<div class="day-swap-badge" title="${escapeHtml(cleanNote)}">${icon("swap_horiz", "", "width: 1.1em; height: 1.1em; vertical-align: middle;")} Plan z ${targetDayGen}</div>`;
     }
 
     html += `<div class="day-group">
-      <div class="day-header">${headerTitle}</div>
-      ${swapBanner}
+      <div class="day-header">
+        <span class="day-header-title">${headerTitle}</span>
+        ${swapBadge}
+      </div>
       <div class="lessons-list">
         ${lessons.map((l) => renderLessonCard(l, targetMonday)).join("")}
       </div>
@@ -1420,16 +1418,18 @@ function renderSchedule() {
         `;
       } else if (dayData.holiday) {
         emptyDayContent = `
-          <div class="grid-day-empty-state holiday">
-            ${icon("celebration", "grid-empty-icon")}
-            <span class="grid-empty-text">${escapeHtml(dayData.holiday)}</span>
+          <div class="lesson-card holiday-card">
+            <div class="holiday-card-content">
+              ${icon("celebration", "holiday-card-icon")}
+              <span class="holiday-card-text">${escapeHtml(dayData.holiday)}</span>
+            </div>
           </div>
         `;
       }
 
       html += `<div class="grid-day-col">
         <div class="grid-day-header ${isToday ? 'today' : ''}">
-          <div>${DNI_PELNE[day]} <span style="font-size: 0.8em; font-weight: normal; opacity: 0.75;">${dayDateFormatted}</span> ${isToday ? '• Dziś' : ''}</div>
+          <span class="grid-day-header-title">${DNI_PELNE[day]} <span style="font-size: 0.8em; font-weight: normal; opacity: 0.75;">${dayDateFormatted}</span> ${isToday ? '• Dziś' : ''}</span>
           ${swapBadge}
         </div>
         <div class="grid-lessons-list">
@@ -2440,6 +2440,8 @@ if (typeof module !== "undefined" && module.exports) {
     getRoomOccupancyAt,
     parsePlanInfo,
     updateCalendarNotice,
+    renderSchedule,
+    state,
     elements
   };
 }
