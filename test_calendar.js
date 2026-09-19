@@ -665,7 +665,7 @@ const weekWithHolidayAndSwap = {
 
 updateCalendarNotice(weekWithHolidayAndSwap);
 assert.strictEqual(mockNoticeEl.classList.contains("hidden"), false, "Baner powinien być widoczny dla dnia zamiennego");
-assert.ok(mockNoticeEl.innerHTML.includes("Dzień zamienny"), "Powinien zawierać informację o dniu zamiennym");
+assert.ok(mockNoticeEl.innerHTML.includes("Zamiana dnia"), "Powinien zawierać informację o zamianie dnia");
 assert.ok(!mockNoticeEl.innerHTML.includes("Dzień wolny"), "NIE powinien powielać informacji o pojedynczym dniu wolnym");
 
 // 2. Tydzień tylko z dniem wolnym (np. Wszystkich Świętych)

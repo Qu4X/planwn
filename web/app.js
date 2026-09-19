@@ -881,7 +881,7 @@ function updateCalendarNotice(academicInfo) {
       notices.push(`
         <div class="calendar-notice-item">
           ${icon("warning", "notice-icon")}
-          <span class="notice-text"><strong>Dzień zamienny:</strong> ${escapeHtml(cleanNote)}</span>
+          <span class="notice-text"><strong>Zamiana dnia:</strong> ${escapeHtml(cleanNote)}</span>
         </div>
       `);
     }
@@ -1103,8 +1103,8 @@ function getLessonMeetingInfo(lesson, baseDay, targetMonday, targetDate = null) 
     let targetMeetingNum = null;
     let targetActive = false;
 
-    // Simulate week-by-week actual teaching sessions (hard cap = 50 weeks)
-    const MAX_ITER = 50;
+    // Simulate week-by-week actual teaching sessions (hard cap = 200 weeks ≈ 4 years)
+    const MAX_ITER = 200;
     let safetyCount = 0;
 
     while ((currentMon <= targetMonday || meetingCount < totalWeeks) && safetyCount++ < MAX_ITER) {
@@ -1355,7 +1355,7 @@ function renderSchedule() {
       if (dayData.swap) {
         const targetDayGen = DNI_DOPELNIACZ[dayData.swap.replaceWith] || dayData.swap.replaceWith;
         if (iconEl) iconEl.innerHTML = icon("swap_horiz", "", "width: 3rem; height: 3rem; color: #d97706;");
-        if (titleEl) titleEl.textContent = `Dzień zamienny (plan z ${targetDayGen})`;
+        if (titleEl) titleEl.textContent = `Zamiana dnia (plan z ${targetDayGen})`;
         if (descEl) {
           descEl.innerHTML = `${prep.charAt(0).toUpperCase() + prep.slice(1)} ${dayAcc} (${dayDateFormatted}) zajęcia odbywają się według planu z <strong>${targetDayGen}</strong>.<br>Twoja grupa nie ma zaplanowanych zajęć w tym planie.`;
         }
