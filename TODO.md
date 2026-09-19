@@ -25,9 +25,9 @@ Rejestr decyzji, zaległości i planowanych usprawnień wynikających z modelowa
 - [x] **Data i wersja aktualizacji planu uczelnianego**: Wyciąganie znacznika czasu i wersji z nazwy planu na arktur (np. `[2026-09-14 17:55] wer. 2`) i wyświetlanie jako data publikacji planu w menu / panelu bocznym.
 - [x] **Dostępność sal z uwzględnieniem dat i cykli (Ostrzeżenie E)**: Funkcja wyszukiwania wolnych sal weryfikuje faktyczny stan zajęć w danej dacie (`getRoomOccupancyAt`): uwzględnia przedmioty zakończone z 1. połowy semestru, naprzemienne cykle co 2 tygodnie, dni wolne oraz zamiany rektorskie. Przetestowane TDD w `test_calendar.js`.
 - [ ] **Usprawnienia wyszukiwarki wolnych sal**:
+  - **Wybór dnia i godziny z popupu kalendarza**: Dodanie selektora daty/dnia z popupu bezpośrednio w modalu wolnych sal, aby umożliwić sprawdzenie dostępności sal w dowolnym wybranym dniu semestru.
   - **Globalna dostępność sal (wszystkie plany)**: Uwzględnianie obłożenia sal ze wszystkich dostępnych planów zajęć UMG (z indeksu `cross_reference.json`), a nie tylko z obecnie wybranego kierunku/grupy.
   - **Szybkie filtrowanie i wyszukiwanie**: Lepsze sortowanie sal, filtrowanie po piętrach/budynkach oraz zakresach godzinowych.
-- [ ] **Wybór konkretnego dnia z popupu / kalendarza**: Dodanie date-pickera (mini-kalendarza) w nagłówku/nawigacji tygodniowej, umożliwiającego bezpośredni skok do wybranego dnia w semestrze (zamiast wyłącznie nawigacji strzałkami tydzień po tygodniu).
 - [ ] **Widok zbiorczy dla wszystkich grup**: Dodanie widoku porównawczego (dzień / tydzień) prezentującego zajęcia wszystkich grup jednocześnie.
 
 
