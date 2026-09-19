@@ -840,10 +840,12 @@ body {
 }
 
 .day-header {
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 1.5rem;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border-subtle);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1075,6 +1077,47 @@ body {
   background: #082f49;
   color: #7dd3fc;
   border-color: #0369a1;
+}
+
+/* Schedule View: Mobile & Default Single-Column Flow */
+.schedule-week-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.grid-day-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.grid-day-header {
+  font-size: 1.05rem;
+  font-weight: 700;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.grid-day-header-title {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.grid-day-header.today {
+  color: var(--brand-primary);
+  border-bottom-color: var(--brand-accent);
+}
+
+.grid-lessons-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 /* Desktop Schedule View: Grid */

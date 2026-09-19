@@ -792,7 +792,11 @@ assert.ok(
   "Karta święta powinna zawierać ikonę oraz nazwę święta"
 );
 
-// 2. Sprawdź, czy plakietka zamiany dnia znajduje się w nagłówku dnia (widok tygodnia)
+// 2. Sprawdź, czy widok tygodnia używa zmiennej CSS --grid-cols i czy plakietka zamiany dnia znajduje się w nagłówku dnia
+assert.ok(
+  renderedHtml.includes("schedule-week-grid") && renderedHtml.includes("--grid-cols:"),
+  "Widok tygodnia powinien używać zmiennej CSS --grid-cols zamiast sztywnego grid-template-columns inline"
+);
 assert.ok(
   renderedHtml.includes("grid-day-header") && renderedHtml.includes("grid-day-swap-badge"),
   "Plakietka zamiany dnia powinna być osadzona wewnątrz nagłówka dnia w widoku tygodnia"

@@ -1394,7 +1394,7 @@ function renderSchedule() {
     </div>`;
   } else {
     // Multi-day / Desktop week view
-    html += `<div class="schedule-week-grid" style="grid-template-columns: repeat(${multiDays.length}, 1fr);">`;
+    html += `<div class="schedule-week-grid" style="--grid-cols: repeat(${multiDays.length}, 1fr);">`;
     for (const day of multiDays) {
       const dayData = filteredSchedule[day] || { lessons: [] };
       const lessons = dayData.lessons;
