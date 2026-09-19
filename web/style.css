@@ -1,6 +1,6 @@
 :root {
   --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  
+
   /* Color Palette - Light (Default) */
   --bg-app: #f4f6f9;
   --bg-card: #ffffff;
@@ -8,7 +8,7 @@
   --text-primary: #1e293b;
   --text-secondary: #64748b;
   --text-muted: #94a3b8;
-  
+
   --brand-navy: #0e2a47;
   --brand-primary: #1a4f8a;
   --brand-primary-hover: #133c69;
@@ -22,11 +22,13 @@
   --badge-text: #334155;
   --badge-room-bg: #fef3c7;
   --badge-room-text: #92400e;
-  
+
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
   --radius: 10px;
+  --radius-sm: 6px;
+  --color-success: #10b981;
 }
 
 [data-theme="dark"] {
@@ -54,6 +56,7 @@
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+  --color-success: #34d399;
 }
 
 * {
@@ -549,11 +552,11 @@ body {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
-.toggle-switch-wrapper input:checked + .toggle-switch-slider {
+.toggle-switch-wrapper input:checked+.toggle-switch-slider {
   background-color: var(--brand-primary);
 }
 
-.toggle-switch-wrapper input:checked + .toggle-switch-slider:before {
+.toggle-switch-wrapper input:checked+.toggle-switch-slider:before {
   transform: translateX(18px);
 }
 
@@ -710,21 +713,26 @@ body {
   .week-year {
     display: none;
   }
+
   .week-prefix-long {
     display: none;
   }
+
   .week-nav-controls {
     gap: 0.35rem;
   }
+
   .week-label {
     font-size: 0.84rem;
     padding: 0.2rem 0.3rem;
   }
+
   .btn-nav {
     width: 32px;
     height: 32px;
     font-size: 1.15rem;
   }
+
   .btn-today {
     padding: 0.2rem 0.45rem;
     font-size: 0.72rem;
@@ -817,7 +825,9 @@ body {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .hidden {
@@ -826,14 +836,14 @@ body {
 
 /* Schedule Content: Mobile Day View */
 .day-group {
-  margin-bottom: 2rem;
+  margin-bottom: 3rem;
 }
 
 .day-header {
   font-size: 1rem;
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1156,8 +1166,15 @@ body {
 }
 
 @keyframes modalIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .modal-header {
@@ -1402,7 +1419,7 @@ body {
 .copy-feedback {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #10b981;
+  color: var(--color-success);
   margin-top: 0.4rem;
   display: block;
 }
@@ -2218,6 +2235,7 @@ body {
   background: #0284c7;
   color: #ffffff;
 }
+
 /* Responsive Grid for About Modal */
 .about-modal-grid {
   display: flex;
@@ -2346,6 +2364,3 @@ body {
   color: var(--brand-accent);
   text-decoration: underline;
 }
-
-
-

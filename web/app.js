@@ -2358,7 +2358,7 @@ async function openFreeRoomsModal(customDay, customSlot) {
     </div>
 
     <div class="free-rooms-summary-banner">
-      <span>Dostępne sale: <strong style="color: #10b981;">${freeCount}</strong> z ${roomsList.length}</span>
+      <span>Dostępne sale: <strong style="color: var(--color-success);">${freeCount}</strong> z ${roomsList.length}</span>
       <span style="font-size: 0.8rem; color: var(--text-muted);">Kliknij salę, aby sprawdzić jej plan</span>
     </div>
 
@@ -2378,7 +2378,7 @@ async function openFreeRoomsModal(customDay, customSlot) {
             <span class="free-room-name">Sala ${escapeHtml(st.room)}</span>
             <span class="free-room-badge">WOLNA</span>
           </div>
-          <div class="free-room-detail" style="color: #10b981; font-weight: 600;">${escapeHtml(subtext)}</div>
+          <div class="free-room-detail" style="color: var(--color-success); font-weight: 600;">${escapeHtml(subtext)}</div>
         </div>
       `;
     } else {
