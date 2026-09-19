@@ -54,7 +54,7 @@ self.addEventListener('fetch', (event) => {
 
   // Network-first strategy: always fetch latest version from server, fallback to cache offline
   event.respondWith(
-    fetch(event.request)
+    fetch(event.request, { cache: 'no-cache' })
       .then((networkResponse) => {
         if (networkResponse && networkResponse.ok) {
           const clone = networkResponse.clone();

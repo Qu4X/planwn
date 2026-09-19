@@ -1060,6 +1060,7 @@ function getLessonMeetingInfo(lesson, baseDay, targetMonday, targetDate = null) 
   try {
     const [year, month, day] = lesson.data_start.split("-").map(Number);
     const startDate = new Date(year, month - 1, day);
+    if (isNaN(startDate.getTime())) return { active: true, meetingNum: 1, total: lesson.tygodnie || 15 };
     const startMonday = getMonday(startDate);
     const totalWeeks = lesson.tygodnie || 15;
 
