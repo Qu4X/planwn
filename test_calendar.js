@@ -818,3 +818,33 @@ assert.ok(
 
 console.log("✅ [PASS] renderSchedule poprawnie umieszcza plakietkę zamiany w nagłówku (mobile + desktop) i renderuje kartę święta.");
 
+// ─── Test 20: Wolne sale — używają właściwego tygodnia z state.weekOffset ────
+console.log("\n-- Test 20: getRoomOccupancyAt działa poprawnie dla tygodnia przesuniętego o weekOffset");
+
+// BHP: aktywne w tygodniach 1-7 (7 spotkań co tydzień), data_start 2026-10-07 (środa)
+// Tydzień 9 (środa 02.12.2026): BHP już zakończone — sala powinna być wolna
+const bhpEntry = {
+  subject: "BHP",
+  hours: "10:15 - 11:45",
+  data_start: "2026-10-07",
+  weeks: 7,
+  co_ile: 1,
+  polowa_sem: 1
+};
+
+const targetDateWeek9 = new Date(2026, 11, 2); // 02.12.2026
+const mondayWeek9 = getMonday(targetDateWeek9);
+const occupancyAfterEnd = getRoomOccupancyAt([bhpEntry], { start: 615, end: 705 }, "2026-12-02", "ŚR");
+assert.strictEqual(occupancyAfterEnd.isFree, true,
+  "Sala powinna być wolna w tygodniu 9 — BHP skończyło się po 7 spotkaniach");
+assert.strictEqual(occupancyAfterEnd.occupyingClass, null,
+  "occupyingClass powinien być null po zakończeniu przedmiotu");
+
+// Tydzień 1 (środa 07.10.2026): BHP aktywne — sala zajęta
+const occupancyWeek1 = getRoomOccupancyAt([bhpEntry], { start: 615, end: 705 }, "2026-10-07", "ŚR");
+assert.strictEqual(occupancyWeek1.isFree, false,
+  "Sala powinna być zajęta w tygodniu 1 — BHP aktywne");
+
+console.log("Tydzień 1 (07.10 - BHP aktywne):", occupancyWeek1.isFree ? "wolna" : "zajęta ✓");
+console.log("Tydzień 9 (02.12 - po BHP):", occupancyAfterEnd.isFree ? "wolna ✓" : "zajęta");
+console.log("✅ [PASS] getRoomOccupancyAt poprawnie weryfikuje aktywność zajęć przy sprawdzaniu wolnych sal.");

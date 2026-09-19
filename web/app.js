@@ -2298,14 +2298,14 @@ async function openFreeRoomsModal(customDay, customSlot) {
     }
   }
 
-  // Determine target date for date-aware occupancy
+  // Determine target date for date-aware occupancy — use the currently viewed week, not always today
   const todayObj = new Date();
   const todayIso = formatDateISO(todayObj);
   let targetDateIso = todayIso;
   let effectiveScheduleDay = day;
 
   if (day !== todayCode) {
-    const curMon = getMonday(todayObj);
+    const curMon = getWeekMonday(state.weekOffset);
     const dayIdx = DNI_MAP_SUNDAY_FIRST.indexOf(day);
     const offset = (dayIdx === 0 ? 6 : dayIdx - 1);
     const targetDayDate = new Date(curMon);
