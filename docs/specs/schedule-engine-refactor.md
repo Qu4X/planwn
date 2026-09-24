@@ -46,10 +46,10 @@ Zakres refaktoryzacji nie zmienia żadnego zachowania widocznego dla użytkownik
 
 | Faza | Zakres | Kryterium wyjścia |
 |------|--------|-------------------|
-| **1 — Red** | Napisać `test_schedule_engine.js` z testami pod nowy interfejs | Testy 🔴; `test_calendar.js` nadal 🟢 |
-| **2 — Green** | Stworzyć `web/js/schedule-engine.js`, implementować do zielonych | `test_schedule_engine.js` 🟢; `test_calendar.js` 🟢 |
-| **3 — Refactor** | Podłączyć silnik w `app.js` (wrappery); podmienić wywołania po jednej metodzie; manualny przegląd w przeglądarce po każdej | Oba pliki testowe 🟢; brak regresji widocznych w UI |
+| **1/2 — Red/Green loop** | Stworzyć szkielet `web/js/schedule-engine.js` (puste metody) + `test_schedule_engine.js`; implementować test po teście w cyklu: napisz test → 🔴 → zaimplementuj → 🟢 → następny | `test_schedule_engine.js` 🟢 w całości; `test_calendar.js` 🟢 przez cały czas |
+| **3 — Refactor** | Stworzyć `engine` w `app.js` (`ScheduleEngine.create(...)`); podmienić wywołania po jednej metodzie z wrapperami; manualny przegląd w przeglądarce po każdej podmianie | Oba pliki testowe 🟢; brak regresji w UI |
 | **4 — Cleanup** | Usunąć wrappery; zmigrować `test_calendar.js` na import z silnika; podbić `CACHE_NAME`; dodać do `STATIC_ASSETS` i `index.html` | `test_calendar.js` i `test_schedule_engine.js` 🟢; `tests.py` 🟢 |
+
 
 ---
 
@@ -60,8 +60,9 @@ Zakres refaktoryzacji nie zmienia żadnego zachowania widocznego dla użytkownik
 Silnik tworzony przez `ScheduleEngine.create(academicCalendar, options?)`.
 
 - `options.now?: Date` — wstrzykiwalna "dzisiaj". Domyślnie `new Date()`. Używana wszędzie, gdzie silnik potrzebuje aktualnej daty. Bez tego testy zależałyby od zegara systemowego.
-- Kalendarz kopiowany przez `structuredClone(academicCalendar)` przed zamrożeniem (`Object.freeze`). Zamrożenie samego referencji byłoby płytkie — mutacja zagnieżdżonych obiektów byłaby możliwa. Kopia przez `structuredClone` + freeze gwarantuje pełną izolację.
+- Kalendarz kopiowany przez `structuredClone(academicCalendar)` wewnątrz factory. `structuredClone` tworzy głęboką kopię — żadna mutacja z zewnątrz nie dosięgnie kopii wewnątrz silnika. `Object.freeze` jest **celowo pomijany**: freeze jest płytki (nie chroni zagnieżdżonych obiektów) i daje fałszywe poczucie bezpieczeństwa. Wystarczy głęboka kopia. Silnik nigdy nie zwraca referencji do wewnętrznego kalendarza.
 - Wszystkie porównania dat: wyłącznie przez stringi `YYYY-MM-DD`. Iteracja tygodniowa (`currentMon.setDate(+7)`) normalizuje czas do `00:00:00` UTC przed porównaniem, żeby DST nie przesuwało daty.
+
 
 ### D2 — Interfejs metod instancji silnika (kompletne sygnatury)
 
@@ -88,6 +89,8 @@ engine.formatDateISO(date: Date) → string
 
 > **Uwaga o nazewnictwie:** `getRoomOccupancyAt` to jedyna nazwa tej metody w całej spec i kodzie. Poprzednia nazwa `resolveRoomOccupancyForDay` (z pierwszego projektu planu) jest porzucona.
 
+> **Narzędzia pomocnicze:** `isTeachingDay`, `getMonday`, `formatDateISO` są wystawione publicznie, bo `app.js` ich używa bezpośrednio. Traktowane jako implementation detail silnika — nie podlegają osobnym testom. Testowane pośrednio przez scenariusze `resolveWeekSchedule` i `getLessonMeetingInfo`.
+
 ### D3 — Typ `DayStatus`
 
 ```
@@ -111,11 +114,12 @@ Gdy dzień spełnia więcej niż jeden warunek (np. święto w środku sesji egz
 
 | Priorytet | Warunek | Status |
 |-----------|---------|--------|
-| 1 (najwyższy) | Data w `ACADEMIC_CALENDAR.holidays` | `"holiday"` |
-| 2 | Data w `ACADEMIC_CALENDAR.daySwaps` | `"daySwap"` |
-| 3 | Data objęta periodem `type: "break"` | `"break"` |
-| 4 | Data objęta periodem `type: "exam"` | `"exam"` |
+| 1 (najwyższy) | Data w `academicCalendar.holidays` | `"holiday"` |
+| 2 | Data w `academicCalendar.daySwaps` | `"daySwap"` |
+| 3 | Data objęta periodem `type: "break"` w `academicCalendar.periods` | `"break"` |
+| 4 | Data objęta periodem `type: "exam"` w `academicCalendar.periods` | `"exam"` |
 | 5 (domyślny) | Żaden z powyższych | `"normal"` |
+
 
 `"daySwap"` ma wyższy priorytet niż `"break"` i `"exam"`, bo zarządzenie rektorskie zamieniające dzień jest bardziej szczegółowe niż okres przerwy.
 
@@ -159,15 +163,30 @@ W przeglądarce obiekt globalny. W `index.html` — `<script src="js/schedule-en
 - Hard cap `MAX_ITER = 200`
 - Guard `isNaN(startDate.getTime())`
 
-### D9 — Tymczasowe aliasy (Faza 3)
+### D9 — Tymczasowe aliasy + inicjalizacja `engine` (Faza 3)
 
-`app.js` zawiera cienkie wrappery delegujące do `engine.*`:
+`engine` tworzony w dwóch miejscach w `app.js`:
+
+```js
+// 1. Natychmiastowo po deklaracji ACADEMIC_CALENDAR (wbudowany fallback, działa offline)
+let engine = ScheduleEngine.create(ACADEMIC_CALENDAR);
+
+// 2. Po załadowaniu kalendarza z sieci (nadpisuje fallback)
+async function loadAcademicCalendarConfig() {
+  // ... fetch ...
+  ACADEMIC_CALENDAR = data;
+  engine = ScheduleEngine.create(ACADEMIC_CALENDAR);  // ← nowa instancja
+}
+```
+
+Wrappery delegujące do `engine.*`:
 ```js
 function getLessonMeetingInfo(...args) { return engine.getLessonMeetingInfo(...args); }
 function getMonday(...args) { return engine.getMonday(...args); }
 function getRoomOccupancyAt(...args) { return engine.getRoomOccupancyAt(...args); }
 ```
-Pozwala utrzymać `test_calendar.js` zielonym. Usuwane w Fazie 4.
+
+`engine` zawsze istnieje — inicjalizowany synchronicznie na starcie z kalendarzem wbudowanym. Wrappery nie potrzebują null-guarda. Usuwane w Fazie 4.
 
 ### D10 — Aktualizacja `sw.js`
 
