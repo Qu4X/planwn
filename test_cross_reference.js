@@ -423,5 +423,109 @@ console.log("\n-- Test 7: DataService (Cache, unieważnianie, fallback i onUpdat
   assert.strictEqual(dataWrongSchema.generated_at, "2026-09-24T20:00:00Z", "Nieaktualny schemaVersion powinien zostać zignorowany");
 
   console.log("✅ [PASS] DataService poprawnie zarządza pamięcią cache, wersjonowaniem i odświeżaniem w tle.");
+
+  // --- Test 8: CrossRef.UI (Inicjalizacja, a11y, przywracanie fokusu, modale i wyszukiwarka) ---
+  console.log("\n-- Test 8: CrossRef.UI (a11y, modale i wyszukiwarka w środowisku kontrolowanym)");
+
+  function createMockElement(id = "", initialClasses = []) {
+    const classes = new Set(initialClasses);
+    return {
+      id,
+      textContent: "",
+      innerHTML: "",
+      value: "",
+      style: {},
+      dataset: {},
+      classList: {
+        contains: (c) => classes.has(c),
+        add: (c) => classes.add(c),
+        remove: (c) => classes.delete(c)
+      },
+      attributes: {},
+      setAttribute: function(k, v) { this.attributes[k] = String(v); },
+      getAttribute: function(k) { return this.attributes[k] || null; },
+      querySelector: () => null,
+      querySelectorAll: () => [],
+      focusCalled: false,
+      focus: function() { this.focusCalled = true; },
+      listeners: {},
+      addEventListener: function(event, fn) {
+        if (!this.listeners[event]) this.listeners[event] = [];
+        this.listeners[event].push(fn);
+      }
+    };
+  }
+
+  const mockModal = createMockElement("cross-modal", ["modal", "hidden"]);
+  const mockTitle = createMockElement("cross-modal-title");
+  const mockBadge = createMockElement("cross-modal-badge");
+  const mockBody = createMockElement("cross-modal-body");
+  const mockSearchInput = createMockElement("search-input");
+  const mockSearchResults = createMockElement("search-results", ["hidden"]);
+  const mockClearBtn = createMockElement("clear-search-btn", ["hidden"]);
+  const mockTriggerBtn = createMockElement("trigger-btn");
+
+  CrossRef.UI.init({
+    elements: {
+      modal: mockModal,
+      title: mockTitle,
+      badge: mockBadge,
+      body: mockBody,
+      searchInput: mockSearchInput,
+      searchResults: mockSearchResults,
+      clearSearchBtn: mockClearBtn
+    },
+    scheduleEngine: engine
+  });
+
+  // Wstrzykujemy załadowane dane do cache UI
+  CrossRef.UI.cachedData = fixtureCrossRefData;
+
+  // 8a: Otwarcie modalu i atrybuty a11y
+  CrossRef.UI.openModal("Test tytuł", "Test badge", "<p>Treść testowa</p>", mockTriggerBtn);
+  assert.strictEqual(mockTitle.textContent, "Test tytuł");
+  assert.strictEqual(mockBadge.textContent, "Test badge");
+  assert.strictEqual(mockBody.innerHTML, "<p>Treść testowa</p>");
+  assert.strictEqual(mockModal.classList.contains("hidden"), false, "Klasa hidden powinna zostać usunięta");
+  assert.strictEqual(mockModal.getAttribute("aria-hidden"), "false");
+
+  // 8b: Zamknięcie modalu i przywrócenie fokusu
+  CrossRef.UI.closeModal();
+  assert.strictEqual(mockModal.classList.contains("hidden"), true, "Klasa hidden powinna zostać dodana");
+  assert.strictEqual(mockModal.getAttribute("aria-hidden"), "true");
+  assert.strictEqual(mockTriggerBtn.focusCalled, true, "Fokus powinien powrócić do elementu wywołującego");
+
+  // 8c: Wyszukiwarka live (handleSearch & clearSearch)
+  await CrossRef.UI.handleSearch("boniewicz");
+  assert.strictEqual(mockSearchResults.classList.contains("hidden"), false);
+  assert.ok(mockSearchResults.innerHTML.includes("Boniewicz-Szmyt Katarzyna"), "Wyniki powinny zawierać dopasowanego wykładowcę");
+  assert.strictEqual(mockClearBtn.classList.contains("hidden"), false, "Przycisk czyszczenia powinien być widoczny");
+
+  // Puste zapytanie czyści wyniki
+  await CrossRef.UI.handleSearch("a"); // < 2 znaki
+  assert.strictEqual(mockSearchResults.classList.contains("hidden"), true);
+  assert.strictEqual(mockClearBtn.classList.contains("hidden"), true);
+
+  // Clear search
+  mockSearchInput.value = "test";
+  CrossRef.UI.clearSearch();
+  assert.strictEqual(mockSearchInput.value, "");
+  assert.strictEqual(mockSearchResults.classList.contains("hidden"), true);
+
+  // 8d: openFreeRooms z selektorem daty i szybkim filtrem
+  await CrossRef.UI.openFreeRooms({
+    dateISO: "2026-10-05",
+    slot: "08:00 - 09:30"
+  });
+  assert.strictEqual(mockTitle.textContent, "Dostępność sal");
+  assert.strictEqual(mockBadge.textContent, "🔎 Wolne sale");
+  assert.ok(mockBody.innerHTML.includes('id="fr-date-input"'), "Modal powinien zawierać date picker");
+  assert.ok(mockBody.innerHTML.includes('id="fr-today-btn"'), "Modal powinien zawierać przycisk Dziś");
+  assert.ok(mockBody.innerHTML.includes('id="fr-tomorrow-btn"'), "Modal powinien zawierać przycisk Jutro");
+  assert.ok(mockBody.innerHTML.includes('id="fr-search-input"'), "Modal powinien zawierać pole szybkiego filtra sal");
+  assert.ok(mockBody.innerHTML.includes('Sala 114'), "Modal powinien wyświetlać listę sal");
+
+  console.log("✅ [PASS] CrossRef.UI poprawnie orkiestruje modale, dostępność (a11y), date picker i wyszukiwarkę.");
+
   console.log("\n🎉 Wszystkie testy CrossRef zakończone sukcesem (100% PASS)!\n");
 })();
