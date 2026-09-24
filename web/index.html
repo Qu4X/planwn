@@ -439,6 +439,39 @@
     </div>
   </div>
 
+  <!-- What's New / Changelog Modal -->
+  <dialog id="changelog-modal" class="modal-dialog" aria-labelledby="changelog-modal-title">
+    <div class="modal-dialog-content">
+      <div class="modal-header">
+        <div class="modal-header-titles">
+          <span class="cross-modal-badge" style="background: rgba(245, 158, 11, 0.15); color: #d97706;">Aktualizacja</span>
+          <h3 id="changelog-modal-title" style="display: flex; align-items: center; gap: 0.4rem;">
+            <span>🎉</span> <span>Co nowego?</span>
+          </h3>
+        </div>
+        <button id="close-changelog-modal" class="btn-close" aria-label="Zamknij">
+          <svg class="icon" aria-hidden="true">
+            <use href="#icon-close"></use>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body changelog-modal-body">
+        <div class="changelog-version-header">
+          <span id="changelog-version-badge" class="badge-version">Wersja</span>
+          <span id="changelog-date" class="subtext"></span>
+        </div>
+        <div class="changelog-features-list-wrapper">
+          <ul id="changelog-features-list" class="changelog-features-list">
+            <!-- Dynamic feature items -->
+          </ul>
+        </div>
+        <button id="confirm-changelog-btn" class="btn-primary" style="width: 100%; justify-content: center; margin-top: 0.5rem;">
+          Super, rozumiem!
+        </button>
+      </div>
+    </div>
+  </dialog>
+
   <!-- About App Modal -->
   <div id="about-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="about-modal-title">
     <div class="modal-backdrop"></div>
@@ -538,6 +571,7 @@
   </footer>
 
   <script async src="https://tally.so/widgets/embed.js"></script>
+  <script src="js/schedule-engine.js"></script>
   <script src="app.js?v=3.8"></script>
 </body>
 

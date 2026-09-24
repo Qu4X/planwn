@@ -118,6 +118,12 @@ let ACADEMIC_CALENDAR = {
   ]
 };
 
+const _ScheduleEngine = (typeof ScheduleEngine !== "undefined")
+  ? ScheduleEngine
+  : (typeof require !== "undefined" ? require("./js/schedule-engine.js") : null);
+
+let engine = _ScheduleEngine ? _ScheduleEngine.create(ACADEMIC_CALENDAR) : null;
+
 const savedDaysView = typeof localStorage !== "undefined"
   ? (localStorage.getItem("umg_days_view") || (localStorage.getItem("umg_show_weekends") === "true" ? "all" : "workdays"))
   : "workdays";
@@ -206,7 +212,13 @@ const elements = typeof document !== "undefined" ? {
   footerAboutBtn: document.getElementById("footer-about-btn"),
   aboutModal: document.getElementById("about-modal"),
   closeAboutModalBtn: document.getElementById("close-about-modal"),
-  reportMailBtn: document.getElementById("report-mail-btn")
+  reportMailBtn: document.getElementById("report-mail-btn"),
+  changelogModal: document.getElementById("changelog-modal"),
+  closeChangelogModalBtn: document.getElementById("close-changelog-modal"),
+  confirmChangelogBtn: document.getElementById("confirm-changelog-btn"),
+  changelogVersionBadge: document.getElementById("changelog-version-badge"),
+  changelogDate: document.getElementById("changelog-date"),
+  changelogFeaturesList: document.getElementById("changelog-features-list")
 } : {};
 
 // Initialize App
@@ -229,6 +241,9 @@ async function loadAcademicCalendarConfig() {
       const data = await res.json();
       if (data && data.periods) {
         ACADEMIC_CALENDAR = data;
+        if (_ScheduleEngine) {
+          engine = _ScheduleEngine.create(ACADEMIC_CALENDAR);
+        }
         updateDayTabsUI();
         if (state.scheduleData) {
           renderSchedule();
@@ -385,6 +400,25 @@ function setupEventListeners() {
     const aboutBackdrop = elements.aboutModal.querySelector(".modal-backdrop");
     if (aboutBackdrop) aboutBackdrop.addEventListener("click", closeAboutModal);
   }
+  if (elements.closeChangelogModalBtn) {
+    elements.closeChangelogModalBtn.addEventListener("click", closeChangelogModal);
+  }
+  if (elements.confirmChangelogBtn) {
+    elements.confirmChangelogBtn.addEventListener("click", closeChangelogModal);
+  }
+  if (elements.changelogModal) {
+    elements.changelogModal.addEventListener("click", (e) => {
+      // If user clicks the dialog backdrop itself (outside the modal-dialog-content)
+      const rect = elements.changelogModal.getBoundingClientRect();
+      const isInDialog = (
+        rect.top <= e.clientY && e.clientY <= rect.top + rect.height &&
+        rect.left <= e.clientX && e.clientX <= rect.left + rect.width
+      );
+      if (!isInDialog || e.target === elements.changelogModal) {
+        closeChangelogModal();
+      }
+    });
+  }
   if (elements.reportMailBtn) {
     elements.reportMailBtn.addEventListener("click", (e) => {
       e.preventDefault();
@@ -534,6 +568,9 @@ async function loadPlans() {
 
     updateWeekDisplay();
     updateDayTabsUI();
+
+    // Check for feature updates and display "Co nowego?" modal if applicable
+    checkChangelogNotification();
   } catch (err) {
     console.error(err);
     elements.loadingState.innerHTML = `<p style="color: #ef4444;">Nie udało się wczytać listy planów. Uruchom build_static.py.</p>`;
@@ -1016,6 +1053,7 @@ const DNI_MAP_SUNDAY_FIRST = ["ND", "PON", "WT", "ŚR", "CZW", "PT", "SOB"];
 
 // Check if a given date is an official teaching day (not a holiday, break, or exam session)
 function isTeachingDay(iso) {
+  if (engine) return engine.isTeachingDay(iso);
   if (ACADEMIC_CALENDAR.holidays && ACADEMIC_CALENDAR.holidays[iso]) return false;
   if (ACADEMIC_CALENDAR.periods) {
     const isNonTeaching = ACADEMIC_CALENDAR.periods.some(
@@ -1055,6 +1093,7 @@ function getLessonSemesterPeriod(lesson) {
 
 // Calculate lesson meeting occurrence info accounting for calendar holidays, day swaps, and breaks
 function getLessonMeetingInfo(lesson, baseDay, targetMonday, targetDate = null) {
+  if (engine) return engine.getLessonMeetingInfo(lesson, baseDay, targetMonday, targetDate);
   if (!lesson.data_start) return { active: true, meetingNum: 1, total: lesson.tygodnie || 15 };
 
   try {
@@ -1180,6 +1219,7 @@ function isLessonInWeek(lesson, baseDay, targetMonday, targetDate = null) {
 
 // Calculate subject meeting progress (e.g. 3/5, 10/15, Ostatnie zajęcia)
 function getLessonProgress(lesson, baseDay, targetMonday, targetDate = null) {
+  if (engine) return engine.getLessonProgress(lesson, baseDay, targetMonday, targetDate);
   if (!lesson.tygodnie) return null;
   if (!lesson.data_start) return { text: `${lesson.tygodnie}`, title: `Liczba spotkań: ${lesson.tygodnie}`, isFinal: false };
 
@@ -1220,48 +1260,66 @@ function renderSchedule() {
   const filteredSchedule = {};
   let totalLessonsInWeek = 0;
 
-  for (let dIdx = 0; dIdx < DNI_TYGODNIA.length; dIdx++) {
-    const day = DNI_TYGODNIA[dIdx];
-    const dayDate = new Date(targetMonday);
-    dayDate.setDate(targetMonday.getDate() + dIdx);
-    const dateKey = formatDateISO(dayDate);
-
-    let sourceDay = day;
-    let daySwapInfo = null;
-    if (ACADEMIC_CALENDAR.daySwaps[dateKey]) {
-      daySwapInfo = ACADEMIC_CALENDAR.daySwaps[dateKey];
-      sourceDay = daySwapInfo.replaceWith;
+  if (engine) {
+    const weekResolution = engine.resolveWeekSchedule(targetMonday, state.scheduleData);
+    for (const day of DNI_TYGODNIA) {
+      const dayStatus = weekResolution[day];
+      filteredSchedule[day] = {
+        lessons: dayStatus.lessons,
+        swap: dayStatus.status === "daySwap" ? { replaceWith: dayStatus.swapReplaceWith, note: dayStatus.swapNote } : null,
+        holiday: dayStatus.status === "holiday" ? dayStatus.message : null,
+        date: dayStatus.dateObj,
+        dateKey: dayStatus.dateISO,
+        status: dayStatus.status,
+        message: dayStatus.message,
+        baseDayPreview: dayStatus.baseDayPreview
+      };
+      totalLessonsInWeek += dayStatus.lessons.length;
     }
+  } else {
+    for (let dIdx = 0; dIdx < DNI_TYGODNIA.length; dIdx++) {
+      const day = DNI_TYGODNIA[dIdx];
+      const dayDate = new Date(targetMonday);
+      dayDate.setDate(targetMonday.getDate() + dIdx);
+      const dateKey = formatDateISO(dayDate);
 
-    const holiday = ACADEMIC_CALENDAR.holidays[dateKey] || null;
+      let sourceDay = day;
+      let daySwapInfo = null;
+      if (ACADEMIC_CALENDAR.daySwaps[dateKey]) {
+        daySwapInfo = ACADEMIC_CALENDAR.daySwaps[dateKey];
+        sourceDay = daySwapInfo.replaceWith;
+      }
 
-    const daySlots = state.scheduleData[sourceDay] || {};
-    const dayLessons = [];
+      const holiday = ACADEMIC_CALENDAR.holidays[dateKey] || null;
 
-    // If it's a holiday or day off, no classes are held!
-    if (!holiday) {
-      for (const [slotStart, lessonInfo] of Object.entries(daySlots)) {
-        if (isLessonInWeek(lessonInfo, sourceDay, targetMonday, dateKey)) {
-          dayLessons.push({
-            slot: parseInt(slotStart),
-            sourceDay: sourceDay,
-            lessonDate: dateKey,
-            ...lessonInfo
-          });
+      const daySlots = state.scheduleData[sourceDay] || {};
+      const dayLessons = [];
+
+      // If it's a holiday or day off, no classes are held!
+      if (!holiday) {
+        for (const [slotStart, lessonInfo] of Object.entries(daySlots)) {
+          if (isLessonInWeek(lessonInfo, sourceDay, targetMonday, dateKey)) {
+            dayLessons.push({
+              slot: parseInt(slotStart),
+              sourceDay: sourceDay,
+              lessonDate: dateKey,
+              ...lessonInfo
+            });
+          }
         }
       }
-    }
 
-    // Sort by slot time
-    dayLessons.sort((a, b) => a.slot - b.slot);
-    filteredSchedule[day] = {
-      lessons: dayLessons,
-      swap: daySwapInfo,
-      holiday: holiday,
-      date: dayDate,
-      dateKey: dateKey
-    };
-    totalLessonsInWeek += dayLessons.length;
+      // Sort by slot time
+      dayLessons.sort((a, b) => a.slot - b.slot);
+      filteredSchedule[day] = {
+        lessons: dayLessons,
+        swap: daySwapInfo,
+        holiday: holiday,
+        date: dayDate,
+        dateKey: dateKey
+      };
+      totalLessonsInWeek += dayLessons.length;
+    }
   }
 
   // Update day tabs based on filteredSchedule and current view mode
@@ -1584,6 +1642,93 @@ function copyCalendarUrl() {
       elements.copyFeedback.classList.add("hidden");
     }, 2500);
   });
+}
+
+// ==========================================================================
+// Changelog / What's New Notification Engine
+// ==========================================================================
+const CHANGELOG_STORAGE_KEY = "last_seen_changelog_version";
+let currentPendingChangelogVersion = null;
+
+function shouldShowChangelog(latestVersion, lastSeenVersion) {
+  if (!latestVersion) return false;
+  if (!lastSeenVersion) return true;
+  return String(latestVersion).trim() !== String(lastSeenVersion).trim();
+}
+
+function openChangelogModal(changelogEntry) {
+  if (!elements.changelogModal || !changelogEntry) return;
+
+  currentPendingChangelogVersion = changelogEntry.version || null;
+
+  if (elements.changelogVersionBadge) {
+    elements.changelogVersionBadge.textContent = changelogEntry.version
+      ? `Wersja ${changelogEntry.version}`
+      : "Aktualizacja";
+  }
+
+  if (elements.changelogDate) {
+    elements.changelogDate.textContent = changelogEntry.date || "";
+  }
+
+  if (elements.changelogFeaturesList) {
+    const features = Array.isArray(changelogEntry.features) ? changelogEntry.features : [];
+    elements.changelogFeaturesList.innerHTML = features
+      .map(feat => `<li>${escapeHtml(feat)}</li>`)
+      .join("");
+  }
+
+  if (typeof elements.changelogModal.showModal === "function") {
+    elements.changelogModal.showModal();
+  } else {
+    elements.changelogModal.classList.remove("hidden");
+  }
+}
+
+function closeChangelogModal() {
+  if (!elements.changelogModal) return;
+
+  if (currentPendingChangelogVersion) {
+    try {
+      localStorage.setItem(CHANGELOG_STORAGE_KEY, currentPendingChangelogVersion);
+    } catch (e) {
+      console.warn("Could not save seen changelog version to localStorage:", e);
+    }
+    currentPendingChangelogVersion = null;
+  }
+
+  if (typeof elements.changelogModal.close === "function") {
+    elements.changelogModal.close();
+  } else {
+    elements.changelogModal.classList.add("hidden");
+  }
+}
+
+async function checkChangelogNotification() {
+  try {
+    const response = await fetch("changelog.json");
+    if (!response.ok) return;
+
+    const changelogs = await response.json();
+    if (!Array.isArray(changelogs) || changelogs.length === 0) return;
+
+    const latest = changelogs[0];
+    if (!latest || !latest.version) return;
+
+    let lastSeen = null;
+    try {
+      lastSeen = localStorage.getItem(CHANGELOG_STORAGE_KEY);
+    } catch (e) {
+      // LocalStorage might be disabled or unavailable
+    }
+
+    if (shouldShowChangelog(latest.version, lastSeen)) {
+      openChangelogModal(latest);
+    }
+  } catch (err) {
+    // Fail silently without disturbing app execution
+    console.debug("Changelog check skipped or failed:", err);
+  }
 }
 
 // ==========================================================================
@@ -2187,6 +2332,7 @@ async function openSubjectDetail(subjectName) {
 
 // Pure function to determine room occupancy at a given date and time range
 function getRoomOccupancyAt(daySchedule, queryRange, targetDateIso, baseDay) {
+  if (engine) return engine.getRoomOccupancyAt(daySchedule, queryRange, targetDateIso, baseDay);
   if (!daySchedule || !daySchedule.length) {
     return { isFree: true, occupyingClass: null, nextClass: null };
   }
@@ -2442,6 +2588,10 @@ if (typeof module !== "undefined" && module.exports) {
     parsePlanInfo,
     updateCalendarNotice,
     renderSchedule,
+    shouldShowChangelog,
+    openChangelogModal,
+    closeChangelogModal,
+    checkChangelogNotification,
     state,
     elements
   };
