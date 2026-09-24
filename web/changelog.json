@@ -1,0 +1,12 @@
+[
+  {
+    "version": "3.8.0",
+    "date": "2026-09-24",
+    "features": [
+      "Nowy system powiadomień o aktualizacjach (Changelog)",
+      "Zoptymalizowany układ i odstępy w mobilnym widoku planu",
+      "Dedykowane kafelki dla dni wolnych i świąt",
+      "Czytelne oznaczenia zamian dni w nagłówkach"
+    ]
+  }
+]

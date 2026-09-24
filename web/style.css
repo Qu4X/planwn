@@ -1231,6 +1231,8 @@ body {
 
 .modal-header h3 {
   font-size: 1.1rem;
+  color: var(--text-primary);
+  margin: 0;
 }
 
 .btn-close {
@@ -1296,6 +1298,71 @@ body {
   background: var(--brand-primary);
   color: white;
   transition: background-color 0.2s;
+}
+
+/* Native Dialog & Changelog Modal */
+.modal-dialog {
+  border: none;
+  padding: 0;
+  background: transparent;
+  max-width: 480px;
+  width: 90%;
+  margin: auto;
+  color: var(--text-primary);
+}
+
+.modal-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+}
+
+.modal-dialog-content {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalIn 0.2s ease-out;
+  color: var(--text-primary);
+}
+
+.changelog-version-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px dashed var(--border-subtle);
+}
+
+.changelog-features-list-wrapper {
+  margin: 0.5rem 0;
+}
+
+.changelog-features-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.changelog-features-list li {
+  position: relative;
+  padding-left: 1.5rem;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--text-primary);
+}
+
+.changelog-features-list li::before {
+  content: "✨";
+  position: absolute;
+  left: 0;
+  top: 0.05rem;
+  font-size: 0.85rem;
 }
 
 /* Calendar Modal */
