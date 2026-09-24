@@ -15,10 +15,10 @@ Rejestr decyzji, zaległości i planowanych usprawnień wynikających z modelowa
 
 
 ### Architektura kodu i refaktoryzacja (`web/app.js`)
-- [ ] **Rozbicie monolitu `web/app.js` na głębokie moduły** (Raport: `architecture-review-1789844861.html`):
-  - **Schedule Engine (Priorytet / Strong)**: Wyodrębnienie czystego silnika domenowego (logika kalendarza akademickiego, zamiany dni, daty startu, `getLessonMeetingInfo`, `getRoomOccupancyAt`, `isLessonInWeek`) z dala od operacji na DOM.
-  - **Cross-Reference Modals (Worth exploring)**: Konsolidacja powielonego kodu w modalach wykładowców, sal i wolnych sal w jeden spójny moduł zapytań i widoków.
-  - **Platform Adapter (Speculative)**: Odizolowanie integracji PWA, Service Workera, detekcji iOS i generowania linków webcal za dedykowanym szwem (seam).
+- [ ] **Rozbicie monolitu `web/app.js` na głębokie moduły** (Raport: `architecture-review-1789844861.html`, Specyfikacja: `docs/specs/schedule-engine-refactor.md`):
+  - [x] **Schedule Engine (Priorytet / Strong)**: Wyodrębnienie czystego silnika domenowego do `web/js/schedule-engine.js` (logika kalendarza akademickiego, zamiany dni, daty startu, `getLessonMeetingInfo`, `getRoomOccupancyAt`, `resolveWeekSchedule`, `buildScheduleIndex`). Pełne pokrycie testami TDD w `test_schedule_engine.js` i `test_calendar.js`.
+  - [ ] **Cross-Reference Modals (Worth exploring)**: Konsolidacja powielonego kodu w modalach wykładowców, sal i wolnych sal w jeden spójny moduł zapytań i widoków.
+  - [ ] **Platform Adapter (Speculative)**: Odizolowanie integracji PWA, Service Workera, detekcji iOS i generowania linków webcal za dedykowanym szwem (seam).
 
 ### Prezentacja planu i interfejs (`web/`)
 - [x] **Oczyszczenie nazw kierunków w menu wyboru**: Parsowanie długich nazw uczelnianych (np. `[TM Sem 1] Transport Morski pierwszego stopnia sem. 1 [2026-09-14 17:55] wer. 2` -> czyste `Transport Morski sem. 1`). Przetestowane w `test_calendar.js` (Test 17) i `tests.py` (Test 19).
