@@ -17,17 +17,17 @@ Rejestr decyzji, zaległości i planowanych usprawnień wynikających z modelowa
 ### Architektura kodu i refaktoryzacja (`web/app.js`)
 - [ ] **Rozbicie monolitu `web/app.js` na głębokie moduły** (Raport: `architecture-review-1789844861.html`, Specyfikacja: `docs/specs/schedule-engine-refactor.md`):
   - [x] **Schedule Engine (Priorytet / Strong)**: Wyodrębnienie czystego silnika domenowego do `web/js/schedule-engine.js` (logika kalendarza akademickiego, zamiany dni, daty startu, `getLessonMeetingInfo`, `getRoomOccupancyAt`, `resolveWeekSchedule`, `buildScheduleIndex`). Pełne pokrycie testami TDD w `test_schedule_engine.js` i `test_calendar.js`.
-  - [ ] **Cross-Reference Modals (Worth exploring)**: Konsolidacja powielonego kodu w modalach wykładowców, sal i wolnych sal w jeden spójny moduł zapytań i widoków.
+  - [x] **Cross-Reference Modals (Worth exploring)**: Konsolidacja powielonego kodu w modalach wykładowców, sal, przedmiotów i wolnych sal w dedykowany moduł `web/js/cross-reference.js` (`CrossRef.Engine`, `CrossRef.DataService`, `CrossRef.UI`). Pełna dostępność (a11y, Escape, focus trap), SWR cache, usunięcie ~640 linii długu z `web/app.js` oraz testy TDD w `test_cross_reference.js` (8/8 PASS).
   - [ ] **Platform Adapter (Speculative)**: Odizolowanie integracji PWA, Service Workera, detekcji iOS i generowania linków webcal za dedykowanym szwem (seam).
 
 ### Prezentacja planu i interfejs (`web/`)
 - [x] **Oczyszczenie nazw kierunków w menu wyboru**: Parsowanie długich nazw uczelnianych (np. `[TM Sem 1] Transport Morski pierwszego stopnia sem. 1 [2026-09-14 17:55] wer. 2` -> czyste `Transport Morski sem. 1`). Przetestowane w `test_calendar.js` (Test 17) i `tests.py` (Test 19).
 - [x] **Data i wersja aktualizacji planu uczelnianego**: Wyciąganie znacznika czasu i wersji z nazwy planu na arktur (np. `[2026-09-14 17:55] wer. 2`) i wyświetlanie jako data publikacji planu w menu / panelu bocznym.
 - [x] **Dostępność sal z uwzględnieniem dat i cykli (Ostrzeżenie E)**: Funkcja wyszukiwania wolnych sal weryfikuje faktyczny stan zajęć w danej dacie (`getRoomOccupancyAt`): uwzględnia przedmioty zakończone z 1. połowy semestru, naprzemienne cykle co 2 tygodnie, dni wolne oraz zamiany rektorskie. Przetestowane TDD w `test_calendar.js`.
-- [ ] **Usprawnienia wyszukiwarki wolnych sal**:
-  - **Wybór dnia i godziny z popupu kalendarza**: Dodanie selektora daty/dnia z popupu bezpośrednio w modalu wolnych sal, aby umożliwić sprawdzenie dostępności sal w dowolnym wybranym dniu semestru.
-  - **Globalna dostępność sal (wszystkie plany)**: Uwzględnianie obłożenia sal ze wszystkich dostępnych planów zajęć UMG (z indeksu `cross_reference.json`), a nie tylko z obecnie wybranego kierunku/grupy.
-  - **Szybkie filtrowanie i wyszukiwanie**: Lepsze sortowanie sal, filtrowanie po piętrach/budynkach oraz zakresach godzinowych.
+- [x] **Usprawnienia wyszukiwarki wolnych sal**:
+  - [x] **Wybór dnia i godziny z popupu kalendarza**: Dodanie selektora daty/dnia (Dziś / Jutro / kalendarz HTML5) bezpośrednio w modalu wolnych sal, umożliwiając sprawdzenie dostępności sal w dowolnym wybranym dniu semestru.
+  - [x] **Globalna dostępność sal (wszystkie plany)**: Uwzględnianie obłożenia sal ze wszystkich dostępnych planów zajęć UMG (z indeksu `cross_reference.json`), zamian rektorskich oraz trybu "Teraz" z czasem warszawskim (`Europe/Warsaw`).
+  - [x] **Szybkie filtrowanie i wyszukiwanie**: Natychmiastowe filtrowanie sal po nazwie (od 1 znaku), podział na kafelki wolne i zwijalną sekcję zajętych z informacją o kolejnych zajęciach.
 - [ ] **Widok zbiorczy dla wszystkich grup**: Dodanie widoku porównawczego (dzień / tydzień) prezentującego zajęcia wszystkich grup jednocześnie.
 
 
