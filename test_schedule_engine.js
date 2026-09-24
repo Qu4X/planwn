@@ -204,5 +204,16 @@ assert.ok(roomIndex["A-101"], "Sala A-101 powinna być zaindeksowana");
 assert.strictEqual(roomIndex["A-101"]["PON"].length, 2);
 assert.strictEqual(roomIndex["OL"], undefined, "Sala OL powinna być pominięta w indeksie fizycznych sal");
 console.log("✅ [PASS] buildScheduleIndex poprawnie indeksuje sale.");
+// --- Test 14: resolveBaseDay (zwykły dzień, zamiana dnia, weekend, błędy) ---
+console.log("\n-- Test 14: resolveBaseDay");
+assert.strictEqual(engine.resolveBaseDay("2026-11-04"), "ŚR", "04.11.2026 to środa");
+assert.strictEqual(engine.resolveBaseDay("2026-11-02"), "PON", "02.11.2026 to poniedziałek");
+// Piątek 13.11.2026 ma zamianę rektorską na środę w academic_calendar.json:
+assert.strictEqual(engine.resolveBaseDay("2026-11-13"), "ŚR", "13.11.2026 (piątek) ma zamianę rektorską na środę");
+assert.strictEqual(engine.resolveBaseDay("2026-11-08"), "ND", "08.11.2026 to niedziela");
+assert.strictEqual(engine.resolveBaseDay(null), null);
+assert.strictEqual(engine.resolveBaseDay(""), null);
+assert.strictEqual(engine.resolveBaseDay("invalid-date"), null);
+console.log("✅ [PASS] resolveBaseDay poprawnie rozwiązuje dzień bazowy i zamiany rektorskie.");
 
 console.log("\n🎉 Wszystkie testy ScheduleEngine zakończone sukcesem (100% PASS)!\n");

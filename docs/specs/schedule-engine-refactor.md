@@ -83,9 +83,16 @@ engine.buildScheduleIndex(plansMap: { [planId]: { [dayCode]: object } })
   → { [roomName]: { [dayCode]: object[] } }
 
 engine.isTeachingDay(iso: string) → boolean
+engine.resolveBaseDay(dateISO: string) → string | null
 engine.getMonday(d: Date) → Date
 engine.formatDateISO(date: Date) → string
 ```
+
+> **resolveBaseDay:** Rozwiązuje dzień bazowy dla podanej daty ISO (`"YYYY-MM-DD"`):
+> - Jeśli dla `dateISO` zdefiniowano zarządzenie rektorskie w `academicCalendar.daySwaps`, zwraca kod dnia zastępczego (`daySwaps[dateISO].replaceWith`, np. piątek 13.11 zwraca `"ŚR"`).
+> - W pozostałych przypadkach zwraca standardowy kod dnia tygodnia według kalendarza (`"PON"`, `"WT"`, `"ŚR"`, `"CZW"`, `"PT"`, `"SOB"`, `"ND"`). W UMG sobota (`SOB`) jest normalnym dniem zajęć dla studiów niestacjonarnych.
+> - Dla błędnych danych wejściowych (brak daty, niepoprawny format ISO) zwraca `null`.
+> - Pokryte dedykowanym testem w `test_schedule_engine.js` (Test 14).
 
 > **Uwaga o nazewnictwie:** `getRoomOccupancyAt` to jedyna nazwa tej metody w całej spec i kodzie. Poprzednia nazwa `resolveRoomOccupancyForDay` (z pierwszego projektu planu) jest porzucona.
 
@@ -218,6 +225,7 @@ Test uderza w interfejs silnika — metody publiczne `engine.*`. Nie testujemy w
 - **Edge case licznik przy zamianie dnia**: zajęcia środowe przeniesione na piątek — `meetingNumber` rośnie (zachowanie obecnej implementacji; test potwierdza)
 - **Niezmienność**: `deepStrictEqual(rawScheduleBefore, rawScheduleAfter)` dla `resolveWeekSchedule`, `getLessonMeetingInfo`, `buildScheduleIndex`
 - **Deterministyczność `now`**: wywołanie z `options.now = new Date("2027-06-20")` (sesja letnia) zwraca `status: "exam"` niezależnie od systemowego zegara; wywołanie z innym `now` (np. `"2026-11-04"`, normalny tydzień) zwraca `status: "normal"`
+- **`resolveBaseDay`**: zwykły dzień tygodnia (`2026-11-04` -> `"ŚR"`), zamiana rektorska (`2026-11-13` -> `"ŚR"`), weekend (`2026-11-08` -> `"ND"`), błędne dane wejściowe -> `null` (Test 14)
 - **Guard przy złej dacie**: `getLessonMeetingInfo` z `data_start: "invalid"` zwraca `{ active: true, meetingNum: 1 }` i nie rzuca wyjątku
 - **`baseDayPreview`**: lekcje w preview mają `meetingNumber: null`
 

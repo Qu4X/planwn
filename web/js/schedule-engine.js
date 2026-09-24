@@ -51,6 +51,20 @@ function create(academicCalendar, options = {}) {
     return true;
   }
 
+  function resolveBaseDay(dateISO) {
+    if (!dateISO || typeof dateISO !== "string") return null;
+    const parts = dateISO.split("-").map(Number);
+    if (parts.length !== 3) return null;
+    const [year, month, day] = parts;
+    const d = new Date(year, month - 1, day);
+    if (isNaN(d.getTime())) return null;
+
+    if (cal.daySwaps && cal.daySwaps[dateISO]) {
+      return cal.daySwaps[dateISO].replaceWith;
+    }
+    return DNI_MAP_SUNDAY_FIRST[d.getDay()];
+  }
+
   function getLessonSemesterPeriod(lesson) {
     if (!lesson || !lesson.data_start || !cal.periods) return null;
     const startIso = lesson.data_start;
@@ -446,6 +460,7 @@ function create(academicCalendar, options = {}) {
     getRoomOccupancyAt,
     buildScheduleIndex,
     isTeachingDay,
+    resolveBaseDay,
     getMonday,
     formatDateISO
   };
