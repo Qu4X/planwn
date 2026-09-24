@@ -227,11 +227,30 @@ if (typeof document !== "undefined") {
     initTheme();
     setupEventListeners();
     initPwaInstall();
+    initCrossRefUI();
     loadAcademicCalendarConfig();
     updateDayTabsUI();
     loadPlans();
-    loadCrossRefData(); // Preload cross-reference data in background
   });
+}
+
+function initCrossRefUI() {
+  if (typeof window !== "undefined" && window.CrossRef && window.CrossRef.UI) {
+    window.CrossRef.UI.init({
+      elements: {
+        modal: elements.crossModal,
+        title: elements.crossModalTitle,
+        badge: elements.crossModalBadge,
+        body: elements.crossModalBody,
+        searchInput: elements.sidebarSearchInput,
+        searchResults: elements.searchResults,
+        clearSearchBtn: elements.clearSearchBtn
+      },
+      scheduleEngine: engine,
+      onBeforeOpen: closeSidebar
+    });
+    window.CrossRef.DataService.load();
+  }
 }
 
 async function loadAcademicCalendarConfig() {
@@ -243,6 +262,9 @@ async function loadAcademicCalendarConfig() {
         ACADEMIC_CALENDAR = data;
         if (_ScheduleEngine) {
           engine = _ScheduleEngine.create(ACADEMIC_CALENDAR);
+          if (typeof window !== "undefined" && window.CrossRef && window.CrossRef.UI) {
+            window.CrossRef.UI.scheduleEngine = engine;
+          }
         }
         updateDayTabsUI();
         if (state.scheduleData) {
@@ -380,8 +402,19 @@ function setupEventListeners() {
   if (elements.copyUrlBtn) elements.copyUrlBtn.addEventListener("click", copyCalendarUrl);
 
   // Cross-reference Detail Modal
-  elements.closeCrossModalBtn.addEventListener("click", closeCrossModal);
-  elements.crossModal.querySelector(".modal-backdrop").addEventListener("click", closeCrossModal);
+  if (elements.closeCrossModalBtn) {
+    elements.closeCrossModalBtn.addEventListener("click", () => {
+      if (window.CrossRef && window.CrossRef.UI) window.CrossRef.UI.closeModal();
+    });
+  }
+  if (elements.crossModal) {
+    const backdrop = elements.crossModal.querySelector(".modal-backdrop");
+    if (backdrop) {
+      backdrop.addEventListener("click", () => {
+        if (window.CrossRef && window.CrossRef.UI) window.CrossRef.UI.closeModal();
+      });
+    }
+  }
 
   // About App Modal
   if (elements.aboutAppBtn) {
@@ -446,7 +479,7 @@ function setupEventListeners() {
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       closeAboutModal();
-      closeCrossModal();
+      if (window.CrossRef && window.CrossRef.UI) window.CrossRef.UI.closeModal();
       closeCalendarModal();
       if (typeof closeIosModal === "function") closeIosModal();
     }
@@ -460,69 +493,95 @@ function setupEventListeners() {
     });
   }
 
-  elements.sidebarSearchInput.addEventListener("input", (e) => {
-    onSearchInput(e.target.value);
-  });
+  if (elements.sidebarSearchInput) {
+    elements.sidebarSearchInput.addEventListener("input", (e) => {
+      if (window.CrossRef && window.CrossRef.UI) {
+        window.CrossRef.UI.handleSearch(e.target.value);
+      }
+    });
+  }
 
-  elements.clearSearchBtn.addEventListener("click", () => {
-    elements.sidebarSearchInput.value = "";
-    onSearchInput("");
-    elements.sidebarSearchInput.focus();
-  });
+  if (elements.clearSearchBtn) {
+    elements.clearSearchBtn.addEventListener("click", () => {
+      if (window.CrossRef && window.CrossRef.UI) {
+        window.CrossRef.UI.clearSearch();
+      }
+      if (elements.sidebarSearchInput) elements.sidebarSearchInput.focus();
+    });
+  }
 
-  elements.searchResults.addEventListener("click", (e) => {
-    const item = e.target.closest(".search-result-item");
-    if (!item) return;
-    const type = item.dataset.type;
-    const id = item.dataset.id;
-    closeSidebar();
-    elements.searchResults.classList.add("hidden");
-    if (type === "teacher") {
-      openTeacherSchedule(id);
-    } else if (type === "room") {
-      openRoomSchedule(id);
-    } else if (type === "subject") {
-      openSubjectDetail(id);
-    }
-  });
+  if (elements.searchResults) {
+    elements.searchResults.addEventListener("click", (e) => {
+      const item = e.target.closest(".search-result-item");
+      if (!item) return;
+      const type = item.dataset.type;
+      const id = item.dataset.id;
+      closeSidebar();
+      elements.searchResults.classList.add("hidden");
+      if (!window.CrossRef || !window.CrossRef.UI) return;
+      if (type === "teacher") {
+        window.CrossRef.UI.openTeacher(id);
+      } else if (type === "room") {
+        window.CrossRef.UI.openRoom(id);
+      } else if (type === "subject") {
+        window.CrossRef.UI.openSubject(id);
+      }
+    });
+  }
 
   // Free Rooms Finder Button
-  elements.freeRoomsBtn.addEventListener("click", () => {
-    closeSidebar();
-    openFreeRoomsModal();
-  });
+  if (elements.freeRoomsBtn) {
+    elements.freeRoomsBtn.addEventListener("click", () => {
+      closeSidebar();
+      if (window.CrossRef && window.CrossRef.UI) {
+        window.CrossRef.UI.openFreeRooms();
+      }
+    });
+  }
 
   // Delegated clicks inside Schedule Cards (Teachers and Rooms)
-  elements.scheduleContent.addEventListener("click", (e) => {
-    const roomBtn = e.target.closest(".lesson-room-btn");
-    if (roomBtn) {
-      e.stopPropagation();
-      openRoomSchedule(roomBtn.dataset.room);
-      return;
-    }
-    const teacherBtn = e.target.closest(".lesson-teacher-btn");
-    if (teacherBtn) {
-      e.stopPropagation();
-      openTeacherSchedule(teacherBtn.dataset.teacher);
-      return;
-    }
-  });
+  if (elements.scheduleContent) {
+    elements.scheduleContent.addEventListener("click", (e) => {
+      const roomBtn = e.target.closest(".lesson-room-btn");
+      if (roomBtn && roomBtn.dataset.room) {
+        e.stopPropagation();
+        if (window.CrossRef && window.CrossRef.UI) {
+          window.CrossRef.UI.openRoom(roomBtn.dataset.room);
+        }
+        return;
+      }
+      const teacherBtn = e.target.closest(".lesson-teacher-btn");
+      if (teacherBtn && teacherBtn.dataset.teacher) {
+        e.stopPropagation();
+        if (window.CrossRef && window.CrossRef.UI) {
+          window.CrossRef.UI.openTeacher(teacherBtn.dataset.teacher);
+        }
+        return;
+      }
+    });
+  }
 
   // Delegated clicks inside Cross Modal (to navigate between teachers, rooms, and subjects)
-  elements.crossModalBody.addEventListener("click", (e) => {
-    const roomBtn = e.target.closest(".lesson-room-btn");
-    if (roomBtn) {
-      e.stopPropagation();
-      openRoomSchedule(roomBtn.dataset.room);
-      return;
-    }
-    const teacherBtn = e.target.closest(".lesson-teacher-btn");
-    if (teacherBtn) {
-      e.stopPropagation();
-      openTeacherSchedule(teacherBtn.dataset.teacher);
-      return;
-    }
-  });
+  if (elements.crossModalBody) {
+    elements.crossModalBody.addEventListener("click", (e) => {
+      const roomBtn = e.target.closest(".lesson-room-btn");
+      if (roomBtn && roomBtn.dataset.room) {
+        e.stopPropagation();
+        if (window.CrossRef && window.CrossRef.UI) {
+          window.CrossRef.UI.openRoom(roomBtn.dataset.room);
+        }
+        return;
+      }
+      const teacherBtn = e.target.closest(".lesson-teacher-btn");
+      if (teacherBtn && teacherBtn.dataset.teacher) {
+        e.stopPropagation();
+        if (window.CrossRef && window.CrossRef.UI) {
+          window.CrossRef.UI.openTeacher(teacherBtn.dataset.teacher);
+        }
+        return;
+      }
+    });
+  }
 }
 
 function openSidebar() {
@@ -1693,421 +1752,12 @@ function initPwaInstall() {
 }
 
 // ==========================================================================
-// Cross-Referencing, Search & Free Room Finder Engine
+// Cross-Referencing & Free Rooms Integration (Delegated to CrossRef module)
 // ==========================================================================
 
-async function loadCrossRefData() {
-  if (state.crossRefData) return state.crossRefData;
 
-  const CACHE_KEY = "umg_cross_ref_cache";
-  try {
-    const cached = localStorage.getItem(CACHE_KEY);
-    if (cached) {
-      state.crossRefData = JSON.parse(cached);
-      // Background fetch for freshness
-      fetch("data/cross_reference.json")
-        .then(r => r.ok ? r.json() : null)
-        .then(fresh => {
-          if (fresh) {
-            state.crossRefData = fresh;
-            try { localStorage.setItem(CACHE_KEY, JSON.stringify(fresh)); } catch (e) { }
-          }
-        }).catch(() => { });
-      return state.crossRefData;
-    }
-  } catch (e) { }
 
-  try {
-    const resp = await fetch("data/cross_reference.json");
-    if (resp.ok) {
-      state.crossRefData = await resp.json();
-      try { localStorage.setItem(CACHE_KEY, JSON.stringify(state.crossRefData)); } catch (e) { }
-      return state.crossRefData;
-    }
-  } catch (err) {
-    console.error("Error loading cross reference data:", err);
-  }
-  return null;
-}
 
-function openCrossModal(title, badge, bodyHtml) {
-  elements.crossModalTitle.textContent = title;
-  elements.crossModalBadge.textContent = badge;
-  elements.crossModalBody.innerHTML = bodyHtml;
-  elements.crossModal.classList.remove("hidden");
-}
-
-function closeCrossModal() {
-  elements.crossModal.classList.add("hidden");
-}
-
-function onSearchInput(query) {
-  const q = query.trim().toLowerCase();
-  if (q.length === 0) {
-    elements.clearSearchBtn.classList.add("hidden");
-    elements.searchResults.classList.add("hidden");
-    elements.searchResults.innerHTML = "";
-    return;
-  }
-  elements.clearSearchBtn.classList.remove("hidden");
-  if (q.length < 2) {
-    elements.searchResults.classList.add("hidden");
-    return;
-  }
-
-  if (!state.crossRefData) {
-    loadCrossRefData().then(() => onSearchInput(query));
-    return;
-  }
-
-  const data = state.crossRefData;
-  const matchedTeachers = [];
-  const matchedRooms = [];
-  const matchedSubjects = [];
-
-  // Match teachers
-  for (const t of Object.keys(data.teachers || {})) {
-    if (t.toLowerCase().includes(q)) {
-      matchedTeachers.push(t);
-      if (matchedTeachers.length >= 5) break;
-    }
-  }
-
-  // Match rooms
-  for (const r of data.room_list || []) {
-    if (r.toLowerCase().includes(q) || `sala ${r}`.toLowerCase().includes(q)) {
-      matchedRooms.push(r);
-      if (matchedRooms.length >= 5) break;
-    }
-  }
-
-  // Match subjects
-  for (const [sName, sData] of Object.entries(data.subjects || {})) {
-    let match = sName.toLowerCase().includes(q);
-    if (!match && sData.raw_variants) {
-      match = sData.raw_variants.some(v => v.toLowerCase().includes(q));
-    }
-    if (match) {
-      matchedSubjects.push(sName);
-      if (matchedSubjects.length >= 5) break;
-    }
-  }
-
-  if (matchedTeachers.length === 0 && matchedRooms.length === 0 && matchedSubjects.length === 0) {
-    elements.searchResults.innerHTML = `<div class="search-no-results">Brak wyników dla "${escapeHtml(query)}"</div>`;
-    elements.searchResults.classList.remove("hidden");
-    return;
-  }
-
-  let html = "";
-  if (matchedTeachers.length > 0) {
-    html += `<div class="search-group-header">👨‍🏫 Wykładowcy</div>`;
-    for (const t of matchedTeachers) {
-      const classCount = (data.teachers[t] || []).length;
-      html += `
-        <button class="search-result-item" data-type="teacher" data-id="${escapeHtml(t)}">
-          <div class="search-result-main">
-            <span class="search-result-title">${escapeHtml(t)}</span>
-            <span class="search-result-subtitle">${classCount} zajęć w tygodniu</span>
-          </div>
-          <span class="search-result-badge">Plan</span>
-        </button>
-      `;
-    }
-  }
-
-  if (matchedRooms.length > 0) {
-    html += `<div class="search-group-header">🚪 Sale</div>`;
-    for (const r of matchedRooms) {
-      html += `
-        <button class="search-result-item" data-type="room" data-id="${escapeHtml(r)}">
-          <div class="search-result-main">
-            <span class="search-result-title">Sala ${escapeHtml(r)}</span>
-            <span class="search-result-subtitle">Dostępność i zajęcia</span>
-          </div>
-          <span class="search-result-badge">Sala</span>
-        </button>
-      `;
-    }
-  }
-
-  if (matchedSubjects.length > 0) {
-    html += `<div class="search-group-header">📚 Przedmioty</div>`;
-    for (const s of matchedSubjects) {
-      const sData = data.subjects[s] || {};
-      const teachersStr = (sData.teachers || []).slice(0, 2).join(", ");
-      html += `
-        <button class="search-result-item" data-type="subject" data-id="${escapeHtml(s)}">
-          <div class="search-result-main">
-            <span class="search-result-title">${escapeHtml(s)}</span>
-            <span class="search-result-subtitle">${escapeHtml(teachersStr || "Szczegóły przedmiotu")}</span>
-          </div>
-          <span class="search-result-badge">Przedmiot</span>
-        </button>
-      `;
-    }
-  }
-
-  elements.searchResults.innerHTML = html;
-  elements.searchResults.classList.remove("hidden");
-}
-
-async function openTeacherSchedule(teacherName) {
-  closeSidebar();
-  openCrossModal(teacherName, "👨‍🏫 Wykładowca", `<div class="spinner" style="margin: 2rem auto;"></div><p style="text-align:center;">Wczytywanie planu...</p>`);
-
-  const data = await loadCrossRefData();
-  if (!data) {
-    openCrossModal(teacherName, "👨‍🏫 Wykładowca", `<p class="placeholder-text" style="text-align:center; padding: 2rem; color: #ef4444;">Nie udało się załadować danych.</p>`);
-    return;
-  }
-
-  let entries = (data.teachers && data.teachers[teacherName]) || null;
-  if (!entries && data.teachers) {
-    const lower = teacherName.toLowerCase().trim();
-    for (const [k, v] of Object.entries(data.teachers)) {
-      if (k.toLowerCase().trim() === lower) {
-        entries = v;
-        break;
-      }
-    }
-  }
-  entries = entries || [];
-
-  if (entries.length === 0) {
-    openCrossModal(teacherName, "👨‍🏫 Wykładowca", `<p class="placeholder-text" style="text-align:center; padding: 2rem;">Brak zaplanowanych zajęć w bazie dla ${escapeHtml(teacherName)}.</p>`);
-    return;
-  }
-
-  const byDay = {};
-  for (const day of DNI_TYGODNIA) byDay[day] = [];
-  for (const entry of entries) {
-    if (!byDay[entry.day]) byDay[entry.day] = [];
-    byDay[entry.day].push(entry);
-  }
-
-  let html = `<div class="modal-schedule-section">`;
-  html += `<p style="margin-bottom: 0.5rem; color: var(--text-secondary);">Łącznie zajęć w tygodniu: <strong>${entries.length}</strong></p>`;
-
-  for (const day of DNI_TYGODNIA) {
-    const dayEntries = byDay[day] || [];
-    if (dayEntries.length === 0) continue;
-
-    html += `
-      <div class="modal-day-group">
-        <div class="modal-day-title">
-          <span>${DNI_PELNE[day] || day}</span>
-          <span>${dayEntries.length} ${dayEntries.length === 1 ? 'zajęcia' : 'zajęć'}</span>
-        </div>
-        <div class="modal-slots-list">
-    `;
-
-    for (const e of dayEntries) {
-      const isPhys = e.room && e.room.toUpperCase() !== "OL";
-      const roomBtn = isPhys
-        ? `<button class="lesson-room-btn" data-room="${escapeHtml(e.room)}">📍 Sala ${escapeHtml(e.room)}</button>`
-        : `<span class="lesson-room-badge">${escapeHtml(e.room || "OL")}</span>`;
-
-      let cycleBadges = "";
-      if (e.polowa_sem) {
-        cycleBadges += `<span class="lesson-sem-badge">${e.polowa_sem}. poł. sem.</span>`;
-      }
-      if (e.co_ile === 2) {
-        const odStr = e.od_tyg === 2 ? "od 2 tyg" : "od 1 tyg";
-        cycleBadges += `<span class="lesson-cycle-badge">co 2 tyg (${odStr})</span>`;
-      }
-
-      const groupsHtml = (e.groups || []).map(g => `<span class="modal-group-chip">${escapeHtml(g)}</span>`).join("");
-
-      html += `
-        <div class="modal-slot-item">
-          <div class="modal-slot-header">
-            <span class="modal-slot-time">${escapeHtml(e.hours)}</span>
-            <div style="display:flex; gap:0.35rem; align-items:center;">
-              ${cycleBadges}
-              ${roomBtn}
-            </div>
-          </div>
-          <div class="modal-slot-subject">${escapeHtml(e.subject)}</div>
-          <div class="modal-slot-meta">
-            <span>Grupy:</span>
-            <div class="modal-groups-chips">${groupsHtml}</div>
-          </div>
-          <div style="font-size: 0.75rem; color: var(--text-muted);">${escapeHtml(e.plan_name)}</div>
-        </div>
-      `;
-    }
-
-    html += `</div></div>`;
-  }
-
-  html += `</div>`;
-  openCrossModal(teacherName, "👨‍🏫 Wykładowca", html);
-}
-
-async function openRoomSchedule(roomName) {
-  closeSidebar();
-  openCrossModal(`Sala ${roomName}`, "🚪 Sala", `<div class="spinner" style="margin: 2rem auto;"></div><p style="text-align:center;">Wczytywanie obłożenia sali...</p>`);
-
-  const data = await loadCrossRefData();
-  if (!data) {
-    openCrossModal(`Sala ${roomName}`, "🚪 Sala", `<p class="placeholder-text" style="text-align:center; padding: 2rem; color: #ef4444;">Nie udało się załadować danych.</p>`);
-    return;
-  }
-
-  let roomDays = (data.rooms && data.rooms[roomName]) || null;
-  if (!roomDays && data.rooms) {
-    const lower = roomName.toLowerCase().trim();
-    for (const [k, v] of Object.entries(data.rooms)) {
-      if (k.toLowerCase().trim() === lower) {
-        roomDays = v;
-        break;
-      }
-    }
-  }
-  roomDays = roomDays || {};
-
-  let totalBooked = 0;
-  for (const d of Object.values(roomDays)) totalBooked += d.length;
-
-  let html = `<div class="modal-schedule-section">`;
-  html += `<p style="margin-bottom: 0.5rem; color: var(--text-secondary);">Tygodniowe obłożenie sali: <strong>${totalBooked}</strong> bloków zajęciowych.</p>`;
-
-  for (const day of DNI_TYGODNIA) {
-    const dayEntries = roomDays[day] || [];
-    html += `
-      <div class="modal-day-group">
-        <div class="modal-day-title">
-          <span>${DNI_PELNE[day] || day}</span>
-          <span>${dayEntries.length > 0 ? `${dayEntries.length} zajęć` : 'Wolna cały dzień'}</span>
-        </div>
-        <div class="modal-slots-list">
-    `;
-
-    if (dayEntries.length === 0) {
-      html += `<p style="padding: 0.75rem; text-align: center; color: var(--text-muted); font-size: 0.85rem;">Brak zajęć w tym dniu (sala wolna)</p>`;
-    } else {
-      for (const e of dayEntries) {
-        const teacherBtn = e.teacher && e.teacher !== "Brak danych prowadzącego"
-          ? `<button class="lesson-teacher-btn" data-teacher="${escapeHtml(e.teacher)}">👨‍🏫 ${escapeHtml(e.teacher)}</button>`
-          : `<span style="font-style: italic; font-size: 0.8rem; color: var(--text-muted);">Brak danych prowadzącego</span>`;
-
-        let cycleBadges = "";
-        if (e.polowa_sem) {
-          cycleBadges += `<span class="lesson-sem-badge">${e.polowa_sem}. poł. sem.</span>`;
-        }
-        if (e.co_ile === 2) {
-          const odStr = e.od_tyg === 2 ? "od 2 tyg" : "od 1 tyg";
-          cycleBadges += `<span class="lesson-cycle-badge">co 2 tyg (${odStr})</span>`;
-        }
-
-        const groupsHtml = (e.groups || []).map(g => `<span class="modal-group-chip">${escapeHtml(g)}</span>`).join("");
-
-        html += `
-          <div class="modal-slot-item">
-            <div class="modal-slot-header">
-              <span class="modal-slot-time">${escapeHtml(e.hours)}</span>
-              <div style="display:flex; gap:0.35rem; align-items:center;">
-                ${cycleBadges}
-                <span class="free-room-badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">Zajęta</span>
-              </div>
-            </div>
-            <div class="modal-slot-subject">${escapeHtml(e.subject)}</div>
-            <div class="modal-slot-meta">
-              ${teacherBtn}
-              <div class="modal-groups-chips">${groupsHtml}</div>
-            </div>
-          </div>
-        `;
-      }
-    }
-
-    html += `</div></div>`;
-  }
-
-  html += `</div>`;
-  openCrossModal(`Sala ${roomName}`, "🚪 Sala", html);
-}
-
-async function openSubjectDetail(subjectName) {
-  closeSidebar();
-  openCrossModal(subjectName, "📚 Przedmiot", `<div class="spinner" style="margin: 2rem auto;"></div><p style="text-align:center;">Wczytywanie szczegółów przedmiotu...</p>`);
-
-  const data = await loadCrossRefData();
-  if (!data) {
-    openCrossModal(subjectName, "📚 Przedmiot", `<p class="placeholder-text" style="text-align:center; padding: 2rem; color: #ef4444;">Nie udało się załadować danych.</p>`);
-    return;
-  }
-
-  let sInfo = (data.subjects && data.subjects[subjectName]) || null;
-  if (!sInfo && data.subjects) {
-    const lower = subjectName.toLowerCase().trim();
-    for (const [k, v] of Object.entries(data.subjects)) {
-      if (k.toLowerCase().trim() === lower) {
-        sInfo = v;
-        break;
-      }
-    }
-  }
-
-  if (!sInfo) {
-    openCrossModal(subjectName, "📚 Przedmiot", `<p class="placeholder-text">Brak szczegółów dla ${escapeHtml(subjectName)}</p>`);
-    return;
-  }
-
-  let html = `<div class="subject-meta-card">`;
-
-  if (sInfo.syllabus_url) {
-    html += `
-      <div>
-        <a class="subject-syllabus-link" href="${escapeHtml(sInfo.syllabus_url)}" target="_blank" rel="noopener">
-          📄 Oficjalna karta przedmiotu (Sylabus WN) ↗
-        </a>
-      </div>
-    `;
-  }
-
-  if (sInfo.majors && sInfo.majors.length > 0) {
-    html += `
-      <div>
-        <div class="control-label" style="margin-bottom: 0.25rem;">Kierunki studiów (siatka WN):</div>
-        <div style="font-size: 0.88rem; color: var(--text-primary); line-height: 1.4;">${sInfo.majors.map(m => `• ${escapeHtml(m)}`).join("<br>")}</div>
-      </div>
-    `;
-  }
-
-  if (sInfo.teachers && sInfo.teachers.length > 0) {
-    html += `
-      <div style="margin-top: 0.5rem;">
-        <div class="control-label" style="margin-bottom: 0.25rem;">Prowadzący ten przedmiot:</div>
-        <div style="display: flex; flex-direction: column; gap: 0.35rem;">
-          ${sInfo.teachers.map(t => `<button class="lesson-teacher-btn" data-teacher="${escapeHtml(t)}">👨‍🏫 ${escapeHtml(t)}</button>`).join("")}
-        </div>
-      </div>
-    `;
-  }
-
-  if (sInfo.plans && sInfo.plans.length > 0) {
-    html += `
-      <div style="margin-top: 0.5rem;">
-        <div class="control-label" style="margin-bottom: 0.25rem;">Grupy realizujące ten przedmiot w semestrze:</div>
-        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-    `;
-    for (const p of sInfo.plans) {
-      const gChips = (p.groups || []).map(g => `<span class="modal-group-chip">${escapeHtml(g)}</span>`).join("");
-      html += `
-        <div style="font-size: 0.82rem; color: var(--text-secondary); background: var(--bg-card); padding: 0.5rem 0.75rem; border-radius: 6px; border: 1px solid var(--border-subtle);">
-          <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">${escapeHtml(p.plan_name)}</div>
-          <div class="modal-groups-chips">${gChips}</div>
-        </div>
-      `;
-    }
-    html += `</div></div>`;
-  }
-
-  html += `</div>`;
-  openCrossModal(subjectName, "📚 Przedmiot", html);
-}
 
 // Pure function to determine room occupancy at a given date and time range
 function getRoomOccupancyAt(daySchedule, queryRange, targetDateIso, baseDay) {
@@ -2115,180 +1765,14 @@ function getRoomOccupancyAt(daySchedule, queryRange, targetDateIso, baseDay) {
   return { isFree: true, occupyingClass: null, nextClass: null };
 }
 
-async function openFreeRoomsModal(customDay, customSlot) {
-  closeSidebar();
-  openCrossModal("Dostępność sal", "🔎 Wolne sale", `<div class="spinner" style="margin: 2rem auto;"></div><p style="text-align:center;">Sprawdzanie dostępności sal...</p>`);
-
-  const data = await loadCrossRefData();
-  if (!data) {
-    openCrossModal("Dostępność sal", "🔎 Wolne sale", `<p class="placeholder-text" style="text-align:center; padding: 2rem; color: #ef4444;">Nie udało się załadować danych.</p>`);
-    return;
-  }
-
-  const todayCode = getTodayCode();
-  const day = customDay || (DNI_TYGODNIA.includes(todayCode) ? todayCode : "PON");
-
-  const STANDARD_SLOTS = [
-    { label: "Teraz (bieżący czas)", value: "NOW" },
-    { label: "08:00 - 09:30", value: "08:00 - 09:30" },
-    { label: "09:45 - 11:15", value: "09:45 - 11:15" },
-    { label: "11:30 - 13:00", value: "11:30 - 13:00" },
-    { label: "13:30 - 15:00", value: "13:30 - 15:00" },
-    { label: "15:15 - 16:45", value: "15:15 - 16:45" },
-    { label: "17:00 - 18:30", value: "17:00 - 18:30" },
-    { label: "18:45 - 20:15", value: "18:45 - 20:15" }
-  ];
-
-  const slot = customSlot || "NOW";
-
-  function parseMinutes(timeStr) {
-    const [h, m] = timeStr.trim().split(":").map(Number);
-    return h * 60 + m;
-  }
-
-  let qStart = 0;
-  let qEnd = 0;
-
-  if (slot === "NOW") {
-    const now = new Date();
-    const curMinutes = now.getHours() * 60 + now.getMinutes();
-    qStart = curMinutes;
-    qEnd = curMinutes + 1;
-  } else {
-    const parts = slot.split(" - ");
-    if (parts.length === 2) {
-      qStart = parseMinutes(parts[0]);
-      qEnd = parseMinutes(parts[1]);
-    }
-  }
-
-  // Determine target date for date-aware occupancy — use the currently viewed week, not always today
-  const todayObj = new Date();
-  const todayIso = formatDateISO(todayObj);
-  let targetDateIso = todayIso;
-  let effectiveScheduleDay = day;
-
-  if (day !== todayCode) {
-    const curMon = getWeekMonday(state.weekOffset);
-    const dayIdx = DNI_MAP_SUNDAY_FIRST.indexOf(day);
-    const offset = (dayIdx === 0 ? 6 : dayIdx - 1);
-    const targetDayDate = new Date(curMon);
-    targetDayDate.setDate(curMon.getDate() + offset);
-    targetDateIso = formatDateISO(targetDayDate);
-  }
-
-  if (ACADEMIC_CALENDAR.daySwaps && ACADEMIC_CALENDAR.daySwaps[targetDateIso]) {
-    effectiveScheduleDay = ACADEMIC_CALENDAR.daySwaps[targetDateIso].replaceWith;
-  }
-
-  const roomsList = data.room_list || [];
-  const roomStatuses = [];
-
-  for (const r of roomsList) {
-    const daySchedule = (data.rooms[r] && data.rooms[r][effectiveScheduleDay]) || [];
-    const occupancy = getRoomOccupancyAt(daySchedule, { start: qStart, end: qEnd }, targetDateIso, effectiveScheduleDay);
-
-    roomStatuses.push({
-      room: r,
-      isFree: occupancy.isFree,
-      overlappingClass: occupancy.occupyingClass,
-      nextClass: occupancy.nextClass
-    });
-  }
-
-  // Free rooms first, then by room name
-  roomStatuses.sort((a, b) => {
-    if (a.isFree !== b.isFree) return a.isFree ? -1 : 1;
-    return a.room.localeCompare(b.room, undefined, { numeric: true });
-  });
-
-  const freeCount = roomStatuses.filter(r => r.isFree).length;
-
-  let html = `
-    <div class="free-rooms-controls">
-      <div class="free-rooms-control-group">
-        <label for="fr-day-select">Dzień tygodnia:</label>
-        <select id="fr-day-select">
-          ${DNI_TYGODNIA.map(d => `<option value="${d}" ${d === day ? 'selected' : ''}>${DNI_PELNE[d]}</option>`).join("")}
-        </select>
-      </div>
-      <div class="free-rooms-control-group">
-        <label for="fr-slot-select">Przedział godzinowy:</label>
-        <select id="fr-slot-select">
-          ${STANDARD_SLOTS.map(s => `<option value="${s.value}" ${s.value === slot ? 'selected' : ''}>${s.label}</option>`).join("")}
-        </select>
-      </div>
-    </div>
-
-    <div class="free-rooms-summary-banner">
-      <span>Dostępne sale: <strong style="color: var(--color-success);">${freeCount}</strong> z ${roomsList.length}</span>
-      <span style="font-size: 0.8rem; color: var(--text-muted);">Kliknij salę, aby sprawdzić jej plan</span>
-    </div>
-
-    <div class="free-rooms-grid">
-  `;
-
-  for (const st of roomStatuses) {
-    if (st.isFree) {
-      let subtext = "Wolna do końca dnia";
-      if (st.nextClass && st.nextClass.hours) {
-        const nextStart = st.nextClass.hours.split(" - ")[0];
-        subtext = `Wolna do ${nextStart}`;
-      }
-      html += `
-        <div class="free-room-card status-free" data-room="${escapeHtml(st.room)}">
-          <div class="free-room-header">
-            <span class="free-room-name">Sala ${escapeHtml(st.room)}</span>
-            <span class="free-room-badge">WOLNA</span>
-          </div>
-          <div class="free-room-detail" style="color: var(--color-success); font-weight: 600;">${escapeHtml(subtext)}</div>
-        </div>
-      `;
-    } else {
-      const cls = st.overlappingClass;
-      html += `
-        <div class="free-room-card status-busy" data-room="${escapeHtml(st.room)}">
-          <div class="free-room-header">
-            <span class="free-room-name">Sala ${escapeHtml(st.room)}</span>
-            <span class="free-room-badge">ZAJĘTA</span>
-          </div>
-          <div class="free-room-detail" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-            ${escapeHtml(cls.subject || "Zajęcia")} (${escapeHtml(cls.hours)})
-          </div>
-        </div>
-      `;
-    }
-  }
-
-  html += `</div>`;
-
-  openCrossModal("Dostępność sal", "🔎 Wolne sale", html);
-
-  // Bind change events inside modal
-  const daySel = document.getElementById("fr-day-select");
-  const slotSel = document.getElementById("fr-slot-select");
-  if (daySel && slotSel) {
-    daySel.addEventListener("change", () => openFreeRoomsModal(daySel.value, slotSel.value));
-    slotSel.addEventListener("change", () => openFreeRoomsModal(daySel.value, slotSel.value));
-  }
-
-  // Click handler on room cards inside modal
-  elements.crossModalBody.querySelectorAll(".free-room-card").forEach(card => {
-    card.addEventListener("click", () => {
-      const r = card.dataset.room;
-      if (r) openRoomSchedule(r);
-    });
-  });
-}
-
-// Global exports for inline handlers
+// Global exports for inline handlers & backward compatibility
 if (typeof window !== "undefined") {
-  window.openTeacherSchedule = openTeacherSchedule;
-  window.openRoomSchedule = openRoomSchedule;
-  window.openSubjectDetail = openSubjectDetail;
-  window.openFreeRoomsModal = openFreeRoomsModal;
+  window.openTeacherSchedule = (t) => window.CrossRef?.UI?.openTeacher(t);
+  window.openRoomSchedule = (r) => window.CrossRef?.UI?.openRoom(r);
+  window.openSubjectDetail = (s) => window.CrossRef?.UI?.openSubject(s);
+  window.openFreeRoomsModal = (d, s) => window.CrossRef?.UI?.openFreeRooms({ dateISO: d, slot: s });
   window.getRoomOccupancyAt = getRoomOccupancyAt;
-  window.closeCrossModal = closeCrossModal;
+  window.closeCrossModal = () => window.CrossRef?.UI?.closeModal();
 }
 
 if (typeof module !== "undefined" && module.exports) {
