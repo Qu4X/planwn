@@ -1085,66 +1085,20 @@ function renderSchedule() {
   const filteredSchedule = {};
   let totalLessonsInWeek = 0;
 
-  if (engine) {
-    const weekResolution = engine.resolveWeekSchedule(targetMonday, state.scheduleData);
-    for (const day of DNI_TYGODNIA) {
-      const dayStatus = weekResolution[day];
-      filteredSchedule[day] = {
-        lessons: dayStatus.lessons,
-        swap: dayStatus.status === "daySwap" ? { replaceWith: dayStatus.swapReplaceWith, note: dayStatus.swapNote } : null,
-        holiday: dayStatus.status === "holiday" ? dayStatus.message : null,
-        date: dayStatus.dateObj,
-        dateKey: dayStatus.dateISO,
-        status: dayStatus.status,
-        message: dayStatus.message,
-        baseDayPreview: dayStatus.baseDayPreview
-      };
-      totalLessonsInWeek += dayStatus.lessons.length;
-    }
-  } else {
-    for (let dIdx = 0; dIdx < DNI_TYGODNIA.length; dIdx++) {
-      const day = DNI_TYGODNIA[dIdx];
-      const dayDate = new Date(targetMonday);
-      dayDate.setDate(targetMonday.getDate() + dIdx);
-      const dateKey = formatDateISO(dayDate);
-
-      let sourceDay = day;
-      let daySwapInfo = null;
-      if (ACADEMIC_CALENDAR.daySwaps[dateKey]) {
-        daySwapInfo = ACADEMIC_CALENDAR.daySwaps[dateKey];
-        sourceDay = daySwapInfo.replaceWith;
-      }
-
-      const holiday = ACADEMIC_CALENDAR.holidays[dateKey] || null;
-
-      const daySlots = state.scheduleData[sourceDay] || {};
-      const dayLessons = [];
-
-      // If it's a holiday or day off, no classes are held!
-      if (!holiday) {
-        for (const [slotStart, lessonInfo] of Object.entries(daySlots)) {
-          if (isLessonInWeek(lessonInfo, sourceDay, targetMonday, dateKey)) {
-            dayLessons.push({
-              slot: parseInt(slotStart),
-              sourceDay: sourceDay,
-              lessonDate: dateKey,
-              ...lessonInfo
-            });
-          }
-        }
-      }
-
-      // Sort by slot time
-      dayLessons.sort((a, b) => a.slot - b.slot);
-      filteredSchedule[day] = {
-        lessons: dayLessons,
-        swap: daySwapInfo,
-        holiday: holiday,
-        date: dayDate,
-        dateKey: dateKey
-      };
-      totalLessonsInWeek += dayLessons.length;
-    }
+  const weekResolution = engine ? engine.resolveWeekSchedule(targetMonday, state.scheduleData) : {};
+  for (const day of DNI_TYGODNIA) {
+    const dayStatus = weekResolution[day] || { lessons: [] };
+    filteredSchedule[day] = {
+      lessons: dayStatus.lessons || [],
+      swap: dayStatus.status === "daySwap" ? { replaceWith: dayStatus.swapReplaceWith, note: dayStatus.swapNote } : null,
+      holiday: dayStatus.status === "holiday" ? dayStatus.message : null,
+      date: dayStatus.dateObj,
+      dateKey: dayStatus.dateISO,
+      status: dayStatus.status,
+      message: dayStatus.message,
+      baseDayPreview: dayStatus.baseDayPreview
+    };
+    totalLessonsInWeek += (dayStatus.lessons || []).length;
   }
 
   // Update day tabs based on filteredSchedule and current view mode

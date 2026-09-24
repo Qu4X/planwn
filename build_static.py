@@ -59,7 +59,8 @@ def setup_dist_directories():
         "screenshot-mobile.png",
         "apple-touch-icon.png",
         "monochrome.svg",
-        "planwn.svg"
+        "planwn.svg",
+        "changelog.json"
     ]
     for filename in web_assets:
         src = os.path.join(WEB_DIR, filename)
@@ -69,6 +70,15 @@ def setup_dist_directories():
             logger.info(f"Copied {filename} -> dist/")
         else:
             logger.warning(f"File {src} not found!")
+
+    # Copy web/js directory (e.g. schedule-engine.js) to dist/js/
+    js_src_dir = os.path.join(WEB_DIR, "js")
+    js_dst_dir = os.path.join(DIST_DIR, "js")
+    if os.path.exists(js_src_dir):
+        os.makedirs(js_dst_dir, exist_ok=True)
+        for js_file in os.listdir(js_src_dir):
+            shutil.copy2(os.path.join(js_src_dir, js_file), os.path.join(js_dst_dir, js_file))
+        logger.info("Copied web/js/ -> dist/js/")
 
     # Copy academic_calendar.json to dist/data/
     cal_src = os.path.join(BASE_DIR, "academic_calendar.json")
