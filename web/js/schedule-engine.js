@@ -4,6 +4,14 @@
  * Zgodny ze specyfikacją: docs/specs/schedule-engine-refactor.md
  */
 
+(function (root, factory) {
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = factory();
+  } else {
+    root.ScheduleEngine = factory();
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+
 const DNI_TYGODNIA = ["PON", "WT", "ŚR", "CZW", "PT", "SOB", "ND"];
 const DNI_MAP_SUNDAY_FIRST = ["ND", "PON", "WT", "ŚR", "CZW", "PT", "SOB"];
 
@@ -443,12 +451,11 @@ function create(academicCalendar, options = {}) {
   };
 }
 
-const ScheduleEngine = {
-  create,
-  DNI_TYGODNIA,
-  DNI_MAP_SUNDAY_FIRST
-};
-
-if (typeof module !== 'undefined') {
-  module.exports = ScheduleEngine;
-}
+  return {
+    create,
+    DNI_TYGODNIA,
+    DNI_MAP_SUNDAY_FIRST,
+    formatDateISO,
+    getMonday
+  };
+});
