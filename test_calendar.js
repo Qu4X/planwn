@@ -1,5 +1,16 @@
 const assert = require("assert");
-const { getLessonMeetingInfo, getMonday, getSafeGroupName, getRoomOccupancyAt, parsePlanInfo, updateCalendarNotice, renderSchedule, state, elements } = require("./web/app.js");
+const ScheduleEngine = require("./web/js/schedule-engine.js");
+const academicCalendar = require("./academic_calendar.json");
+
+// Domain engine instance
+const engine = ScheduleEngine.create(academicCalendar);
+const getLessonMeetingInfo = (...args) => engine.getLessonMeetingInfo(...args);
+const getMonday = (...args) => engine.getMonday(...args);
+const getRoomOccupancyAt = (...args) => engine.getRoomOccupancyAt(...args);
+const isTeachingDay = (...args) => engine.isTeachingDay(...args);
+
+// UI helpers and state from app.js
+const { getSafeGroupName, parsePlanInfo, updateCalendarNotice, renderSchedule, shouldShowChangelog, openChangelogModal, closeChangelogModal, state, elements } = require("./web/app.js");
 
 console.log("\n🧪 Running Calendar Engine TDD Tests...\n");
 
@@ -852,3 +863,59 @@ assert.strictEqual(occupancyWeek1.isFree, false,
 console.log("Tydzień 1 (07.10 - BHP aktywne):", occupancyWeek1.isFree ? "wolna" : "zajęta ✓");
 console.log("Tydzień 9 (02.12 - po BHP):", occupancyAfterEnd.isFree ? "wolna ✓" : "zajęta");
 console.log("✅ [PASS] getRoomOccupancyAt poprawnie weryfikuje aktywność zajęć przy sprawdzaniu wolnych sal.");
+
+// ─── Test 21: Powiadomienie o nowościach (Changelog Modal & shouldShowChangelog) ────
+console.log("\n-- Test 21: Powiadomienie o nowościach (Changelog Popup Modal)");
+
+// 1. shouldShowChangelog logic
+assert.strictEqual(shouldShowChangelog("3.8.0", null), true, "Dla nowego użytkownika (brak zapisu) powinno pokazać modal");
+assert.strictEqual(shouldShowChangelog("3.8.0", "3.7.0"), true, "Dla nowszej wersji powinno pokazać modal");
+assert.strictEqual(shouldShowChangelog("3.8.0", "3.8.0"), false, "Dla tej samej wersji NIE powinno pokazywać modala");
+assert.strictEqual(shouldShowChangelog(null, "3.8.0"), false, "Brak nowej wersji nie powinien wywołać modala");
+
+// 2. Interakcja z elementami DOM i localStorage
+let modalOpened = false;
+let modalClosed = false;
+
+elements.changelogModal = {
+  showModal() { modalOpened = true; },
+  close() { modalClosed = true; },
+  classList: { add() {}, remove() {} }
+};
+elements.changelogVersionBadge = { textContent: "" };
+elements.changelogDate = { textContent: "" };
+elements.changelogFeaturesList = { innerHTML: "" };
+
+const mockStorage = {};
+global.localStorage = {
+  getItem(k) { return mockStorage[k] || null; },
+  setItem(k, v) { mockStorage[k] = String(v); }
+};
+
+const sampleChangelog = {
+  version: "3.8.0",
+  date: "2026-09-24",
+  features: ["Funkcja A", "Funkcja B"]
+};
+
+openChangelogModal(sampleChangelog);
+
+assert.strictEqual(modalOpened, true, "openChangelogModal powinno wywołać showModal() na elemencie dialog");
+assert.strictEqual(elements.changelogVersionBadge.textContent, "Wersja 3.8.0", "Badge wersji powinien mieć tekst 'Wersja 3.8.0'");
+assert.strictEqual(elements.changelogDate.textContent, "2026-09-24", "Data powinna być ustawiona na '2026-09-24'");
+assert.ok(elements.changelogFeaturesList.innerHTML.includes("Funkcja A") && elements.changelogFeaturesList.innerHTML.includes("Funkcja B"),
+  "Lista funkcji powinna zawierać wstrzyknięte elementy <li>");
+
+// Zamknij modal i zweryfikuj zapis do localStorage
+closeChangelogModal();
+assert.strictEqual(modalClosed, true, "closeChangelogModal powinno wywołać close() na dialogu");
+assert.strictEqual(mockStorage["last_seen_changelog_version"], "3.8.0", "Wersja powinna zostać zapisana w localStorage");
+
+// Sprawdź ponowną weryfikację po zapisaniu wersji
+assert.strictEqual(
+  shouldShowChangelog("3.8.0", mockStorage["last_seen_changelog_version"]),
+  false,
+  "Po zapisaniu w localStorage modal nie powinien się ponownie wyświetlać dla tej samej wersji"
+);
+
+console.log("✅ [PASS] Powiadomienie o nowościach (Changelog Modal & shouldShowChangelog) działa prawidłowo.");

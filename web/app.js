@@ -1051,202 +1051,27 @@ function updateDayTabsUI(filteredSchedule = null) {
 
 const DNI_MAP_SUNDAY_FIRST = ["ND", "PON", "WT", "ŚR", "CZW", "PT", "SOB"];
 
-// Check if a given date is an official teaching day (not a holiday, break, or exam session)
+// Sprawdzenie dnia dydaktycznego (delegowane do ScheduleEngine)
 function isTeachingDay(iso) {
-  if (engine) return engine.isTeachingDay(iso);
-  if (ACADEMIC_CALENDAR.holidays && ACADEMIC_CALENDAR.holidays[iso]) return false;
-  if (ACADEMIC_CALENDAR.periods) {
-    const isNonTeaching = ACADEMIC_CALENDAR.periods.some(
-      p => (p.type === "break" || p.type === "exam") && p.start <= iso && p.end >= iso
-    );
-    if (isNonTeaching) return false;
-    const isTeaching = ACADEMIC_CALENDAR.periods.some(
-      p => p.type === "teaching" && p.start <= iso && p.end >= iso
-    );
-    return isTeaching;
-  }
-  return true;
+  return engine ? engine.isTeachingDay(iso) : true;
 }
 
-// Determine the academic semester teaching period for a given lesson
-function getLessonSemesterPeriod(lesson) {
-  if (!lesson || !lesson.data_start || !ACADEMIC_CALENDAR.periods) return null;
-  const startIso = lesson.data_start;
-  const teachingPeriods = ACADEMIC_CALENDAR.periods.filter(p => p.type === "teaching");
-  if (!teachingPeriods.length) return null;
-
-  if (typeof lesson.semestr === "number") {
-    const isSummer = lesson.semestr % 2 === 0;
-    return teachingPeriods.find(
-      p => isSummer ? p.name.includes("letni") : p.name.includes("zimowy")
-    ) || null;
-  }
-
-  const directMatch = teachingPeriods.find(p => p.start <= startIso && p.end >= startIso);
-  if (directMatch) return directMatch;
-
-  if (startIso <= "2027-02-21") {
-    return teachingPeriods.find(p => p.name.includes("zimowy")) || teachingPeriods[0];
-  }
-  return teachingPeriods.find(p => p.name.includes("letni")) || teachingPeriods[1];
-}
-
-// Calculate lesson meeting occurrence info accounting for calendar holidays, day swaps, and breaks
+// Obliczenie wystąpienia spotkania (delegowane do ScheduleEngine)
 function getLessonMeetingInfo(lesson, baseDay, targetMonday, targetDate = null) {
-  if (engine) return engine.getLessonMeetingInfo(lesson, baseDay, targetMonday, targetDate);
-  if (!lesson.data_start) return { active: true, meetingNum: 1, total: lesson.tygodnie || 15 };
-
-  try {
-    const [year, month, day] = lesson.data_start.split("-").map(Number);
-    const startDate = new Date(year, month - 1, day);
-    if (isNaN(startDate.getTime())) return { active: true, meetingNum: 1, total: lesson.tygodnie || 15 };
-    const startMonday = getMonday(startDate);
-    const totalWeeks = lesson.tygodnie || 15;
-
-    // Hard semester end: days outside teaching periods, holidays, or exam sessions cannot have active classes
-    if (targetDate && !isTeachingDay(targetDate)) {
-      return { active: false, meetingNum: 0, total: totalWeeks };
-    }
-
-    // Semester boundaries: classes from odd (winter) semesters cannot occur after inter-semester break,
-    // and classes from even (summer) semesters cannot occur before it.
-    const semPeriod = getLessonSemesterPeriod(lesson);
-    if (semPeriod) {
-      if (targetDate && (targetDate < semPeriod.start || targetDate > semPeriod.end)) {
-        return { active: false, meetingNum: 0, total: totalWeeks };
-      }
-      if (!targetDate) {
-        const monIso = formatDateISO(targetMonday);
-        const sun = new Date(targetMonday);
-        sun.setDate(sun.getDate() + 6);
-        const sunIso = formatDateISO(sun);
-        if (sunIso < semPeriod.start || monIso > semPeriod.end) {
-          return { active: false, meetingNum: 0, total: totalWeeks };
-        }
-      }
-    }
-
-    if (targetDate && targetDate < formatDateISO(startDate)) {
-      return { active: false, meetingNum: 0, total: totalWeeks };
-    }
-    if (!targetDate && targetMonday < startMonday) {
-      return { active: false, meetingNum: 0, total: totalWeeks };
-    }
-
-    // Guard: if baseDay is not a recognised weekday name, avoid iterating at all
-    if (!DNI_MAP_SUNDAY_FIRST.includes(baseDay)) {
-      return { active: true, meetingNum: 1, total: totalWeeks };
-    }
-
-    let currentMon = new Date(startMonday);
-    let meetingCount = 0;
-    let targetMeetingNum = null;
-    let targetActive = false;
-
-    // Simulate week-by-week actual teaching sessions (hard cap = 200 weeks ≈ 4 years)
-    const MAX_ITER = 200;
-    let safetyCount = 0;
-
-    while ((currentMon <= targetMonday || meetingCount < totalWeeks) && safetyCount++ < MAX_ITER) {
-      const diffTime = currentMon.getTime() - startMonday.getTime();
-      const diffWeeks = Math.round(diffTime / (1000 * 60 * 60 * 24 * 7));
-
-      // For bi-weekly classes, odd intervals from startMonday are off-weeks
-      const isCycleWeek = (lesson.co_ile !== 2) || (diffWeeks % 2 === 0);
-
-      if (isCycleWeek) {
-        for (let i = 0; i < 7; i++) {
-          const dayDate = new Date(currentMon);
-          dayDate.setDate(currentMon.getDate() + i);
-          const iso = formatDateISO(dayDate);
-
-          // Skip if before subject start date
-          if (iso < lesson.data_start) continue;
-
-          // Skip if outside this lesson's semester teaching window
-          if (semPeriod && (iso < semPeriod.start || iso > semPeriod.end)) continue;
-
-          // Skip if not an official teaching day (holiday, break, or exam session)
-          if (!isTeachingDay(iso)) continue;
-
-          // Effective day of teaching (accounting for rector day swaps)
-          let effectiveDay = DNI_MAP_SUNDAY_FIRST[dayDate.getDay()];
-          if (ACADEMIC_CALENDAR.daySwaps[iso]) {
-            effectiveDay = ACADEMIC_CALENDAR.daySwaps[iso].replaceWith;
-          }
-
-          if (effectiveDay === baseDay) {
-            meetingCount++;
-
-            if (targetDate) {
-              if (iso === targetDate) {
-                targetMeetingNum = meetingCount;
-                targetActive = meetingCount <= totalWeeks;
-              }
-            } else if (currentMon.getTime() === targetMonday.getTime()) {
-              targetMeetingNum = meetingCount;
-              targetActive = meetingCount <= totalWeeks;
-            }
-          }
-        }
-      }
-
-      if (currentMon.getTime() === targetMonday.getTime() && targetMeetingNum === null) {
-        targetActive = false;
-        targetMeetingNum = meetingCount;
-      }
-
-      if (currentMon > targetMonday && meetingCount >= totalWeeks) break;
-      currentMon.setDate(currentMon.getDate() + 7);
-    }
-
-    return {
-      active: targetActive,
-      meetingNum: targetMeetingNum || meetingCount,
-      total: totalWeeks
-    };
-  } catch (e) {
-    return { active: true, meetingNum: 1, total: lesson.tygodnie || 15 };
-  }
+  return engine
+    ? engine.getLessonMeetingInfo(lesson, baseDay, targetMonday, targetDate)
+    : { active: true, meetingNum: 1, total: (lesson && lesson.tygodnie) || 15 };
 }
 
-// Check if lesson is active in selected week or specific date
+// Sprawdzenie czy zajęcia odbywają się w wybranym tygodniu
 function isLessonInWeek(lesson, baseDay, targetMonday, targetDate = null) {
-  if (!lesson.data_start) return true;
-  const info = getLessonMeetingInfo(lesson, baseDay, targetMonday, targetDate);
-  return info.active;
+  if (!lesson || !lesson.data_start) return true;
+  return getLessonMeetingInfo(lesson, baseDay, targetMonday, targetDate).active;
 }
 
-// Calculate subject meeting progress (e.g. 3/5, 10/15, Ostatnie zajęcia)
+// Obliczenie postępu spotkania (delegowane do ScheduleEngine)
 function getLessonProgress(lesson, baseDay, targetMonday, targetDate = null) {
-  if (engine) return engine.getLessonProgress(lesson, baseDay, targetMonday, targetDate);
-  if (!lesson.tygodnie) return null;
-  if (!lesson.data_start) return { text: `${lesson.tygodnie}`, title: `Liczba spotkań: ${lesson.tygodnie}`, isFinal: false };
-
-  try {
-    const info = getLessonMeetingInfo(lesson, baseDay, targetMonday, targetDate);
-    if (!info.meetingNum || info.meetingNum < 1) {
-      return { text: `${lesson.tygodnie}`, title: `Liczba spotkań: ${lesson.tygodnie}`, isFinal: false };
-    }
-
-    const total = info.total || lesson.tygodnie;
-    const isFinal = info.meetingNum >= total;
-
-    if (isFinal) {
-      return {
-        text: "Ostatnie zajęcia",
-        title: `Ostatnie zajęcia (${info.meetingNum} z ${total})`,
-        isFinal: true
-      };
-    }
-
-    const text = total > 1 ? `${info.meetingNum}/${total}` : `${info.meetingNum}`;
-    const title = total > 1 ? `Spotkanie ${info.meetingNum} z ${total}` : `Spotkanie ${info.meetingNum}`;
-
-    return { text, title, isFinal: false };
-  } catch (e) {
-    return { text: `${lesson.tygodnie}`, title: `Liczba spotkań: ${lesson.tygodnie}`, isFinal: false };
-  }
+  return engine ? engine.getLessonProgress(lesson, baseDay, targetMonday, targetDate) : null;
 }
 
 // Render schedule view
@@ -2333,69 +2158,7 @@ async function openSubjectDetail(subjectName) {
 // Pure function to determine room occupancy at a given date and time range
 function getRoomOccupancyAt(daySchedule, queryRange, targetDateIso, baseDay) {
   if (engine) return engine.getRoomOccupancyAt(daySchedule, queryRange, targetDateIso, baseDay);
-  if (!daySchedule || !daySchedule.length) {
-    return { isFree: true, occupyingClass: null, nextClass: null };
-  }
-
-  // If the target date is not a teaching day (holiday, break, exam session)
-  if (!isTeachingDay(targetDateIso)) {
-    return { isFree: true, occupyingClass: null, nextClass: null };
-  }
-
-  const qStart = queryRange.start;
-  const qEnd = queryRange.end;
-
-  let occupyingClass = null;
-  let nextClass = null;
-
-  const [y, m, d] = targetDateIso.split("-").map(Number);
-  const targetDateObj = new Date(y, m - 1, d);
-  const targetMonday = getMonday(targetDateObj);
-
-  for (const entry of daySchedule) {
-    if (!entry.hours || !entry.hours.includes(" - ")) continue;
-    const [startStr, endStr] = entry.hours.split(" - ");
-    const [sh, sm] = startStr.trim().split(":").map(Number);
-    const [eh, em] = endStr.trim().split(":").map(Number);
-    const cStart = sh * 60 + sm;
-    const cEnd = eh * 60 + em;
-
-    // Check if the lesson is active on targetDateIso
-    const lessonDesc = {
-      przedmiot: entry.subject,
-      data_start: entry.data_start,
-      tygodnie: entry.weeks || entry.tygodnie || 15,
-      co_ile: entry.co_ile || 1,
-      polowa_sem: entry.polowa_sem
-    };
-
-    const meetingInfo = getLessonMeetingInfo(lessonDesc, baseDay, targetMonday, targetDateIso);
-    if (!meetingInfo.active) {
-      continue;
-    }
-
-    if (cStart < qEnd && cEnd > qStart) {
-      occupyingClass = entry;
-      break;
-    }
-    if (cStart >= qEnd) {
-      if (!nextClass) {
-        nextClass = entry;
-      } else {
-        const [nsh, nsm] = nextClass.hours.split(" - ")[0].trim().split(":").map(Number);
-        if (cStart < nsh * 60 + nsm) {
-          nextClass = entry;
-        }
-      }
-    }
-  }
-
-  return {
-    isFree: !occupyingClass,
-    occupyingClass,
-    overlappingClass: occupyingClass,
-    nextClass
-  };
+  return { isFree: true, occupyingClass: null, nextClass: null };
 }
 
 async function openFreeRoomsModal(customDay, customSlot) {
@@ -2580,7 +2343,6 @@ if (typeof module !== "undefined" && module.exports) {
     formatDateISO,
     getMonday,
     isTeachingDay,
-    getLessonSemesterPeriod,
     getLessonMeetingInfo,
     getLessonProgress,
     getSafeGroupName,
