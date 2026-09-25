@@ -29,6 +29,12 @@
   --radius: 10px;
   --radius-sm: 6px;
   --color-success: #10b981;
+
+  /* Lesson Forms (Light) */
+  --form-wyklad: #2563eb;
+  --form-cwiczenia: #059669;
+  --form-laboratorium: #7c3aed;
+  --form-symulator: #d97706;
 }
 
 [data-theme="dark"] {
@@ -57,6 +63,12 @@
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
   --color-success: #34d399;
+
+  /* Lesson Forms (Dark) */
+  --form-wyklad: #60a5fa;
+  --form-cwiczenia: #34d399;
+  --form-laboratorium: #a78bfa;
+  --form-symulator: #fbbf24;
 }
 
 * {
@@ -880,6 +892,22 @@ body {
 .lesson-card:hover {
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
+}
+
+.lesson-card.form-wyklad {
+  border-left-color: var(--form-wyklad);
+}
+
+.lesson-card.form-cwiczenia {
+  border-left-color: var(--form-cwiczenia);
+}
+
+.lesson-card.form-laboratorium {
+  border-left-color: var(--form-laboratorium);
+}
+
+.lesson-card.form-symulator {
+  border-left-color: var(--form-symulator);
 }
 
 .lesson-title {

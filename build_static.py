@@ -30,6 +30,8 @@ DIST_DIR = os.path.join(BASE_DIR, "dist")
 DATA_DIR = os.path.join(DIST_DIR, "data")
 SCHEDULES_DIR = os.path.join(DATA_DIR, "schedules")
 CALENDARS_DIR = os.path.join(DIST_DIR, "calendars")
+CURRICULUM_FORMS_PATH = os.path.join(BASE_DIR, "wn_curriculum_forms.json")
+FORMS_MANUAL_PATH = os.path.join(BASE_DIR, "forms_manual.json")
 
 
 def setup_dist_directories():
@@ -155,12 +157,127 @@ def parse_plan_title(raw_name: str) -> dict:
     }
 
 
+def load_curriculum_forms(path: Optional[str] = None) -> Dict[str, Any]:
+    """Wczytuje oficjalny katalog siatek godzinowych WN z wn_curriculum_forms.json"""
+    target_path = path or CURRICULUM_FORMS_PATH
+    if os.path.exists(target_path):
+        try:
+            with open(target_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            logger.warning(f"Nie udało się wczytać curriculum forms ({target_path}): {e}")
+    return {}
+
+
+def load_forms_manual(path: Optional[str] = None) -> Dict[str, Any]:
+    """Wczytuje manualne nadpisania form zajęć z forms_manual.json"""
+    target_path = path or FORMS_MANUAL_PATH
+    if os.path.exists(target_path):
+        try:
+            with open(target_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            logger.warning(f"Nie udało się wczytać forms_manual.json ({target_path}): {e}")
+    return {}
+
+
+def normalize_form_key(text: str) -> str:
+    """Normalizuje nazwę przedmiotu lub kierunku do dopasowania w katalogu."""
+    if not text:
+        return ""
+    text = text.strip().lower()
+    return re.sub(r'[\s\-_.,/()]+', ' ', text).strip()
+
+
+def classify_lesson_form(
+    lesson: LessonDict,
+    plan_name: str,
+    curriculum_catalog: Optional[Dict[str, Any]] = None,
+    manual_config: Optional[Dict[str, Any]] = None
+) -> str:
+    """
+    Klasyfikuje formę zajęć do jednej z czterech kategorii:
+    'wyklad', 'cwiczenia', 'laboratorium', 'symulator'.
+    Kaskada: manualne nadpisania -> sala -> kolor Arktura / colspan -> siatka godzinowa WN -> fallback.
+    """
+    manual = manual_config or {}
+    catalog = curriculum_catalog or {}
+
+    przedmiot = lesson.get("przedmiot", "")
+    raw_przedmiot = lesson.get("raw_przedmiot", "")
+    sala = (lesson.get("sala") or "").strip()
+    colspan = lesson.get("colspan", 1)
+    arktur_kolor = lesson.get("arktur_kolor", "default")
+    norm_sub = normalize_form_key(przedmiot)
+    norm_raw = normalize_form_key(raw_przedmiot)
+
+    # 1. Manualne nadpisania po nazwie przedmiotu (np. WF -> cwiczenia, BHP -> wyklad)
+    sub_overrides = manual.get("override_by_subject", {})
+    if norm_sub in sub_overrides:
+        return sub_overrides[norm_sub]
+    if norm_raw in sub_overrides:
+        return sub_overrides[norm_raw]
+
+    # 2. Weryfikacja sali (np. 306,400 -> laboratorium, 306 -> symulator, Aula -> wyklad, basen -> cwiczenia)
+    room_lower = sala.lower()
+    room_overrides = manual.get("override_by_room", {})
+    if room_lower in room_overrides:
+        return room_overrides[room_lower]
+
+    for pattern, form in manual.get("room_regex", []):
+        if re.search(pattern, room_lower, re.IGNORECASE):
+            return form
+
+    # 3. Kolor Arktura lub aula/audytorium
+    if arktur_kolor == "cyan" or room_lower in ("aula", "audytorium"):
+        return "wyklad"
+
+    if arktur_kolor == "magenta":
+        return "laboratorium"
+
+    # 4. Sprawdzenie w oficjalnej siatce godzinowej WN
+    m_sem = re.search(r'\bsem\.?\s*(\d+)\b', plan_name, re.IGNORECASE)
+    sem_str = m_sem.group(1) if m_sem else None
+
+    norm_plan = normalize_form_key(plan_name)
+    matched_major_data = None
+    for m_key, m_val in catalog.get("majors", {}).items():
+        if m_key in norm_plan:
+            matched_major_data = m_val
+            break
+
+    curriculum_entry = None
+    if matched_major_data and sem_str and sem_str in matched_major_data.get("semesters", {}):
+        sem_subs = matched_major_data["semesters"][sem_str]
+        curriculum_entry = sem_subs.get(norm_sub) or sem_subs.get(norm_raw)
+
+    if curriculum_entry:
+        if curriculum_entry.get("single_form"):
+            return curriculum_entry["single_form"]
+        if colspan > 1 and curriculum_entry.get("A", 0) > 0:
+            return "wyklad"
+
+    if norm_sub in catalog.get("global_single_forms", {}):
+        return catalog["global_single_forms"][norm_sub]
+    if norm_raw in catalog.get("global_single_forms", {}):
+        return catalog["global_single_forms"][norm_raw]
+
+    if colspan > 2:
+        return "wyklad"
+
+    # 5. Domyślny fallback dla sal standardowych
+    return "cwiczenia"
+
+
 def build(limit=None):
     """Main build process"""
     start_time = datetime.now()
     logger.info("Starting UMG Static Site Build...")
 
     setup_dist_directories()
+
+    curriculum_catalog = load_curriculum_forms()
+    manual_forms_config = load_forms_manual()
 
     logger.info("1. Fetching plans list from UMG...")
     plany_slownik = pobierz_liste_planow()
@@ -214,6 +331,13 @@ def build(limit=None):
                 dane_plaskie, min_slot, max_slot = przetworz_plan_na_grafike(
                     html_text, grupa, grupy
                 )
+
+                # Classify form for each lesson (wyklad, cwiczenia, laboratorium, symulator)
+                for day_slots in dane_plaskie.values():
+                    for lesson in day_slots.values():
+                        lesson["forma"] = classify_lesson_form(
+                            lesson, plan_name, curriculum_catalog, manual_forms_config
+                        )
 
                 safe_grupa = re.sub(r'[^\w-]', '_', grupa)
                 safe_group_filename = f"{plan_id_str}_{safe_grupa}.json"

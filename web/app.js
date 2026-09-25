@@ -1377,8 +1377,10 @@ function renderLessonCard(lesson, targetMonday = null) {
     badgeHtml += `<span class="lesson-sem-badge" title="Zajęcia w 2. połowie semestru">2. poł. sem.</span>`;
   }
 
+  const formClass = lesson.forma ? ` form-${escapeHtml(lesson.forma)}` : "";
+
   return `
-    <div class="lesson-card">
+    <div class="lesson-card${formClass}">
       <div class="lesson-title">${safeTitle}</div>
       <div class="lesson-time">${safeTime}</div>
       <div class="lesson-room-wrapper">${roomHtml}${badgeHtml}</div>
@@ -1788,6 +1790,7 @@ if (typeof module !== "undefined" && module.exports) {
     parsePlanInfo,
     updateCalendarNotice,
     renderSchedule,
+    renderLessonCard,
     shouldShowChangelog,
     openChangelogModal,
     closeChangelogModal,

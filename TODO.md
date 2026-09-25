@@ -29,7 +29,13 @@ Rejestr decyzji, zaległości i planowanych usprawnień wynikających z modelowa
   - [x] **Globalna dostępność sal (wszystkie plany)**: Uwzględnianie obłożenia sal ze wszystkich dostępnych planów zajęć UMG (z indeksu `cross_reference.json`), zamian rektorskich oraz trybu "Teraz" z czasem warszawskim (`Europe/Warsaw`).
   - [x] **Szybkie filtrowanie i wyszukiwanie**: Natychmiastowe filtrowanie sal po nazwie (od 1 znaku), podział na kafelki wolne i zwijalną sekcję zajętych z informacją o kolejnych zajęciach.
 - [ ] **Widok zbiorczy dla wszystkich grup**: Dodanie widoku porównawczego (dzień / tydzień) prezentującego zajęcia wszystkich grup jednocześnie.
+- [ ] **Naturalne sortowanie listy planów w menu wyboru**: Sortowanie planów alfabetycznie po nazwie kierunku, a w ramach danego kierunku rosnąco po numerze semestru (np. *Transport i Logistyka sem. 1, 3, 5, 7*, a następnie *Transport Morski sem. 1, 3* zamiast losowej/chronologicznej kolejności z Arktura).
 
+
+### Scraping i integracja z Arkturem (`arktur_client.py`, `build_static.py`)
+- [ ] **Bezpieczna detekcja grup II stopnia (np. `A1`, `B1`)**: Rozszerzenie regexu w `arktur_client.py` o ścisły format grup magisterskich (`^[A-E]\s*\d{1,2}$`), zapobiegający pomijaniu planów takich jak Morskie Systemy Transportowe i Logistyczne przy jednoczesnym blokowaniu śmieciowych komórek Arktura (z testem regresyjnym w `tests.py`).
+- [ ] **Słownik wyjątków i nadpisań grup (`groups_manual.json`)**: Wprowadzenie pliku manualnego fallbacku dla grup (analogicznie do `subjects_manual.json`), jako bezpiecznego koła ratunkowego dla nietypowych oznaczeń dziekanatu.
+- [ ] **Inteligentne sprawdzanie aktualizacji (Conditional Scraping)**: Weryfikacja daty publikacji i wersji `[YYYY-MM-DD HH:MM] wer. X` przed pobieraniem pełnej siatki i dziesiątek zapytań AJAX, minimalizując obciążenie serwera Arktura.
 
 ### Baza wykładowców i konsultacje (`scrapper.py`, `build_static.py`, `web/`)
 - [x] **Błąd sumowania grup w widoku wykładowcy przy cyklach naprzemiennych**: Gdy prowadzący ma w tym samym slocie godzinowym zajęcia z różnymi grupami w różnych tygodniach/połówkach (np. co 2 tyg z grupami 1 i 2, a w drugim tygodniu z grupami 3 i 4), deduplikacja w `build_static.py` uwzględnia parametry cyklu (`co_ile`, `od_tyg`, `polowa_sem`, `data_start`) i nie sumuje grup, a widoki prezentują plakietki cykli. Przetestowane w `tests.py` (Test 20).
@@ -39,7 +45,18 @@ Rejestr decyzji, zaległości i planowanych usprawnień wynikających z modelowa
 - [x] **Funkcja "Zgłoś błąd w planie"**: Zaimplementowano w modalu "O aplikacji" dedykowany formularz zgłoszeniowy (Tally modal z automatycznym fallbackiem przy adblockerach) oraz bezpośredni odnośnik do GitHub Issues.
 - [ ] **Czwartkowy komunikat o flankach**: Wyświetlanie w czwartki lekkiego, studenckiego baneru / powiadomienia przypominającego o tradycji integracyjnej (flanki).
 
+### Analityka i telemetria (`web/`)
+- [ ] **Wdrożenie analityki GoatCounter**: Dodanie lekkiego, bezciasteczkowego skryptu analitycznego do `web/index.html`:
+  ```html
+  <script data-goatcounter="https://qu4x.goatcounter.com/count"
+          async src="//gc.zgo.at/count.js"></script>
+  ```
+
 ### Zadania przesunięte na koniec
-- [ ] **Oznaczenie kolorystyczne form zajęć**: Rozróżnienie form dydaktycznych (wykład, ćwiczenia, laboratorium, projekt) za pomocą czytelnych akcentów kolorystycznych i etykiet w widoku kafelkowym i siatce planu.
+- [x] **Oznaczenie kolorystyczne form zajęć**: Rozróżnienie form dydaktycznych (wykład, ćwiczenia, laboratorium, symulator) za pomocą akcentów kolorystycznych lewej krawędzi (`border-left-color`) na kartach zajęć.
+- [ ] **Zajętość i harmonogram pływalni UMG (`umg.edu.pl/basen/harmonogram`)**:
+  - Scrapowanie cotygodniowej tabeli harmonogramu basenu UMG (status: otwarte / nieczynne, rezerwacje torów 1–6, wolne tory dla klientów/studentów).
+  - Eksport do `dist/data/pool_schedule.json` podczas nocnego buildu.
+  - Prezentacja dostępności torów w aplikacji (np. wzbogacenie sali `WF basen` w wyszukiwarce sal lub dedykowany kafel/widok z aktualnym statusem "Czy popływam teraz?").
 
 

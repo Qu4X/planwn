@@ -2,6 +2,7 @@
 test_scrapper.py
 scrapper_test.py
 test*.py
+!tests.py
 strpza6_response.txt
 
 # Środowisko wirtualne
@@ -15,4 +16,5 @@ __pycache__/
 dist/
 icons/
 temp/
+scratch/
 architecture-review-*.html

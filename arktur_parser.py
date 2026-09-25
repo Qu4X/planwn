@@ -102,6 +102,11 @@ def _wspolny_parser_html(html_text: str) -> Tuple[Dict[str, Dict[Any, Dict[int, 
         rowspan = int(td.get('rowspan', 1))
         cell_end_slot = cell_slot_start + rowspan
 
+        td_classes = td.get('class', [])
+        arktur_kolor = 'magenta' if any('magenta' in c for c in td_classes) else (
+            'cyan' if any('cyan' in c for c in td_classes) else 'default'
+        )
+
         drag = td.find('div', class_='drag')
         if not drag:
             continue
@@ -267,6 +272,7 @@ def _wspolny_parser_html(html_text: str) -> Tuple[Dict[str, Dict[Any, Dict[int, 
                 "sala": sala,
                 "height": sub_height,
                 "colspan": colspan,
+                "arktur_kolor": arktur_kolor,
                 "data_start": data_start,
                 "tygodnie": liczba_tygodni,
                 "co_ile": co_ile,

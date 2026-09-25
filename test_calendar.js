@@ -10,7 +10,7 @@ const getRoomOccupancyAt = (...args) => engine.getRoomOccupancyAt(...args);
 const isTeachingDay = (...args) => engine.isTeachingDay(...args);
 
 // UI helpers and state from app.js
-const { getSafeGroupName, parsePlanInfo, updateCalendarNotice, renderSchedule, shouldShowChangelog, openChangelogModal, closeChangelogModal, state, elements } = require("./web/app.js");
+const { getSafeGroupName, parsePlanInfo, updateCalendarNotice, renderSchedule, renderLessonCard, shouldShowChangelog, openChangelogModal, closeChangelogModal, state, elements } = require("./web/app.js");
 
 console.log("\n🧪 Running Calendar Engine TDD Tests...\n");
 
@@ -919,3 +919,34 @@ assert.strictEqual(
 );
 
 console.log("✅ [PASS] Powiadomienie o nowościach (Changelog Modal & shouldShowChangelog) działa prawidłowo.");
+
+// -- Test 22: renderLessonCard z klasą formy zajęć (wykład, ćwiczenia, lab, symulator)
+console.log("\n-- Test 22: renderLessonCard nadaje odpowiednie klasy formy (.form-*)");
+const sampleLesson = {
+  przedmiot: "Nawigacja",
+  godziny: "08:00 - 09:30",
+  sala: "306",
+  prowadzacy: "Jan Kowalski",
+  forma: "symulator"
+};
+
+const renderedCardSym = renderLessonCard(sampleLesson);
+assert.ok(renderedCardSym.includes("form-symulator"), "Karta powinna zawierać klasę form-symulator");
+
+const sampleWyk = { ...sampleLesson, forma: "wyklad" };
+const renderedCardWyk = renderLessonCard(sampleWyk);
+assert.ok(renderedCardWyk.includes("form-wyklad"), "Karta powinna zawierać klasę form-wyklad");
+
+const sampleCw = { ...sampleLesson, forma: "cwiczenia" };
+const renderedCardCw = renderLessonCard(sampleCw);
+assert.ok(renderedCardCw.includes("form-cwiczenia"), "Karta powinna zawierać klasę form-cwiczenia");
+
+const sampleLab = { ...sampleLesson, forma: "laboratorium" };
+const renderedCardLab = renderLessonCard(sampleLab);
+assert.ok(renderedCardLab.includes("form-laboratorium"), "Karta powinna zawierać klasę form-laboratorium");
+
+const sampleNoForm = { ...sampleLesson, forma: null };
+const renderedCardNoForm = renderLessonCard(sampleNoForm);
+assert.ok(!renderedCardNoForm.includes("form-"), "Karta bez formy nie powinna mieć klasy form-*");
+
+console.log("✅ [PASS] renderLessonCard poprawnie aplikuje klasy .form-* do kart zajęć.");

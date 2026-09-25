@@ -19,6 +19,8 @@ class LessonDict(TypedDict, total=False):
     co_ile: int
     od_tyg: Optional[int]
     polowa_sem: Optional[int]
+    arktur_kolor: Optional[str]
+    forma: Optional[str]
 
 
 class RoomScheduleEntry(TypedDict, total=False):
