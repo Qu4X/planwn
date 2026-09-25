@@ -229,8 +229,8 @@ def classify_lesson_form(
         if re.search(pattern, room_lower, re.IGNORECASE):
             return form
 
-    # 3. Kolor Arktura lub aula/audytorium
-    if arktur_kolor == "cyan" or room_lower in ("aula", "audytorium"):
+    # 3. Aula, audytorium lub kolor magenta (laboratoria specjalistyczne w Arkturze)
+    if room_lower in ("aula", "audytorium"):
         return "wyklad"
 
     if arktur_kolor == "magenta":
@@ -265,10 +265,24 @@ def classify_lesson_form(
             return "wyklad"
         # Dla podgrup ćwiczeniowych/laboratoryjnych
         forms = curriculum_entry.get("forms", [])
+        if "cwiczenia" in forms and "laboratorium" in forms:
+            # a) Pracownia laboratoryjna / komputerowa / sala wielokrotna
+            if any(re.search(p, room_lower) for p in [r'\blab\b', r'\bprac\b', r'\bmw\b', r'h\d+', r'\d+a\b']) or "," in sala:
+                return "laboratorium"
+            # b) Większa podgrupa (ćwiczenia tablicowe często łączą >= 2 grupy)
+            if colspan > 1:
+                return "cwiczenia"
+            # c) Stosunek godzin w siatce
+            if curriculum_entry.get("C", 0) >= curriculum_entry.get("L", 0):
+                return "cwiczenia"
+            return "laboratorium"
+
         if "cwiczenia" in forms:
             return "cwiczenia"
         if "laboratorium" in forms:
             return "laboratorium"
+        if "symulator" in forms:
+            return "symulator"
 
     if norm_sub in catalog.get("global_single_forms", {}):
         return catalog["global_single_forms"][norm_sub]

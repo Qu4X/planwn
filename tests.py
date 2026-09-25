@@ -414,18 +414,38 @@ check("UN in Aula with colspan 10 is wyklad", classify_lesson_form(un_w_lesson, 
 mag_lesson = {"przedmiot": "Fizyka", "raw_przedmiot": "Fiz", "sala": "P1", "colspan": 1, "arktur_kolor": "magenta"}
 check("Magenta cell is laboratorium", classify_lesson_form(mag_lesson, "Transport i Logistyka sem. 1", curr_cat, forms_cfg) == "laboratorium")
 
-# 7. Cyan cell -> wyklad
-cyan_lesson = {"przedmiot": "Fizyka", "raw_przedmiot": "Fiz", "sala": "114", "colspan": 1, "arktur_kolor": "cyan"}
-check("Cyan cell is wyklad", classify_lesson_form(cyan_lesson, "Transport i Logistyka sem. 1", curr_cat, forms_cfg) == "wyklad")
+# 7. Cyan cell does NOT force wyklad; curriculum decides form
+cyan_fiz_lesson = {"przedmiot": "Fizyka", "raw_przedmiot": "Fiz", "sala": "114", "colspan": 1, "arktur_kolor": "cyan"}
+check("Cyan cell for Fizyka (cs=1) is cwiczenia from curriculum", classify_lesson_form(cyan_fiz_lesson, "Transport i Logistyka sem. 1", curr_cat, forms_cfg, total_groups=8) == "cwiczenia")
 
-# 8. Math and Physics exercises (colspan 2 in 8-group plan) -> cwiczenia
+# 8. TiL Sem 3 (Plan 550) cyan cells correctly classified via curriculum
+mat_lab = {"przedmiot": "Materiałoznawstwo", "raw_przedmiot": "Mater", "sala": "H204", "colspan": 1, "arktur_kolor": "cyan"}
+check("Materiałoznawstwo in H204 (cs=1, cyan) is laboratorium", classify_lesson_form(mat_lab, "Transport i Logistyka sem. 3", curr_cat, forms_cfg, total_groups=6) == "laboratorium")
+
+mat_wyk = {"przedmiot": "Materiałoznawstwo", "raw_przedmiot": "Materiałoznawstwo", "sala": "C136", "colspan": 6, "arktur_kolor": "cyan"}
+check("Materiałoznawstwo in C136 (cs=6, cyan) is wyklad", classify_lesson_form(mat_wyk, "Transport i Logistyka sem. 3", curr_cat, forms_cfg, total_groups=6) == "wyklad")
+
+str_cw = {"przedmiot": "Środki Transportu", "raw_przedmiot": "ŚTr", "sala": "020", "colspan": 2, "arktur_kolor": "cyan"}
+check("Środki Transportu in 020 (cs=2, cyan) is cwiczenia", classify_lesson_form(str_cw, "Transport i Logistyka sem. 3", curr_cat, forms_cfg, total_groups=6) == "cwiczenia")
+
+pbikm_lab = {"przedmiot": "Podstawy Budowy i Konstrukcji Maszyn", "raw_przedmiot": "PBiKM", "sala": "P1", "colspan": 1, "arktur_kolor": "cyan"}
+check("PBiKM in P1 (cs=1, cyan) is laboratorium", classify_lesson_form(pbikm_lab, "Transport i Logistyka sem. 3", curr_cat, forms_cfg, total_groups=6) == "laboratorium")
+
+# 9. Disambiguation for curriculum with both C > 0 and L > 0 (Mechanika Techniczna in TiL sem 2: A=15, C=30, L=15)
+mech_lab = {"przedmiot": "Mechanika Techniczna", "raw_przedmiot": "MT", "sala": "MW", "colspan": 1}
+check("Mechanika Techniczna in lab room (MW) is laboratorium", classify_lesson_form(mech_lab, "Transport i Logistyka sem. 2", curr_cat, forms_cfg, total_groups=6) == "laboratorium")
+
+mech_cw = {"przedmiot": "Mechanika Techniczna", "raw_przedmiot": "MT", "sala": "114", "colspan": 2}
+check("Mechanika Techniczna with cs=2 is cwiczenia", classify_lesson_form(mech_cw, "Transport i Logistyka sem. 2", curr_cat, forms_cfg, total_groups=6) == "cwiczenia")
+
+# 10. Math and Physics exercises (colspan 2 in 8-group plan) -> cwiczenia
 mat_cw = {"przedmiot": "Matematyka", "raw_przedmiot": "MA", "sala": "114", "colspan": 2, "arktur_kolor": "default"}
 check("Matematyka with cs=2 (room 114) is cwiczenia", classify_lesson_form(mat_cw, "Transport i Logistyka sem. 1", curr_cat, forms_cfg, total_groups=8) == "cwiczenia")
 
 fiz_cw = {"przedmiot": "Fizyka", "raw_przedmiot": "Fiz", "sala": "P1", "colspan": 2, "arktur_kolor": "default"}
 check("Fizyka with cs=2 (room P1) is cwiczenia", classify_lesson_form(fiz_cw, "Transport i Logistyka sem. 1", curr_cat, forms_cfg, total_groups=8) == "cwiczenia")
 
-# 9. Math and Physics lectures in C136 with full cohort (colspan 8) -> wyklad
+# 11. Math and Physics lectures in C136 with full cohort (colspan 8) -> wyklad
 mat_w = {"przedmiot": "Matematyka", "raw_przedmiot": "MA", "sala": "C136", "colspan": 8, "arktur_kolor": "default"}
 check("Matematyka in C136 with cs=8 is wyklad", classify_lesson_form(mat_w, "Transport i Logistyka sem. 1", curr_cat, forms_cfg, total_groups=8) == "wyklad")
 
