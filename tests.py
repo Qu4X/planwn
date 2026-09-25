@@ -418,9 +418,19 @@ check("Magenta cell is laboratorium", classify_lesson_form(mag_lesson, "Transpor
 cyan_lesson = {"przedmiot": "Fizyka", "raw_przedmiot": "Fiz", "sala": "114", "colspan": 1, "arktur_kolor": "cyan"}
 check("Cyan cell is wyklad", classify_lesson_form(cyan_lesson, "Transport i Logistyka sem. 1", curr_cat, forms_cfg) == "wyklad")
 
-# 8. Standard classroom fallback -> cwiczenia
-cw_lesson = {"przedmiot": "Matematyka", "raw_przedmiot": "MA", "sala": "110", "colspan": 1, "arktur_kolor": "default"}
-check("Matematyka in room 110 is cwiczenia", classify_lesson_form(cw_lesson, "Transport i Logistyka sem. 1", curr_cat, forms_cfg) == "cwiczenia")
+# 8. Math and Physics exercises (colspan 2 in 8-group plan) -> cwiczenia
+mat_cw = {"przedmiot": "Matematyka", "raw_przedmiot": "MA", "sala": "114", "colspan": 2, "arktur_kolor": "default"}
+check("Matematyka with cs=2 (room 114) is cwiczenia", classify_lesson_form(mat_cw, "Transport i Logistyka sem. 1", curr_cat, forms_cfg, total_groups=8) == "cwiczenia")
+
+fiz_cw = {"przedmiot": "Fizyka", "raw_przedmiot": "Fiz", "sala": "P1", "colspan": 2, "arktur_kolor": "default"}
+check("Fizyka with cs=2 (room P1) is cwiczenia", classify_lesson_form(fiz_cw, "Transport i Logistyka sem. 1", curr_cat, forms_cfg, total_groups=8) == "cwiczenia")
+
+# 9. Math and Physics lectures in C136 with full cohort (colspan 8) -> wyklad
+mat_w = {"przedmiot": "Matematyka", "raw_przedmiot": "MA", "sala": "C136", "colspan": 8, "arktur_kolor": "default"}
+check("Matematyka in C136 with cs=8 is wyklad", classify_lesson_form(mat_w, "Transport i Logistyka sem. 1", curr_cat, forms_cfg, total_groups=8) == "wyklad")
+
+fiz_w = {"przedmiot": "Fizyka", "raw_przedmiot": "Fiz", "sala": "C136", "colspan": 8, "arktur_kolor": "default"}
+check("Fizyka in C136 with cs=8 is wyklad", classify_lesson_form(fiz_w, "Transport i Logistyka sem. 1", curr_cat, forms_cfg, total_groups=8) == "wyklad")
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 print("\n" + "="*60)

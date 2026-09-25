@@ -193,12 +193,13 @@ def classify_lesson_form(
     lesson: LessonDict,
     plan_name: str,
     curriculum_catalog: Optional[Dict[str, Any]] = None,
-    manual_config: Optional[Dict[str, Any]] = None
+    manual_config: Optional[Dict[str, Any]] = None,
+    total_groups: Optional[int] = None
 ) -> str:
     """
     Klasyfikuje formę zajęć do jednej z czterech kategorii:
     'wyklad', 'cwiczenia', 'laboratorium', 'symulator'.
-    Kaskada: manualne nadpisania -> sala -> kolor Arktura / colspan -> siatka godzinowa WN -> fallback.
+    Kaskada: manualne nadpisania -> sala -> kolor Arktura -> pełny rocznik -> siatka godzinowa WN -> fallback.
     """
     manual = manual_config or {}
     catalog = curriculum_catalog or {}
@@ -218,7 +219,7 @@ def classify_lesson_form(
     if norm_raw in sub_overrides:
         return sub_overrides[norm_raw]
 
-    # 2. Weryfikacja sali (np. 306,400 -> laboratorium, 306 -> symulator, Aula -> wyklad, basen -> cwiczenia)
+    # 2. Weryfikacja sali (np. 306,400 -> laboratorium, 306 -> symulator, Aula/C136 -> wyklad, basen -> cwiczenia)
     room_lower = sala.lower()
     room_overrides = manual.get("override_by_room", {})
     if room_lower in room_overrides:
@@ -235,7 +236,13 @@ def classify_lesson_form(
     if arktur_kolor == "magenta":
         return "laboratorium"
 
-    # 4. Sprawdzenie w oficjalnej siatce godzinowej WN
+    # 4. Sprawdzenie, czy zajęcia łączą cały rocznik / dużą grupę wykładową
+    # Standardowe ćwiczenia łączą maksymalnie 2 grupy dziekańskie (colspan 1 lub 2).
+    # Wykłady łączą cały rocznik (colspan >= 4 lub colspan >= total_groups).
+    threshold = 4 if not total_groups else min(4, total_groups)
+    is_cohort_wide = colspan >= threshold
+
+    # 5. Sprawdzenie w oficjalnej siatce godzinowej WN
     m_sem = re.search(r'\bsem\.?\s*(\d+)\b', plan_name, re.IGNORECASE)
     sem_str = m_sem.group(1) if m_sem else None
 
@@ -254,18 +261,24 @@ def classify_lesson_form(
     if curriculum_entry:
         if curriculum_entry.get("single_form"):
             return curriculum_entry["single_form"]
-        if colspan > 1 and curriculum_entry.get("A", 0) > 0:
+        if is_cohort_wide and curriculum_entry.get("A", 0) > 0:
             return "wyklad"
+        # Dla podgrup ćwiczeniowych/laboratoryjnych
+        forms = curriculum_entry.get("forms", [])
+        if "cwiczenia" in forms:
+            return "cwiczenia"
+        if "laboratorium" in forms:
+            return "laboratorium"
 
     if norm_sub in catalog.get("global_single_forms", {}):
         return catalog["global_single_forms"][norm_sub]
     if norm_raw in catalog.get("global_single_forms", {}):
         return catalog["global_single_forms"][norm_raw]
 
-    if colspan > 2:
+    if is_cohort_wide:
         return "wyklad"
 
-    # 5. Domyślny fallback dla sal standardowych
+    # 6. Domyślny fallback dla sal standardowych
     return "cwiczenia"
 
 
@@ -336,7 +349,7 @@ def build(limit=None):
                 for day_slots in dane_plaskie.values():
                     for lesson in day_slots.values():
                         lesson["forma"] = classify_lesson_form(
-                            lesson, plan_name, curriculum_catalog, manual_forms_config
+                            lesson, plan_name, curriculum_catalog, manual_forms_config, total_groups=len(grupy)
                         )
 
                 safe_grupa = re.sub(r'[^\w-]', '_', grupa)
