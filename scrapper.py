@@ -33,9 +33,20 @@ from ics_export import (
     ACADEMIC_CALENDAR_PATH,
     WEEKDAY_TO_CODE,
     generate_ics,
+    generate_nst_ics,
     generuj_ics,
+    generuj_ics_nst,
     load_academic_calendar,
 )
+
+# Re-eksporty dla planów niestacjonarnych
+from nst_client import (
+    fetch_nst_plans_list,
+    download_pdf_file,
+    pobierz_liste_planow_nst,
+    pobierz_plik_pdf,
+)
+from nst_parser import parse_pdf_schedule
 
 __all__ = [
     # arktur_client
@@ -58,6 +69,15 @@ __all__ = [
     "ACADEMIC_CALENDAR_PATH",
     "WEEKDAY_TO_CODE",
     "generate_ics",
+    "generate_nst_ics",
     "generuj_ics",
+    "generuj_ics_nst",
     "load_academic_calendar",
+    # nst
+    "fetch_nst_plans_list",
+    "download_pdf_file",
+    "pobierz_liste_planow_nst",
+    "pobierz_plik_pdf",
+    "parse_pdf_schedule",
 ]
+

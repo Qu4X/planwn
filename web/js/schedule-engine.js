@@ -51,7 +51,7 @@ function create(academicCalendar, options = {}) {
     return true;
   }
 
-  function resolveBaseDay(dateISO) {
+  function resolveBaseDay(dateISO, options = {}) {
     if (!dateISO || typeof dateISO !== "string") return null;
     const parts = dateISO.split("-").map(Number);
     if (parts.length !== 3) return null;
@@ -59,7 +59,8 @@ function create(academicCalendar, options = {}) {
     const d = new Date(year, month - 1, day);
     if (isNaN(d.getTime())) return null;
 
-    if (cal.daySwaps && cal.daySwaps[dateISO]) {
+    const isNst = options.isNst === true || options.studyMode === "niestacjonarne";
+    if (!isNst && cal.daySwaps && cal.daySwaps[dateISO]) {
       return cal.daySwaps[dateISO].replaceWith;
     }
     return DNI_MAP_SUNDAY_FIRST[d.getDay()];
@@ -336,6 +337,10 @@ function create(academicCalendar, options = {}) {
     const mon = new Date(targetMonday);
     mon.setHours(0, 0, 0, 0);
 
+    const isNstSchedule = scheduleOptions.isNst === true ||
+      scheduleOptions.studyMode === "niestacjonarne" ||
+      (rawSchedule && Object.keys(rawSchedule).some(k => /^\d{4}-\d{2}-\d{2}$/.test(k)));
+
     for (let dIdx = 0; dIdx < DNI_TYGODNIA.length; dIdx++) {
       const day = DNI_TYGODNIA[dIdx];
       const dayDate = new Date(mon);
@@ -345,7 +350,7 @@ function create(academicCalendar, options = {}) {
 
       // Tabela priorytetów D4:
       // 1. Data w academicCalendar.holidays -> "holiday"
-      // 2. Data w academicCalendar.daySwaps -> "daySwap"
+      // 2. Data w academicCalendar.daySwaps (tylko studia stacjonarne) -> "daySwap"
       // 3. Data objęta periodem type: "break" -> "break"
       // 4. Data objęta periodem type: "exam" -> "exam"
       // 5. Domyślny -> "normal"
@@ -358,7 +363,7 @@ function create(academicCalendar, options = {}) {
       if (cal.holidays && cal.holidays[dateISO]) {
         status = "holiday";
         message = cal.holidays[dateISO];
-      } else if (cal.daySwaps && cal.daySwaps[dateISO]) {
+      } else if (!isNstSchedule && cal.daySwaps && cal.daySwaps[dateISO]) {
         status = "daySwap";
         swapNote = cal.daySwaps[dateISO].note || null;
         swapReplaceWith = cal.daySwaps[dateISO].replaceWith || null;
@@ -383,32 +388,52 @@ function create(academicCalendar, options = {}) {
 
       // Jeśli status to holiday, break lub exam -> lessons jest zawsze [] (zgodnie z D3)
       if (status === "normal" || status === "daySwap") {
-        const sourceDay = status === "daySwap" ? swapReplaceWith : day;
-        const daySlots = (rawSchedule && rawSchedule[sourceDay]) || {};
-        const entries = Array.isArray(daySlots)
-          ? daySlots.map((item, idx) => [idx, item])
-          : Object.entries(daySlots);
-
-        for (const [slotKey, lesson] of entries) {
-          if (!lesson) continue;
-          const meetingInfo = getLessonMeetingInfo(lesson, sourceDay, mon, dateISO);
-          const isAct = meetingInfo.active;
-
-          if (isAct || scheduleOptions.includeInactive) {
-            const total = meetingInfo.total || lesson.tygodnie || 15;
-            const mNum = isAct ? meetingInfo.meetingNum : 0;
-            const isFin = mNum >= total;
-
+        // 1. Sprawdź format niestacjonarny: bezpośredni klucz dateISO (np. "2026-10-03")
+        if (rawSchedule && Array.isArray(rawSchedule[dateISO])) {
+          const nstLessons = rawSchedule[dateISO];
+          for (let idx = 0; idx < nstLessons.length; idx++) {
+            const lesson = nstLessons[idx];
+            if (!lesson) continue;
             lessons.push({
               ...lesson,
-              slot: parseInt(slotKey) || 0,
-              isActive: isAct,
-              meetingNumber: mNum,
-              totalMeetings: total,
-              isFinalMeeting: isFin,
-              sourceDay: sourceDay,
+              slot: idx + 1,
+              isActive: true,
+              meetingNumber: null,
+              totalMeetings: null,
+              isFinalMeeting: false,
+              sourceDay: day,
               lessonDate: dateISO
             });
+          }
+        } else {
+          // 2. Format stacjonarny: kluczowanie dniami tygodnia
+          const sourceDay = status === "daySwap" ? swapReplaceWith : day;
+          const daySlots = (rawSchedule && rawSchedule[sourceDay]) || {};
+          const entries = Array.isArray(daySlots)
+            ? daySlots.map((item, idx) => [idx, item])
+            : Object.entries(daySlots);
+
+          for (const [slotKey, lesson] of entries) {
+            if (!lesson) continue;
+            const meetingInfo = getLessonMeetingInfo(lesson, sourceDay, mon, dateISO);
+            const isAct = meetingInfo.active;
+
+            if (isAct || scheduleOptions.includeInactive) {
+              const total = meetingInfo.total || lesson.tygodnie || 15;
+              const mNum = isAct ? meetingInfo.meetingNum : 0;
+              const isFin = mNum >= total;
+
+              lessons.push({
+                ...lesson,
+                slot: parseInt(slotKey) || 0,
+                isActive: isAct,
+                meetingNumber: mNum,
+                totalMeetings: total,
+                isFinalMeeting: isFin,
+                sourceDay: sourceDay,
+                lessonDate: dateISO
+              });
+            }
           }
         }
         lessons.sort((a, b) => a.slot - b.slot);

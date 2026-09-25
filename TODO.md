@@ -46,7 +46,7 @@ Rejestr decyzji, zaległości i planowanych usprawnień wynikających z modelowa
 - [ ] **Czwartkowy komunikat o flankach**: Wyświetlanie w czwartki lekkiego, studenckiego baneru / powiadomienia przypominającego o tradycji integracyjnej (flanki).
 
 ### Analityka i telemetria (`web/`)
-- [ ] **Wdrożenie analityki GoatCounter**: Dodanie lekkiego, bezciasteczkowego skryptu analitycznego do `web/index.html`:
+- [x] **Wdrożenie analityki GoatCounter**: Dodanie lekkiego, bezciasteczkowego skryptu analitycznego do `web/index.html`:
   ```html
   <script data-goatcounter="https://qu4x.goatcounter.com/count"
           async src="//gc.zgo.at/count.js"></script>

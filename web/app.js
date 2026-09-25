@@ -128,6 +128,10 @@ const savedDaysView = typeof localStorage !== "undefined"
   ? (localStorage.getItem("umg_days_view") || (localStorage.getItem("umg_show_weekends") === "true" ? "all" : "workdays"))
   : "workdays";
 
+const savedStudyMode = typeof localStorage !== "undefined"
+  ? (localStorage.getItem("umg_study_mode") || "stacjonarne")
+  : "stacjonarne";
+
 function getTodayCode(respectMode = false) {
   const days = ["ND", "PON", "WT", "ŚR", "CZW", "PT", "SOB"];
   const dayIdx = new Date().getDay();
@@ -141,6 +145,7 @@ function getTodayCode(respectMode = false) {
 // Application State
 const state = {
   plansData: null,
+  studyMode: savedStudyMode, // "stacjonarne" | "niestacjonarne"
   selectedPlanId: null,
   selectedGroup: null,
   scheduleData: null,
@@ -172,6 +177,7 @@ const elements = typeof document !== "undefined" ? {
   planVersionBadge: document.getElementById("plan-version-badge"),
   groupSelect: document.getElementById("group-select"),
   daysViewSelect: document.getElementById("days-view-select"),
+  studyModeSelect: document.getElementById("study-mode-select"),
   freeRoomsBtn: document.getElementById("free-rooms-btn"),
   currentWeekLabel: document.getElementById("current-week-label"),
   weekDatePicker: document.getElementById("week-date-picker"),
@@ -338,6 +344,14 @@ function setupEventListeners() {
       }
       updateDayTabsUI();
       renderSchedule();
+    });
+  }
+
+  // Study mode selector in sidebar (stacjonarne / niestacjonarne)
+  if (elements.studyModeSelect) {
+    elements.studyModeSelect.value = state.studyMode;
+    elements.studyModeSelect.addEventListener("change", (e) => {
+      onStudyModeChange(e.target.value);
     });
   }
 
@@ -609,16 +623,21 @@ async function loadPlans() {
       elements.lastUpdated.textContent = `Aktualizacja: ${state.plansData.last_updated}`;
     }
 
-    populatePlanSelect();
-
     // Restore saved selections from localStorage
     const savedPlan = localStorage.getItem("umg_selected_plan");
     const savedGroup = localStorage.getItem("umg_selected_group");
 
     if (savedPlan && state.plansData.plans[savedPlan]) {
+      const planObj = state.plansData.plans[savedPlan];
+      const planMode = planObj.mode || (planObj.name && /niestacjonarne/i.test(planObj.name) ? "niestacjonarne" : "stacjonarne");
+      state.studyMode = planMode;
+      if (elements.studyModeSelect) elements.studyModeSelect.value = planMode;
+      populatePlanSelect();
       elements.planSelect.value = savedPlan;
       onPlanChange(savedPlan, savedGroup);
     } else {
+      populatePlanSelect();
+      if (elements.studyModeSelect) elements.studyModeSelect.value = state.studyMode;
       elements.loadingState.classList.add("hidden");
       elements.emptyState.classList.remove("hidden");
       // Open sidebar automatically on first visit so user knows to pick a group
@@ -747,7 +766,13 @@ function populatePlanSelect() {
   elements.planSelect.innerHTML = '<option value="">Wybierz kierunek studiów...</option>';
   if (!state.plansData || !state.plansData.plans) return;
 
-  const sortedEntries = Object.entries(state.plansData.plans).sort(([, a], [, b]) => comparePlans(a, b));
+  const currentMode = state.studyMode || "stacjonarne";
+  const sortedEntries = Object.entries(state.plansData.plans)
+    .filter(([, plan]) => {
+      const planMode = plan.mode || (plan.name && /niestacjonarne/i.test(plan.name) ? "niestacjonarne" : "stacjonarne");
+      return planMode === currentMode;
+    })
+    .sort(([, a], [, b]) => comparePlans(a, b));
 
   for (const [id, plan] of sortedEntries) {
     const opt = document.createElement("option");
@@ -756,6 +781,22 @@ function populatePlanSelect() {
     opt.textContent = planInfo.cleanName;
     elements.planSelect.appendChild(opt);
   }
+}
+
+function onStudyModeChange(newMode) {
+  state.studyMode = newMode;
+  localStorage.setItem("umg_study_mode", newMode);
+
+  // W trybie niestacjonarnym domyślnie sugerujemy "Tylko dni z zajęciami"
+  if (newMode === "niestacjonarne" && state.daysView === "workdays") {
+    state.daysView = "active_only";
+    if (elements.daysViewSelect) elements.daysViewSelect.value = "active_only";
+    localStorage.setItem("umg_days_view", "active_only");
+  }
+
+  populatePlanSelect();
+  updateWeekDisplay();
+  onPlanChange(null);
 }
 
 function onPlanChange(planId, preferredGroup = null) {
@@ -977,6 +1018,8 @@ function getAcademicInfoForWeek(targetMonday) {
     }
   }
 
+  const isNst = state.studyMode === "niestacjonarne";
+
   // Scan 7 days of the week for day swaps and holidays
   const daySwaps = [];
   const holidays = [];
@@ -986,7 +1029,7 @@ function getAcademicInfoForWeek(targetMonday) {
     d.setDate(targetMonday.getDate() + i);
     const dISO = formatDateISO(d);
 
-    if (ACADEMIC_CALENDAR.daySwaps[dISO]) {
+    if (!isNst && ACADEMIC_CALENDAR.daySwaps[dISO]) {
       daySwaps.push({ date: dISO, ...ACADEMIC_CALENDAR.daySwaps[dISO] });
     }
     if (ACADEMIC_CALENDAR.holidays[dISO]) {
@@ -1016,9 +1059,10 @@ function updateCalendarNotice(academicInfo) {
   }
 
   const notices = [];
+  const isNst = state.studyMode === "niestacjonarne";
 
-  // Retain day swaps and critical announcements
-  if (academicInfo.daySwaps && academicInfo.daySwaps.length > 0) {
+  // Retain day swaps and critical announcements (day swaps apply only to stacjonarne)
+  if (!isNst && academicInfo.daySwaps && academicInfo.daySwaps.length > 0) {
     for (const swap of academicInfo.daySwaps) {
       const cleanNote = (swap.note || "").replace(/\s*\(zarządzenie rektora\)/gi, "").trim();
       notices.push(`
@@ -1103,7 +1147,8 @@ function updateDayTabsUI(filteredSchedule = null) {
       const dateKey = formatDateISO(dayDate);
 
       let sourceDay = day;
-      if (ACADEMIC_CALENDAR.daySwaps[dateKey]) {
+      const isNst = state.studyMode === "niestacjonarne";
+      if (!isNst && ACADEMIC_CALENDAR.daySwaps[dateKey]) {
         sourceDay = ACADEMIC_CALENDAR.daySwaps[dateKey].replaceWith;
       }
       const holiday = ACADEMIC_CALENDAR.holidays[dateKey] || null;
@@ -1111,10 +1156,14 @@ function updateDayTabsUI(filteredSchedule = null) {
       const daySlots = state.scheduleData[sourceDay] || {};
       let hasLessons = false;
       if (!holiday) {
-        for (const lessonInfo of Object.values(daySlots)) {
-          if (isLessonInWeek(lessonInfo, sourceDay, targetMonday)) {
-            hasLessons = true;
-            break;
+        if (Array.isArray(state.scheduleData[dateKey])) {
+          hasLessons = state.scheduleData[dateKey].length > 0;
+        } else {
+          for (const lessonInfo of Object.values(daySlots)) {
+            if (isLessonInWeek(lessonInfo, sourceDay, targetMonday)) {
+              hasLessons = true;
+              break;
+            }
           }
         }
       }
@@ -1191,7 +1240,9 @@ function renderSchedule() {
   const filteredSchedule = {};
   let totalLessonsInWeek = 0;
 
-  const weekResolution = engine ? engine.resolveWeekSchedule(targetMonday, state.scheduleData) : {};
+  const isNst = state.studyMode === "niestacjonarne";
+  const scheduleOptions = { isNst, studyMode: state.studyMode };
+  const weekResolution = engine ? engine.resolveWeekSchedule(targetMonday, state.scheduleData, scheduleOptions) : {};
   for (const day of DNI_TYGODNIA) {
     const dayStatus = weekResolution[day] || { lessons: [] };
     filteredSchedule[day] = {
@@ -1403,7 +1454,7 @@ function renderLessonCard(lesson, targetMonday = null) {
 
   const isPhysicalRoom = rawRoom && rawRoom.toUpperCase() !== "OL";
   const roomHtml = isPhysicalRoom
-    ? `<button class="lesson-room-btn" data-room="${escapeHtml(rawRoom)}" title="Sprawdź plan i dostępność sali ${safeRoom}">Sala ${safeRoom}</button>`
+    ? `<button class="lesson-room-btn" data-room="${escapeHtml(rawRoom)}" title="Sprawdź plan i dostępność sali ${safeRoom}">${safeRoom}</button>`
     : `<span class="lesson-room-badge">${safeRoom}</span>`;
 
   const teacherHtml = rawTeacher && rawTeacher !== "Brak danych prowadzącego"
@@ -1835,6 +1886,7 @@ if (typeof module !== "undefined" && module.exports) {
     getSafeGroupName,
     getRoomOccupancyAt,
     parsePlanInfo,
+    getAcademicInfoForWeek,
     updateCalendarNotice,
     renderSchedule,
     renderLessonCard,
@@ -1844,6 +1896,8 @@ if (typeof module !== "undefined" && module.exports) {
     checkChangelogNotification,
     comparePlans,
     getPlanSortKey,
+    populatePlanSelect,
+    onStudyModeChange,
     state,
     elements
   };

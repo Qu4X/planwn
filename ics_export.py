@@ -3,7 +3,7 @@ import json
 import re
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 from icalendar import Calendar, Event
 from models import LessonDict
 
@@ -187,5 +187,73 @@ def generuj_ics(dane_planu: Dict[str, Any], nazwa_grupy: str, academic_calendar:
     return output
 
 
-# Alias zgodny z terminologią angielskojęzyczną
+def generate_nst_ics(nst_group_schedule: Dict[str, List[Dict[str, Any]]], group_name: str) -> str:
+    """
+    Generates an iCal (.ics) calendar for part-time (NST) studies group
+    based on explicit session calendar dates.
+    nst_group_schedule: {"2026-10-01": [lesson1, lesson2, ...], ...}
+    """
+    cal = Calendar()
+    cal.add('prodid', '-//Plan Zajec WN UMG (Niestacjonarne)//umg.edu.pl//')
+    cal.add('version', '2.0')
+    cal.add('x-wr-calname', f"Plan WN (NST) - {group_name}")
+    cal.add('x-wr-timezone', 'Europe/Warsaw')
+
+    for date_iso, lessons in nst_group_schedule.items():
+        for lesson in lessons:
+            try:
+                hours_str = lesson.get("godziny", "")
+                if not hours_str or "-" not in hours_str:
+                    continue
+                parts = hours_str.split("-")
+                if len(parts) != 2:
+                    continue
+                start_h, end_h = parts[0].strip(), parts[1].strip()
+                if not (re.match(r"^\d{1,2}:\d{2}$", start_h) and re.match(r"^\d{1,2}:\d{2}$", end_h)):
+                    continue
+                sh, sm = map(int, start_h.split(":"))
+                eh, em = map(int, end_h.split(":"))
+
+                y, m, d = map(int, date_iso.split("-"))
+                dt_start = datetime(y, m, d, sh, sm)
+                dt_end = datetime(y, m, d, eh, em)
+
+                event = Event()
+                subj = lesson.get("przedmiot", "Zajęcia")
+                forma = lesson.get("forma", "")
+                summary = f"[{forma.upper()}] {subj}" if forma else subj
+                event.add('summary', summary)
+                event.add('dtstart', dt_start)
+                event.add('dtend', dt_end)
+
+                clean_subj = re.sub(r'[^\w]', '', subj)[:20]
+                uid = f"nst_{group_name}_{date_iso}_{sh:02d}{sm:02d}_{clean_subj}@umg.edu.pl"
+                event.add('uid', uid)
+                event.add('dtstamp', datetime.now(timezone.utc))
+
+                sala = lesson.get("sala", "")
+                if sala and sala != "brak sali":
+                    event.add('location', sala)
+
+                desc_lines = []
+                if lesson.get("prowadzacy"):
+                    desc_lines.append(f"Prowadzący: {lesson['prowadzacy']}")
+                if lesson.get("forma"):
+                    desc_lines.append(f"Forma: {lesson['forma']}")
+                desc_lines.append(f"Grupa: {group_name}")
+                event.add('description', "\n".join(desc_lines))
+
+                cal.add_component(event)
+            except Exception as e:
+                logger.warning(f"ICS NST pominięto lekcję: {e}")
+
+    output = cal.to_ical()
+    if isinstance(output, bytes):
+        return output.decode("utf-8")
+    return output
+
+
+# Backward compatibility aliases
+generuj_ics_nst = generate_nst_ics
 generate_ics = generuj_ics
+

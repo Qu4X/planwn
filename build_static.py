@@ -20,7 +20,9 @@ logger = logging.getLogger("build_static")
 
 from arktur_client import pobierz_liste_planow, pobierz_surowy_plan
 from arktur_parser import przetworz_plan_na_grafike, _wspolny_parser_html
-from ics_export import generuj_ics, load_academic_calendar
+from ics_export import generuj_ics, generate_nst_ics, load_academic_calendar
+from nst_client import fetch_nst_plans_list, download_pdf_file
+from nst_parser import parse_pdf_schedule
 from models import LessonDict, RoomScheduleEntry, TeacherScheduleEntry
 
 
@@ -372,7 +374,8 @@ def build(limit=None, plan_ids=None, filter_query=None):
             "clean_name": parsed_title["clean_name"],
             "published_at": parsed_title["published_at"],
             "version": parsed_title["version"],
-            "groups": grupy
+            "groups": grupy,
+            "mode": "stacjonarne"
         }
 
         # Parse schedule once for all groups in this plan
@@ -418,6 +421,70 @@ def build(limit=None, plan_ids=None, filter_query=None):
 
             except Exception as e:
                 logger.error(f"Error processing group {grupa} in plan {plan_id_str}: {e}")
+
+    # =========================================================================
+    # Part-time (NST) studies schedule processing from PDF files
+    # =========================================================================
+    logger.info("2. Fetching part-time (NST) plans list from UMG...")
+    try:
+        nst_plans = fetch_nst_plans_list()
+        logger.info(f"Found {len(nst_plans)} part-time (NST) plans.")
+        if limit and limit > 0:
+            nst_plans = nst_plans[:limit]
+        cache_pdf_dir = os.path.join(BASE_DIR, "cache_nst_pdf")
+        os.makedirs(cache_pdf_dir, exist_ok=True)
+
+        for nst_item in nst_plans:
+            plan_id_nst = f"nst_{nst_item['id']}"
+            plan_name = nst_item["name"]
+            pdf_url = nst_item["pdf_url"]
+            local_pdf_path = os.path.join(cache_pdf_dir, nst_item["filename"])
+
+            # Download or use cached PDF
+            logger.info(f"Downloading/parsing NST plan {plan_id_nst} ({plan_name})...")
+            if not download_pdf_file(pdf_url, local_pdf_path):
+                logger.warning(f"Could not download NST PDF {pdf_url}. Skipping.")
+                continue
+
+            # Parse PDF schedule
+            nst_schedule_by_group = parse_pdf_schedule(local_pdf_path)
+            if not nst_schedule_by_group:
+                logger.warning(f"No schedule extracted from {local_pdf_path}. Skipping.")
+                continue
+
+            nst_groups = sorted(list(nst_schedule_by_group.keys()))
+            clean_name = f"{plan_name} (niestacjonarne)"
+
+            plans_metadata["plans"][plan_id_nst] = {
+                "name": plan_name,
+                "clean_name": clean_name,
+                "published_at": nst_item.get("modified"),
+                "version": None,
+                "groups": nst_groups,
+                "mode": "niestacjonarne"
+            }
+
+            for group_name, dates_dict in nst_schedule_by_group.items():
+                try:
+                    safe_group = re.sub(r'[^\w-]', '_', group_name)
+                    safe_group_filename = f"{plan_id_nst}_{safe_group}.json"
+                    json_path = os.path.join(SCHEDULES_DIR, safe_group_filename)
+                    with open(json_path, "w", encoding="utf-8") as jf:
+                        json.dump(dates_dict, jf, ensure_ascii=False, indent=2)
+
+                    # Generate iCal (.ics) calendar
+                    ics_text = generate_nst_ics(dates_dict, group_name)
+                    ics_filename = f"{plan_id_nst}_{safe_group}.ics"
+                    ics_path = os.path.join(CALENDARS_DIR, ics_filename)
+                    with open(ics_path, "w", encoding="utf-8") as icsf:
+                        icsf.write(ics_text)
+
+                    total_groups_processed += 1
+                except Exception as ge:
+                    logger.error(f"Error processing NST group {group_name} in {plan_id_nst}: {ge}")
+
+    except Exception as nst_err:
+        logger.error(f"Error while processing part-time (NST) plans: {nst_err}")
 
     # Write plans.json metadata file (merge with existing plans if subset was processed)
     plans_json_path = os.path.join(DATA_DIR, "plans.json")
@@ -489,7 +556,7 @@ def build_cross_reference_indexes(plans_metadata=None, schedules_dir=SCHEDULES_D
         return False
 
     logger.info("Building cross-reference indexes (teachers, rooms, subjects)...")
-    dni_order = {"PON": 1, "WT": 2, "ŚR": 3, "CZW": 4, "PT": 5, "SOB": 6}
+    dni_order = {"PON": 1, "WT": 2, "ŚR": 3, "CZW": 4, "PT": 5, "SOB": 6, "ND": 7}
 
     # Load plans metadata if not passed
     if not plans_metadata:
@@ -542,54 +609,119 @@ def build_cross_reference_indexes(plans_metadata=None, schedules_dir=SCHEDULES_D
                 logger.error(f"Error reading {schedule_path}: {e}")
                 continue
 
-            for day, day_slots in schedule_data.items():
-                if not isinstance(day_slots, dict):
+            # Unified lesson extraction:
+            # - full-time: day (e.g. "PON", "WT") -> dict of slots {"1": lesson_dict}
+            # - part-time (NST): date_iso (e.g. "2026-10-01") -> list of lessons [lesson_dict, ...]
+            all_entries_to_index = []
+
+            for key, val in schedule_data.items():
+                if isinstance(val, dict):
+                    # Full-time format
+                    day = key
+                    for slot_str, lesson in val.items():
+                        try:
+                            slot = int(str(slot_str).split('_')[0])
+                        except ValueError:
+                            slot = 0
+                        all_entries_to_index.append((day, slot, lesson))
+                elif isinstance(val, list):
+                    # Part-time (NST) format: key is ISO date e.g. "2026-10-03"
+                    date_iso = key
+                    for idx, lesson in enumerate(val):
+                        # Determine day code from 'dzien' field or ISO date
+                        raw_day_name = lesson.get("dzien", "").strip()
+                        day_name_to_code = {
+                            "Poniedziałek": "PON", "Wtorek": "WT", "Środa": "ŚR",
+                            "Czwartek": "CZW", "Piątek": "PT", "Sobota": "SOB", "Niedziela": "ND"
+                        }
+                        day_code = day_name_to_code.get(raw_day_name)
+                        if not day_code:
+                            try:
+                                dt = datetime.strptime(date_iso, "%Y-%m-%d")
+                                day_code = {0: "PON", 1: "WT", 2: "ŚR", 3: "CZW", 4: "PT", 5: "SOB", 6: "ND"}[dt.weekday()]
+                            except Exception:
+                                day_code = "SOB"
+
+                        lesson_copy = dict(lesson)
+                        lesson_copy["data_start"] = date_iso
+                        lesson_copy["tygodnie"] = 1
+                        lesson_copy["co_ile"] = 1
+                        all_entries_to_index.append((day_code, idx + 1, lesson_copy))
+
+            for day, slot, lesson in all_entries_to_index:
+                subject = (lesson.get("przedmiot") or "").strip()
+                raw_subject = (lesson.get("raw_przedmiot") or subject).strip()
+                teacher = (lesson.get("prowadzacy") or "").strip()
+                room = (lesson.get("sala") or "").strip()
+                hours = (lesson.get("godziny") or "").strip()
+                weeks = lesson.get("tygodnie", 1)
+                data_start = lesson.get("data_start", "")
+                co_ile = int(lesson.get("co_ile", 1) or 1)
+                od_tyg = int(lesson.get("od_tyg", 1) or 1)
+                polowa_sem = lesson.get("polowa_sem")
+
+                if not subject:
                     continue
-                for slot_str, lesson in day_slots.items():
-                    try:
-                        slot = int(str(slot_str).split('_')[0])
-                    except ValueError:
-                        slot = 0
 
-                    subject = (lesson.get("przedmiot") or "").strip()
-                    raw_subject = (lesson.get("raw_przedmiot") or subject).strip()
-                    teacher = (lesson.get("prowadzacy") or "").strip()
-                    room = (lesson.get("sala") or "").strip()
-                    hours = (lesson.get("godziny") or "").strip()
-                    weeks = lesson.get("tygodnie", 1)
-                    data_start = lesson.get("data_start", "")
-                    co_ile = int(lesson.get("co_ile", 1) or 1)
-                    od_tyg = int(lesson.get("od_tyg", 1) or 1)
-                    polowa_sem = lesson.get("polowa_sem")
+                # 1. Instructor index
+                if teacher and teacher != "Brak danych prowadzącego":
+                    if teacher not in teachers_index:
+                        teachers_index[teacher] = []
 
-                    if not subject:
-                        continue
+                    # Deduplicate multi-group lectures in the same room/time
+                    # ONLY if they occur in the same cycle, semester half, and start date
+                    deduped = False
+                    for entry in teachers_index[teacher]:
+                        if (entry["day"] == day and entry["slot"] == slot and
+                            entry["hours"] == hours and entry["subject"] == subject and
+                            entry["room"] == room and entry["plan_id"] == plan_id_str and
+                            _is_same_cycle(entry, co_ile, od_tyg, polowa_sem, data_start)):
+                            if group not in entry["groups"]:
+                                entry["groups"].append(group)
+                            deduped = True
+                            break
+                    if not deduped:
+                        teachers_index[teacher].append({
+                            "day": day,
+                            "slot": slot,
+                            "hours": hours,
+                            "subject": subject,
+                            "raw_subject": raw_subject,
+                            "room": room,
+                            "groups": [group],
+                            "plan_id": plan_id_str,
+                            "plan_name": plan_name,
+                            "weeks": weeks,
+                            "data_start": data_start,
+                            "co_ile": co_ile,
+                            "od_tyg": od_tyg,
+                            "polowa_sem": polowa_sem
+                        })
 
-                    # 1. Instructor index
-                    if teacher and teacher != "Brak danych prowadzącego":
-                        if teacher not in teachers_index:
-                            teachers_index[teacher] = []
+                # 2. Room index (exclude purely virtual 'OL' or blank)
+                if room and room.upper() != "OL":
+                    room_set.add(room)
+                    if room not in rooms_index:
+                        rooms_index[room] = {d: [] for d in dni_order.keys()}
 
-                        # Deduplicate multi-group lectures in the same room/time
-                        # ONLY if they occur in the same cycle, semester half, and start date
+                    if day in rooms_index[room]:
                         deduped = False
-                        for entry in teachers_index[teacher]:
-                            if (entry["day"] == day and entry["slot"] == slot and
-                                entry["hours"] == hours and entry["subject"] == subject and
-                                entry["room"] == room and entry["plan_id"] == plan_id_str and
+                        for entry in rooms_index[room][day]:
+                            if (entry["slot"] == slot and entry["hours"] == hours and
+                                entry["subject"] == subject and entry["plan_id"] == plan_id_str and
                                 _is_same_cycle(entry, co_ile, od_tyg, polowa_sem, data_start)):
                                 if group not in entry["groups"]:
                                     entry["groups"].append(group)
+                                if not entry["teacher"] and teacher:
+                                    entry["teacher"] = teacher
                                 deduped = True
                                 break
                         if not deduped:
-                            teachers_index[teacher].append({
-                                "day": day,
+                            rooms_index[room][day].append({
                                 "slot": slot,
                                 "hours": hours,
                                 "subject": subject,
-                                "raw_subject": raw_subject,
-                                "room": room,
+                                "teacher": teacher,
                                 "groups": [group],
                                 "plan_id": plan_id_str,
                                 "plan_name": plan_name,
@@ -600,67 +732,33 @@ def build_cross_reference_indexes(plans_metadata=None, schedules_dir=SCHEDULES_D
                                 "polowa_sem": polowa_sem
                             })
 
-                    # 2. Room index (exclude purely virtual 'OL' or blank)
-                    if room and room.upper() != "OL":
-                        room_set.add(room)
-                        if room not in rooms_index:
-                            rooms_index[room] = {d: [] for d in dni_order.keys()}
+                # 3. Subject index
+                if subject not in subjects_index:
+                    # Check WN catalog
+                    wn_match = wn_lower.get(subject.lower())
+                    wn_meta = wn_match[1] if wn_match else {}
+                    subjects_index[subject] = {
+                        "subject": subject,
+                        "raw_variants": [],
+                        "teachers": [],
+                        "majors": wn_meta.get("majors", []),
+                        "syllabus_url": wn_meta.get("syllabus_url", ""),
+                        "plans": {}
+                    }
 
-                        if day in rooms_index[room]:
-                            deduped = False
-                            for entry in rooms_index[room][day]:
-                                if (entry["slot"] == slot and entry["hours"] == hours and
-                                    entry["subject"] == subject and entry["plan_id"] == plan_id_str and
-                                    _is_same_cycle(entry, co_ile, od_tyg, polowa_sem, data_start)):
-                                    if group not in entry["groups"]:
-                                        entry["groups"].append(group)
-                                    if not entry["teacher"] and teacher:
-                                        entry["teacher"] = teacher
-                                    deduped = True
-                                    break
-                            if not deduped:
-                                rooms_index[room][day].append({
-                                    "slot": slot,
-                                    "hours": hours,
-                                    "subject": subject,
-                                    "teacher": teacher,
-                                    "groups": [group],
-                                    "plan_id": plan_id_str,
-                                    "plan_name": plan_name,
-                                    "weeks": weeks,
-                                    "data_start": data_start,
-                                    "co_ile": co_ile,
-                                    "od_tyg": od_tyg,
-                                    "polowa_sem": polowa_sem
-                                })
+                if raw_subject and raw_subject not in subjects_index[subject]["raw_variants"]:
+                    subjects_index[subject]["raw_variants"].append(raw_subject)
+                if teacher and teacher not in subjects_index[subject]["teachers"]:
+                    subjects_index[subject]["teachers"].append(teacher)
 
-                    # 3. Subject index
-                    if subject not in subjects_index:
-                        # Check WN catalog
-                        wn_match = wn_lower.get(subject.lower())
-                        wn_meta = wn_match[1] if wn_match else {}
-                        subjects_index[subject] = {
-                            "subject": subject,
-                            "raw_variants": [],
-                            "teachers": [],
-                            "majors": wn_meta.get("majors", []),
-                            "syllabus_url": wn_meta.get("syllabus_url", ""),
-                            "plans": {}
-                        }
-
-                    if raw_subject and raw_subject not in subjects_index[subject]["raw_variants"]:
-                        subjects_index[subject]["raw_variants"].append(raw_subject)
-                    if teacher and teacher not in subjects_index[subject]["teachers"]:
-                        subjects_index[subject]["teachers"].append(teacher)
-
-                    if plan_id_str not in subjects_index[subject]["plans"]:
-                        subjects_index[subject]["plans"][plan_id_str] = {
-                            "plan_id": plan_id_str,
-                            "plan_name": plan_name,
-                            "groups": []
-                        }
-                    if group not in subjects_index[subject]["plans"][plan_id_str]["groups"]:
-                        subjects_index[subject]["plans"][plan_id_str]["groups"].append(group)
+                if plan_id_str not in subjects_index[subject]["plans"]:
+                    subjects_index[subject]["plans"][plan_id_str] = {
+                        "plan_id": plan_id_str,
+                        "plan_name": plan_name,
+                        "groups": []
+                    }
+                if group not in subjects_index[subject]["plans"][plan_id_str]["groups"]:
+                    subjects_index[subject]["plans"][plan_id_str]["groups"].append(group)
 
     # Sort entries
     for teacher, entries in teachers_index.items():

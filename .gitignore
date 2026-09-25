@@ -17,4 +17,5 @@ dist/
 icons/
 temp/
 scratch/
+cache_nst_pdf/
 architecture-review-*.html

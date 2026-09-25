@@ -10,7 +10,7 @@ const getRoomOccupancyAt = (...args) => engine.getRoomOccupancyAt(...args);
 const isTeachingDay = (...args) => engine.isTeachingDay(...args);
 
 // UI helpers and state from app.js
-const { getSafeGroupName, parsePlanInfo, updateCalendarNotice, renderSchedule, renderLessonCard, shouldShowChangelog, openChangelogModal, closeChangelogModal, comparePlans, getPlanSortKey, state, elements } = require("./web/app.js");
+const { getSafeGroupName, parsePlanInfo, getAcademicInfoForWeek, updateCalendarNotice, renderSchedule, renderLessonCard, shouldShowChangelog, openChangelogModal, closeChangelogModal, comparePlans, getPlanSortKey, populatePlanSelect, onStudyModeChange, state, elements } = require("./web/app.js");
 
 console.log("\n🧪 Running Calendar Engine TDD Tests...\n");
 
@@ -975,3 +975,112 @@ assert.deepStrictEqual(sortedNames, [
 ]);
 
 console.log("✅ [PASS] Naturalne sortowanie planów działa poprawnie (kierunki alfabetycznie, semestry rosnąco).");
+
+// -- Test 24: Tryb studiów (stacjonarne / niestacjonarne) i renderowanie dat ISO
+console.log("\n-- Test 24: Tryb studiów (studyMode) i obsługa planów niestacjonarnych");
+
+// 24a. Filtrowanie planów wg trybu
+state.plansData = {
+  plans: {
+    "101": { name: "Nawigacja stacjonarne sem. 1", mode: "stacjonarne" },
+    "102": { name: "Transport stacjonarne sem. 3", mode: "stacjonarne" },
+    "nst_TiL_I": { name: "Transport studia 1 stopnia (TiL) rok: I (niestacjonarne)", mode: "niestacjonarne" }
+  }
+};
+
+state.studyMode = "stacjonarne";
+const fakeSelect = {
+  innerHTML: "",
+  children: [],
+  appendChild(child) {
+    this.children.push(child);
+  }
+};
+elements.planSelect = fakeSelect;
+
+populatePlanSelect();
+const stacjoOptions = fakeSelect.children.map(c => c.value);
+assert.ok(stacjoOptions.includes("101"), "Tryb stacjonarny powinien zawierać plan 101");
+assert.ok(!stacjoOptions.includes("nst_TiL_I"), "Tryb stacjonarny nie powinien zawierać planu niestacjonarnego");
+
+state.studyMode = "niestacjonarne";
+fakeSelect.children = [];
+populatePlanSelect();
+const nstOptions = fakeSelect.children.map(c => c.value);
+assert.ok(nstOptions.includes("nst_TiL_I"), "Tryb niestacjonarny powinien zawierać plan nst_TiL_I");
+assert.ok(!nstOptions.includes("101"), "Tryb niestacjonarny nie powinien zawierać planu stacjonarnego");
+
+// 24b. ResolveWeekSchedule dla formatu niestacjonarnego (daty ISO)
+const mockNstSchedule = {
+  "2026-10-03": [
+    {
+      przedmiot: "Matematyka",
+      godziny: "08:00-09:35",
+      sala: "Aula",
+      prowadzacy: "Milczek Beata, dr",
+      dzien: "Sobota"
+    }
+  ]
+};
+
+const weekMon = new Date(2026, 8, 28); // Poniedziałek 28.09.2026 przed 03.10.2026
+const resolvedWeek = engine.resolveWeekSchedule(weekMon, mockNstSchedule);
+
+assert.ok(resolvedWeek["SOB"], "Tydzień powinien zawierać sobotę");
+assert.strictEqual(resolvedWeek["SOB"].lessons.length, 1, "Sobota powinna mieć 1 zajęcia");
+assert.strictEqual(resolvedWeek["SOB"].lessons[0].przedmiot, "Matematyka");
+assert.strictEqual(resolvedWeek["SOB"].lessons[0].sala, "Aula");
+assert.strictEqual(resolvedWeek["SOB"].lessons[0].lessonDate, "2026-10-03");
+
+console.log("✅ [PASS] Przełącznik trybu studiów i silnik dat ISO dla planów niestacjonarnych działają prawidłowo.");
+ 
+// -- Test 25: Brak dni zamiennych w trybie niestacjonarnym (NST)
+console.log("\n-- Test 25: Brak dni zamiennych w trybie niestacjonarnym (NST)");
+
+// Tydzień 09.11.2026 - 15.11.2026 zawiera zamianę dnia: 13.11 (Piątek jako Środa)
+const swapWeekMon = new Date(2026, 10, 9); // Poniedziałek 09.11.2026
+
+// 25a. W trybie stacjonarnym zamiana dnia powinna być widoczna
+state.studyMode = "stacjonarne";
+const stacjoAcademicInfo = getAcademicInfoForWeek(swapWeekMon);
+assert.ok(stacjoAcademicInfo.daySwaps.length > 0, "Tryb stacjonarny powinien wykrywać zamianę dnia w tygodniu 09.11-15.11");
+assert.strictEqual(stacjoAcademicInfo.daySwaps[0].replaceWith, "ŚR", "Dla stacjonarnych 13.11 powinien być zamieniony na Środę");
+
+// 25b. W trybie niestacjonarnym zamiany dni są ignorowane
+state.studyMode = "niestacjonarne";
+const nstAcademicInfo = getAcademicInfoForWeek(swapWeekMon);
+assert.strictEqual(nstAcademicInfo.daySwaps.length, 0, "Tryb niestacjonarny NIE powinien zawierać dni zamiennych w academicInfo");
+
+// 25c. updateCalendarNotice nie renderuje zamiany dnia w trybie niestacjonarnym
+elements.calendarNotice = {
+  innerHTML: "",
+  className: "",
+  classList: {
+    add(cls) { this.classes.add(cls); },
+    remove(cls) { this.classes.delete(cls); },
+    classes: new Set()
+  }
+};
+updateCalendarNotice(stacjoAcademicInfo); // wywołane gdy state.studyMode = "niestacjonarne"
+assert.ok(!elements.calendarNotice.innerHTML.includes("Zamiana dnia"), "Baner zamiany dnia nie powinien być renderowany w trybie NST");
+
+// 25d. resolveWeekSchedule nie zamienia planu dla formatu niestacjonarnego
+const nstFridaySchedule = {
+  "2026-11-13": [
+    {
+      przedmiot: "Nawigacja techniczna",
+      godziny: "16:00-18:25",
+      sala: "B211",
+      dzien: "Piątek"
+    }
+  ]
+};
+const nstResolved = engine.resolveWeekSchedule(swapWeekMon, nstFridaySchedule, { isNst: true, studyMode: "niestacjonarne" });
+assert.strictEqual(nstResolved["PT"].status, "normal", "W trybie niestacjonarnym piątek 13.11 powinien mieć status 'normal' zamiast 'daySwap'");
+assert.strictEqual(nstResolved["PT"].swapNote, null, "W trybie niestacjonarnym swapNote powinien być null");
+assert.strictEqual(nstResolved["PT"].swapReplaceWith, null, "W trybie niestacjonarnym swapReplaceWith powinien być null");
+assert.strictEqual(nstResolved["PT"].lessons.length, 1, "Piątkowe zajęcia NST powinny pozostać na swoim miejscu");
+assert.strictEqual(nstResolved["PT"].lessons[0].przedmiot, "Nawigacja techniczna", "Zajęcia z piątku nie powinny być zastąpione środą");
+
+console.log("✅ [PASS] Dni zamienne są całkowicie wyłączone w trybie niestacjonarnym (brak banerów, brak zamian w silniku i UI).");
+

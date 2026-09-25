@@ -532,6 +532,186 @@ check("'A1 ' with strip() matches II-degree group regex",
 check("'A1\\t' with strip() matches II-degree group regex",
       bool(re.search(GROUP_REGEX_25, "A1\t".strip(), re.IGNORECASE)))
 
+# ── 26. Niestacjonarne (NST) client & parser tests ───────────────────────────
+print("\n-- 26. Niestacjonarne (NST) client & parser --------------------------")
+from nst_client import fetch_nst_plans_list, pobierz_liste_planow_nst
+from nst_parser import normalize_iso_date, _parse_single_table
+from ics_export import generate_nst_ics, generuj_ics_nst
+
+# 26a. Canonical English exports and backward compatibility aliases
+check("fetch_nst_plans_list is pobierz_liste_planow_nst", fetch_nst_plans_list is pobierz_liste_planow_nst)
+check("generate_nst_ics is generuj_ics_nst", generate_nst_ics is generuj_ics_nst)
+
+# 26b. Normalizacja daty ISO
+check("normalize_iso_date handles '1.10.2026'", normalize_iso_date("1.10.2026") == "2026-10-01")
+check("normalize_iso_date handles '15.01.2027'", normalize_iso_date("15.01.2027") == "2027-01-15")
+check("normalize_iso_date handles invalid string", normalize_iso_date("brak-daty") is None)
+
+# 26c. Mockowana tabela z PDF z wielookresowymi blokami zajęć
+sample_table = [
+    [None, None, "3.10.2026", None, None],
+    [None, None, "sobota", None, None],
+    [None, None, "GR.01", "GR.02", "Sala"],
+    ["08:00", "08:45", "Matematyka\nW", "Fizyka\nC", "Aula"],
+    ["08:50", "09:35", None, None, None],
+    ["09:40", "10:25", "Milczek Beata, dr", "Nowak Jan, dr", "Aula"],
+    ["10:30", "11:15", "Fizyka\nC", "Matematyka\nW", "Aula"],
+    ["11:20", "12:05", None, None, None],
+    ["12:10", "12:55", "Nowak Jan, dr", "Milczek Beata, dr", "Aula"]
+]
+parsed_mock = _parse_single_table(sample_table)
+check("Parsed table contains GR.01 and GR.02", "GR.01" in parsed_mock and "GR.02" in parsed_mock)
+check("Parsed table has date 2026-10-03", "2026-10-03" in parsed_mock.get("GR.01", {}))
+gr1_lessons = parsed_mock.get("GR.01", {}).get("2026-10-03", [])
+check("GR.01 has 2 lessons", len(gr1_lessons) == 2, f"got {len(gr1_lessons)}")
+if gr1_lessons:
+    l0 = gr1_lessons[0]
+    check("Lesson 0 subject extracted", "Matematyka" in l0["przedmiot"], f"got {l0['przedmiot']}")
+    check("Lesson 0 teacher extracted", "Milczek" in l0["prowadzacy"], f"got {l0['prowadzacy']}")
+    check("Lesson 0 hours extracted", l0["godziny"] == "08:00-10:25", f"got {l0['godziny']}")
+    check("Lesson 0 room extracted", l0["sala"].upper() == "AULA", f"got {l0['sala']}")
+    check("Lesson 0 day is Sobota", l0["dzien"] == "Sobota", f"got {l0['dzien']}")
+
+# 26d. Test generate_nst_ics
+sample_nst_schedule = {"2026-10-03": gr1_lessons}
+ics_output = generate_nst_ics(sample_nst_schedule, "GR.01")
+check("generate_nst_ics produces valid iCal with VEVENT", "BEGIN:VEVENT" in ics_output and "Matematyka" in ics_output)
+
+# 26e. Regression test for Saturday multi-group & multi-period classes without gridlines (2026-11-21)
+import os
+from nst_parser import parse_pdf_schedule
+
+sample_pdf_path = "cache_nst_pdf/TiL_I.pdf"
+if os.path.exists(sample_pdf_path):
+    parsed_pdf = parse_pdf_schedule(sample_pdf_path)
+    gr4_nov21 = parsed_pdf.get("GR.04", {}).get("2026-11-21", [])
+    check("GR.04 on 2026-11-21 has afternoon lessons", len(gr4_nov21) >= 3, f"got {len(gr4_nov21)}")
+
+    l_1330 = next((l for l in gr4_nov21 if l["godziny"].startswith("13:30")), None)
+    check("GR.04 has 13:30 lesson", l_1330 is not None)
+    if l_1330:
+        check("GR.04 13:30 subject is Podstawy nautyki w transporcie", l_1330["przedmiot"] == "Podstawy nautyki w transporcie", f"got {l_1330['przedmiot']}")
+        check("GR.04 13:30 teacher is Gil Mateusz", "Gil Mateusz" in l_1330["prowadzacy"], f"got {l_1330['prowadzacy']}")
+        check("GR.04 13:30 room is C30", l_1330["sala"] == "C30", f"got {l_1330['sala']}")
+        check("GR.04 13:30 form is laboratorium", l_1330["forma"] == "laboratorium", f"got {l_1330['forma']}")
+        check("GR.04 13:30 subject has no interleaving artifacts", "Gkir" not in l_1330["przedmiot"] and "sPkoadstawy" not in l_1330["przedmiot"])
+
+    l_1600 = next((l for l in gr4_nov21 if l["godziny"].startswith("16:00")), None)
+    check("GR.04 has 16:00 lesson", l_1600 is not None)
+    if l_1600:
+        check("GR.04 16:00 subject is Grafika inżynierska", l_1600["przedmiot"] == "Grafika inżynierska", f"got {l_1600['przedmiot']}")
+        check("GR.04 16:00 teacher is Tessmer Agnieszka", "Tessmer Agnieszka" in l_1600["prowadzacy"], f"got {l_1600['prowadzacy']}")
+        check("GR.04 16:00 room is B211", l_1600["sala"] == "B211", f"got {l_1600['sala']}")
+
+    gr5_nov21 = parsed_pdf.get("GR.05", {}).get("2026-11-21", [])
+    l5_1330 = next((l for l in gr5_nov21 if l["godziny"].startswith("13:30")), None)
+    check("GR.05 has 13:30 lesson", l5_1330 is not None)
+    if l5_1330:
+        check("GR.05 13:30 subject is Grafika inżynierska", l5_1330["przedmiot"] == "Grafika inżynierska", f"got {l5_1330['przedmiot']}")
+        check("GR.05 13:30 room is B211", l5_1330["sala"] == "B211", f"got {l5_1330['sala']}")
+
+    # 26f. Regression test for empty days (29.10, 30.10) and adjacent subject splitting (28.11 18:30)
+    for empty_date in ("2026-10-29", "2026-10-30"):
+        gr1_empty = parsed_pdf.get("GR.01", {}).get(empty_date, [])
+        check(f"GR.01 has 0 lessons on empty day {empty_date}", len(gr1_empty) == 0, f"got {len(gr1_empty)}: {gr1_empty}")
+        gr2_empty = parsed_pdf.get("GR.02", {}).get(empty_date, [])
+        check(f"GR.02 has 0 lessons on empty day {empty_date}", len(gr2_empty) == 0, f"got {len(gr2_empty)}: {gr2_empty}")
+
+    gr1_nov28 = parsed_pdf.get("GR.01", {}).get("2026-11-28", [])
+    check("GR.01 on 2026-11-28 has 3 lessons", len(gr1_nov28) == 3, f"got {len(gr1_nov28)}")
+    gr1_1830 = next((l for l in gr1_nov28 if l["godziny"].startswith("18:30")), None)
+    check("GR.01 on 2026-11-28 has 18:30 lesson", gr1_1830 is not None)
+    if gr1_1830:
+        check("GR.01 18:30 subject is Podstawy nautyki w transporcie", gr1_1830["przedmiot"] == "Podstawy nautyki w transporcie", f"got {gr1_1830['przedmiot']}")
+        check("GR.01 18:30 teacher is Gil Mateusz", "Gil Mateusz" in gr1_1830["prowadzacy"], f"got {gr1_1830['prowadzacy']}")
+        check("GR.01 18:30 room is C31", gr1_1830["sala"] == "C31", f"got {gr1_1830['sala']}")
+else:
+    print(f"  [SKIP] 26e/26f — PDF fixture not found at {sample_pdf_path!r}. Run with the real PDF to execute integration tests.")
+
+# 26g. Deterministyczny test: extract_stream_runs — split na font-change i is_glued_title (regresja 28.11 18:30)
+print("\n-- 26g. extract_stream_runs — split na zmianie fontu i is_glued_title ----------")
+from nst_parser import extract_stream_runs
+
+def _make_char(text, x0, x1, top=100.0, bottom=108.0, fontname="BCDEEE+Calibri"):
+    return {"text": text, "x0": x0, "x1": x1, "top": top, "bottom": bottom, "fontname": fontname}
+
+# Znaki tego samego fontu bez przerwy — jeden run
+same_font_chars = [
+    _make_char("P", 78.0, 84.0),
+    _make_char("o", 84.0, 89.0),
+    _make_char("d", 89.0, 94.0),
+]
+same_font_runs = extract_stream_runs(same_font_chars)
+check("Znaki tego samego fontu tworzą jeden run", len(same_font_runs) == 1, f"got {len(same_font_runs)}")
+check("Treść runu: 'Pod'", same_font_runs[0]["text"] == "Pod", f"got {same_font_runs[0]['text']}")
+
+# Zmiana fontu bez przerwy — dwa runy (regresja: scalanie nazw przedmiotów GR.01 i GR.03 na 28.11)
+font_change_chars = [
+    _make_char("P", 78.0, 84.0, fontname="BCDEEE+Calibri"),
+    _make_char("o", 84.0, 89.0, fontname="BCDEEE+Calibri"),
+    _make_char("G", 89.0, 95.0, fontname="BCDFEE+Calibri"),  # inna rodzina fontu
+    _make_char("r", 95.0, 100.0, fontname="BCDFEE+Calibri"),
+]
+font_change_runs = extract_stream_runs(font_change_chars)
+check("Zmiana fontu tworzy nowy run (regresja 28.11)", len(font_change_runs) == 2,
+      f"got {len(font_change_runs)}: {[r['text'] for r in font_change_runs]}")
+check("Run 1 to 'Po'", font_change_runs[0]["text"] == "Po", f"got {font_change_runs[0]['text']}")
+check("Run 2 to 'Gr'", font_change_runs[1]["text"] == "Gr", f"got {font_change_runs[1]['text']}")
+
+# is_glued_title: lowercase bezpośrednio przed uppercase bez przerwy (gap < 3pt) — dwa runy
+glued_chars = [
+    _make_char("a", 78.0, 83.0),   # lowercase
+    _make_char("B", 83.0, 89.0),   # uppercase, gap = 0.0 < 3.0
+]
+glued_runs = extract_stream_runs(glued_chars)
+check("Glued lowercase→uppercase bez luki tworzy nowy run (is_glued_title)", len(glued_runs) == 2,
+      f"got {len(glued_runs)}: {[r['text'] for r in glued_runs]}")
+
+# Brak over-splitu: ciąg uppercase bez zmiany fontu i bez luki — jeden run
+all_upper_chars = [
+    _make_char("A", 78.0, 84.0),
+    _make_char("B", 84.0, 90.0),
+    _make_char("C", 90.0, 96.0),
+]
+all_upper_runs = extract_stream_runs(all_upper_chars)
+check("Ciąg uppercase bez zmiany fontu i bez luki pozostaje jednym runem", len(all_upper_runs) == 1,
+      f"got {len(all_upper_runs)}")
+
+# Brak over-splitu: normalne słowo lowercase — jeden run
+normal_word_chars = [
+    _make_char("t", 78.0, 83.0),
+    _make_char("r", 83.0, 88.0),
+    _make_char("a", 88.0, 93.0),
+    _make_char("n", 93.0, 98.0),
+]
+normal_word_runs = extract_stream_runs(normal_word_chars)
+check("Normalne słowo lowercase (bez luki, bez zmiany fontu) tworzy jeden run", len(normal_word_runs) == 1,
+      f"got {len(normal_word_runs)}")
+
+# 26h. Deterministyczny test: _extract_lesson_details — odrzuca tekst złożony wyłącznie z tokenów grupy
+print("\n-- 26h. _extract_lesson_details — guard dla tokenów grupy (regresja 29/30.10) --")
+from nst_parser import _extract_lesson_details
+
+# Tekst będący samym nagłówkiem grupy — powinien zwrócić None (regresja pustych dni 29.10, 30.10)
+check("_extract_lesson_details('GR.01') zwraca None",
+      _extract_lesson_details("GR.01", fallback_room="", time_range="08:00-10:25",
+                              day_name="Sobota", date_iso="2026-10-29", group_name="GR.01") is None)
+check("_extract_lesson_details('GR.01 GR.02') zwraca None",
+      _extract_lesson_details("GR.01 GR.02", fallback_room="", time_range="08:00-10:25",
+                              day_name="Sobota", date_iso="2026-10-29", group_name="GR.01") is None)
+check("_extract_lesson_details('GR 1 GR 2') zwraca None",
+      _extract_lesson_details("GR 1 GR 2", fallback_room="", time_range="08:00-10:25",
+                              day_name="Sobota", date_iso="2026-10-29", group_name="GR.01") is None)
+
+# Prawidłowy tekst zajęć — nie powinien zwrócić None
+ok_result = _extract_lesson_details(
+    "Matematyka W Milczek Beata, dr Aula",
+    fallback_room="", time_range="08:00-10:25", day_name="Sobota", date_iso="2026-10-03", group_name="GR.01"
+)
+check("_extract_lesson_details zwraca dict dla prawidłowych zajęć", ok_result is not None)
+if ok_result:
+    check("Prawidłowe zajęcia: przedmiot zawiera Matematyka", "Matematyka" in ok_result.get("przedmiot", ""))
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 print("\n" + "="*60)
 passed = sum(1 for ok,_ in results if ok)
@@ -542,4 +722,5 @@ if failed:
     for ok,name in results:
         if not ok: print(f"    [FAIL]  {name}")
     sys.exit(1)
+
 
