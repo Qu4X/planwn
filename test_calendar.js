@@ -10,7 +10,7 @@ const getRoomOccupancyAt = (...args) => engine.getRoomOccupancyAt(...args);
 const isTeachingDay = (...args) => engine.isTeachingDay(...args);
 
 // UI helpers and state from app.js
-const { getSafeGroupName, parsePlanInfo, updateCalendarNotice, renderSchedule, renderLessonCard, shouldShowChangelog, openChangelogModal, closeChangelogModal, state, elements } = require("./web/app.js");
+const { getSafeGroupName, parsePlanInfo, updateCalendarNotice, renderSchedule, renderLessonCard, shouldShowChangelog, openChangelogModal, closeChangelogModal, comparePlans, getPlanSortKey, state, elements } = require("./web/app.js");
 
 console.log("\n🧪 Running Calendar Engine TDD Tests...\n");
 
@@ -950,3 +950,28 @@ const renderedCardNoForm = renderLessonCard(sampleNoForm);
 assert.ok(!renderedCardNoForm.includes("form-"), "Karta bez formy nie powinna mieć klasy form-*");
 
 console.log("✅ [PASS] renderLessonCard poprawnie aplikuje klasy .form-* do kart zajęć.");
+ 
+// -- Test 23: Naturalne sortowanie listy planów (kierunek alfabetycznie, stopień, semestr rosnąco)
+console.log("\n-- Test 23: Naturalne sortowanie listy planów (comparePlans)");
+const unorderedPlans = [
+  { id: "557", name: "Transport Morski pierwszego stopnia sem. 1" },
+  { id: "550", name: "Transport i Logistyka pierwszego stopnia sem. 3" },
+  { id: "559", name: "Transport Morski pierwszego stopnia sem. 3" },
+  { id: "558", name: "Transport i Logistyka pierwszego stopnia sem. 1" },
+  { id: "556", name: "Morskie Systemy Transportowe i Logistyczne drugiego stopnia sem. 2" },
+  { id: "551", name: "Transport i Logistyka pierwszego stopnia sem. 5" }
+];
+
+const sorted = [...unorderedPlans].sort((a, b) => comparePlans(a, b));
+const sortedNames = sorted.map(p => parsePlanInfo(p.name).cleanName);
+
+assert.deepStrictEqual(sortedNames, [
+  "Morskie Systemy Transportowe i Logistyczne sem. 2 (II st.)",
+  "Transport i Logistyka sem. 1",
+  "Transport i Logistyka sem. 3",
+  "Transport i Logistyka sem. 5",
+  "Transport Morski sem. 1",
+  "Transport Morski sem. 3"
+]);
+
+console.log("✅ [PASS] Naturalne sortowanie planów działa poprawnie (kierunki alfabetycznie, semestry rosnąco).");

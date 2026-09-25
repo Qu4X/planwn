@@ -157,6 +157,20 @@ def parse_plan_title(raw_name: str) -> dict:
     }
 
 
+def get_plan_sort_key(plan_entry: tuple) -> tuple:
+    """Klucz naturalnego sortowania planów: kierunek alfabetycznie, stopień, semestr rosnąco."""
+    pid, pdata = plan_entry
+    name = (pdata.get("clean_name") or pdata.get("name") or "") if isinstance(pdata, dict) else str(pdata)
+    m_sem = re.search(r'\bsem\.?\s*(\d+)\b', name, re.IGNORECASE)
+    sem_num = int(m_sem.group(1)) if m_sem else 0
+    is_second_degree = bool(re.search(r'drugiego\s+stopnia|II\s+st', name, re.IGNORECASE))
+    degree_order = 2 if is_second_degree else 1
+    clean_major = re.sub(r'\bsem\.?\s*\d+\b', '', name, flags=re.IGNORECASE)
+    clean_major = re.sub(r'\(II\s+st\.?\)', '', clean_major, flags=re.IGNORECASE)
+    clean_major = re.sub(r'\s+', ' ', clean_major).strip()
+    return (clean_major.lower(), degree_order, sem_num, name)
+
+
 def load_curriculum_forms(path: Optional[str] = None) -> Dict[str, Any]:
     """Wczytuje oficjalny katalog siatek godzinowych WN z wn_curriculum_forms.json"""
     target_path = path or CURRICULUM_FORMS_PATH
@@ -414,7 +428,8 @@ def build(limit=None, plan_ids=None, filter_query=None):
         except Exception:
             existing_plans = {}
 
-    plans_metadata["plans"] = {**existing_plans, **plans_metadata["plans"]}
+    merged_plans = {**existing_plans, **plans_metadata["plans"]}
+    plans_metadata["plans"] = dict(sorted(merged_plans.items(), key=get_plan_sort_key))
 
     with open(plans_json_path, "w", encoding="utf-8") as f:
         json.dump(plans_metadata, f, ensure_ascii=False, indent=2)

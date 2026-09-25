@@ -464,6 +464,24 @@ neg_groups = ["termin", "Inny plan", "Przedmiot A:", "A", "F1", "Z1", "Plan", "P
 for g in neg_groups:
     check(f"Junk '{g}' does NOT match regex", not bool(re.search(GROUP_REGEX, g, re.IGNORECASE)))
 
+# ── 24. Natural sorting of plans (get_plan_sort_key) ──────────────────────────
+print("\n-- 24. Natural sorting of plans (get_plan_sort_key) -------------------")
+from build_static import get_plan_sort_key
+
+plans_to_sort = {
+    "557": {"name": "Transport Morski pierwszego stopnia sem. 1"},
+    "550": {"name": "Transport i Logistyka pierwszego stopnia sem. 3"},
+    "559": {"name": "Transport Morski pierwszego stopnia sem. 3"},
+    "558": {"name": "Transport i Logistyka pierwszego stopnia sem. 1"},
+    "556": {"name": "Morskie Systemy Transportowe i Logistyczne drugiego stopnia sem. 2"},
+    "551": {"name": "Transport i Logistyka pierwszego stopnia sem. 5"},
+}
+
+sorted_pids = [pid for pid, _ in sorted(plans_to_sort.items(), key=get_plan_sort_key)]
+check("Plans sorted alphabetically by major and ascending by semester",
+      sorted_pids == ["556", "558", "550", "551", "557", "559"],
+      f"got {sorted_pids}")
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 print("\n" + "="*60)
 passed = sum(1 for ok,_ in results if ok)

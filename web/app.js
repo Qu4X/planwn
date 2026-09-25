@@ -700,9 +700,56 @@ function getShortPlanCode(planName) {
   return [major, sem].filter(Boolean).join(" ");
 }
 
+function getPlanSortKey(planObj) {
+  const name = (planObj && (planObj.clean_name || planObj.name)) || "";
+  const planInfo = parsePlanInfo(name);
+  const cleanName = planInfo.cleanName || name;
+
+  const semMatch = cleanName.match(/\bsem\.?\s*(\d+)\b/i);
+  const semNum = semMatch ? parseInt(semMatch[1], 10) : 0;
+
+  const isSecondDegree = Boolean(planInfo.isSecondDegree || /\bII\s+st/i.test(cleanName) || /drugiego\s+stopnia/i.test(name));
+  const degreeOrder = isSecondDegree ? 2 : 1;
+
+  let major = cleanName
+    .replace(/\bsem\.?\s*\d+\b/gi, "")
+    .replace(/\(II\s+st\.?\)/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return {
+    major,
+    degreeOrder,
+    semNum,
+    cleanName
+  };
+}
+
+function comparePlans(planA, planB) {
+  const keyA = getPlanSortKey(planA);
+  const keyB = getPlanSortKey(planB);
+
+  const majorCmp = keyA.major.localeCompare(keyB.major, "pl", { sensitivity: "base" });
+  if (majorCmp !== 0) return majorCmp;
+
+  if (keyA.degreeOrder !== keyB.degreeOrder) {
+    return keyA.degreeOrder - keyB.degreeOrder;
+  }
+
+  if (keyA.semNum !== keyB.semNum) {
+    return keyA.semNum - keyB.semNum;
+  }
+
+  return keyA.cleanName.localeCompare(keyB.cleanName, "pl", { sensitivity: "base" });
+}
+
 function populatePlanSelect() {
   elements.planSelect.innerHTML = '<option value="">Wybierz kierunek studiów...</option>';
-  for (const [id, plan] of Object.entries(state.plansData.plans)) {
+  if (!state.plansData || !state.plansData.plans) return;
+
+  const sortedEntries = Object.entries(state.plansData.plans).sort(([, a], [, b]) => comparePlans(a, b));
+
+  for (const [id, plan] of sortedEntries) {
     const opt = document.createElement("option");
     opt.value = id;
     const planInfo = parsePlanInfo(plan.clean_name || plan.name);
@@ -1795,6 +1842,8 @@ if (typeof module !== "undefined" && module.exports) {
     openChangelogModal,
     closeChangelogModal,
     checkChangelogNotification,
+    comparePlans,
+    getPlanSortKey,
     state,
     elements
   };
