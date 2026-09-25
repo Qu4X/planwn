@@ -146,3 +146,20 @@ Projekt ma polskie słownictwo domenowe. Użyj tych terminów w komentarzach i k
 | **Przerwa dydaktyczna** | Wielodniowy okres bez zajęć | wakacje, ferie |
 
 Pełny słownik → [`CONTEXT.md`](CONTEXT.md)
+
+
+---
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs live as GitHub issues (Qu4X/planwn). See docs/agents/issue-tracker.md.
+
+### Triage labels
+
+Canonical 5-role triage vocabulary. See docs/agents/triage-labels.md.
+
+### Domain docs
+
+Single-context (CONTEXT.md and docs/adr/ at repo root). See docs/agents/domain.md.
