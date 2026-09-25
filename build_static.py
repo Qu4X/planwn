@@ -19,7 +19,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger("build_static")
 
 from arktur_client import pobierz_liste_planow, pobierz_surowy_plan
-from arktur_parser import przetworz_plan_na_grafike
+from arktur_parser import przetworz_plan_na_grafike, _wspolny_parser_html
 from ics_export import generuj_ics, load_academic_calendar
 from models import LessonDict, RoomScheduleEntry, TeacherScheduleEntry
 
@@ -296,7 +296,7 @@ def classify_lesson_form(
     return "cwiczenia"
 
 
-def build(limit=None):
+def build(limit=None, plan_ids=None, filter_query=None):
     """Main build process"""
     start_time = datetime.now()
     logger.info("Starting UMG Static Site Build...")
@@ -316,7 +316,15 @@ def build(limit=None):
 
     # Filter/limit if specified
     plan_items = list(plany_slownik.items())
-    if limit and limit > 0:
+    if plan_ids:
+        plan_id_set = {str(pid).strip() for pid in plan_ids}
+        plan_items = [(name, pid) for name, pid in plan_items if str(pid) in plan_id_set]
+        logger.info(f"Filtered to {len(plan_items)} plans by plan IDs: {plan_ids}")
+    elif filter_query:
+        fq = filter_query.lower()
+        plan_items = [(name, pid) for name, pid in plan_items if fq in name.lower()]
+        logger.info(f"Filtered to {len(plan_items)} plans matching '{filter_query}'")
+    elif limit and limit > 0:
         logger.info(f"Applying limit: processing first {limit} plans only.")
         plan_items = plan_items[:limit]
 
@@ -351,12 +359,15 @@ def build(limit=None):
             "groups": grupy
         }
 
+        # Parse schedule once for all groups in this plan
+        parsed_schedule = _wspolny_parser_html(html_text)
+
         # Process each group in plan
         for grupa in grupy:
             try:
                 # 1. Generate flat schedule JSON
                 dane_plaskie, min_slot, max_slot = przetworz_plan_na_grafike(
-                    html_text, grupa, grupy
+                    html_text, grupa, grupy, _parsed_schedule=parsed_schedule
                 )
 
                 # Classify form for each lesson (wyklad, cwiczenia, laboratorium, symulator)
@@ -392,8 +403,19 @@ def build(limit=None):
             except Exception as e:
                 logger.error(f"Error processing group {grupa} in plan {plan_id_str}: {e}")
 
-    # Write plans.json metadata file
+    # Write plans.json metadata file (merge with existing plans if subset was processed)
     plans_json_path = os.path.join(DATA_DIR, "plans.json")
+    existing_plans = {}
+    if os.path.exists(plans_json_path):
+        try:
+            with open(plans_json_path, "r", encoding="utf-8") as f:
+                existing_data = json.load(f)
+                existing_plans = existing_data.get("plans", {})
+        except Exception:
+            existing_plans = {}
+
+    plans_metadata["plans"] = {**existing_plans, **plans_metadata["plans"]}
+
     with open(plans_json_path, "w", encoding="utf-8") as f:
         json.dump(plans_metadata, f, ensure_ascii=False, indent=2)
 
@@ -664,6 +686,18 @@ if __name__ == "__main__":
         help="Limit the number of plans processed (useful for quick local testing)"
     )
     parser.add_argument(
+        "--plan-ids",
+        type=str,
+        default=None,
+        help="Comma-separated plan IDs to scrape (e.g. '557,559' or '556')"
+    )
+    parser.add_argument(
+        "--filter",
+        type=str,
+        default=None,
+        help="Filter plans by name substring (e.g. 'Transport Morski')"
+    )
+    parser.add_argument(
         "--reindex-only",
         action="store_true",
         help="Skip network scraping and regenerate cross-reference indexes from existing schedule JSONs"
@@ -674,5 +708,6 @@ if __name__ == "__main__":
         if not build_cross_reference_indexes():
             sys.exit(1)
     else:
-        build(limit=args.limit)
+        plan_ids_list = [p.strip() for p in args.plan_ids.split(",")] if args.plan_ids else None
+        build(limit=args.limit, plan_ids=plan_ids_list, filter_query=args.filter)
 

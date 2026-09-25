@@ -325,7 +325,8 @@ parsuj_plan_html = _wspolny_parser_html
 def przetworz_plan_na_grafike(
     html_text: str,
     wybrana_grupa: str,
-    lista_grup: List[str]
+    lista_grup: List[str],
+    _parsed_schedule: Optional[Tuple] = None
 ) -> Tuple[Dict[str, Dict[str, LessonDict]], int, int]:
     """
     Filtruje i spłaszcza siatkę zajęć dla wybranej grupy dziekańskiej.
@@ -335,7 +336,10 @@ def przetworz_plan_na_grafike(
         return {}, 0, 0
 
     target_idx = lista_grup.index(wybrana_grupa)
-    dane_z_kolumnami, min_slot, max_slot = _wspolny_parser_html(html_text)
+    if _parsed_schedule:
+        dane_z_kolumnami, min_slot, max_slot = _parsed_schedule
+    else:
+        dane_z_kolumnami, min_slot, max_slot = _wspolny_parser_html(html_text)
 
     dane_plaskie: Dict[str, Dict[str, LessonDict]] = {d: {} for d in DNI_MAPA.values()}
 

@@ -9,9 +9,12 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional, Set, Tuple
 
+import warnings
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
 from requests.adapters import HTTPAdapter
+
+warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +114,7 @@ def pobierz_surowy_plan(plan_id: str) -> Tuple[str, List[str]]:
         if "ETMON" in txt or "[" in txt or "{" in txt or ":" in txt or len(txt) > 12:
             continue
 
-        if re.search(r"^(?:GR\.?\s*\d+|[1-4]\s*(?:TM|ER|L|N)\b|[A-Z]{2,4}\.?\s*\d+)", txt, re.IGNORECASE):
+        if re.search(r"^(?:GR\.?\s*\d+|[1-4]\s*(?:TM|ER|L|N)\b|[A-Z]{2,4}\.?\s*\d+|[A-E]\s*\d{1,2}$)", txt, re.IGNORECASE):
             if txt not in grupy:
                 grupy.append(txt)
 

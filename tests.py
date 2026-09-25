@@ -452,6 +452,18 @@ check("Matematyka in C136 with cs=8 is wyklad", classify_lesson_form(mat_w, "Tra
 fiz_w = {"przedmiot": "Fizyka", "raw_przedmiot": "Fiz", "sala": "C136", "colspan": 8, "arktur_kolor": "default"}
 check("Fizyka in C136 with cs=8 is wyklad", classify_lesson_form(fiz_w, "Transport i Logistyka sem. 1", curr_cat, forms_cfg, total_groups=8) == "wyklad")
 
+# ── 23. Safe group detection regex (including II degree groups A1, B1, etc.) ────
+print("\n-- 23. Safe group detection regex (including II degree groups) ---------")
+GROUP_REGEX = r"^(?:GR\.?\s*\d+|[1-4]\s*(?:TM|ER|L|N)\b|[A-Z]{2,4}\.?\s*\d+|[A-E]\s*\d{1,2}$)"
+
+pos_groups = ["A1", "A 1", "B1", "B2", "C1", "D1", "E2", "GR. 1", "GR.01", "GR 8", "1 TM", "2 ER", "MSTL. 1", "TiL 1"]
+for g in pos_groups:
+    check(f"Group '{g}' matches regex", bool(re.search(GROUP_REGEX, g, re.IGNORECASE)))
+
+neg_groups = ["termin", "Inny plan", "Przedmiot A:", "A", "F1", "Z1", "Plan", "Poniedziałek"]
+for g in neg_groups:
+    check(f"Junk '{g}' does NOT match regex", not bool(re.search(GROUP_REGEX, g, re.IGNORECASE)))
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 print("\n" + "="*60)
 passed = sum(1 for ok,_ in results if ok)
