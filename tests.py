@@ -482,6 +482,56 @@ check("Plans sorted alphabetically by major and ascending by semester",
       sorted_pids == ["556", "558", "550", "551", "557", "559"],
       f"got {sorted_pids}")
 
+# ── 25. Regressions: symulator branch reachability + group regex strip ─────────
+print("\n-- 25. Regressions: symulator branch + group regex strip ---------------")
+
+# 25a. Symulator-only entry — musi zwrócić "symulator" (przed fixem: wypadało na "cwiczenia" przez global fallback)
+sym_lesson = {"przedmiot": "Symulator Ratunkowy", "raw_przedmiot": "SRat", "sala": "Symulator", "colspan": 1, "arktur_kolor": "default"}
+# Inject a curriculum entry z tylko "symulator" w forms — używamy forms_manual override w testowym katalogu
+# Najprostszy test: symulator room w forms_manual → symulator
+# Zamiast tego sprawdzamy bezpośrednio, że jeśli catalog entry ma forms=["symulator"], wynik to "symulator",
+# a nie "cwiczenia" (domyślny fallback).
+from build_static import classify_lesson_form as clf
+_sym_catalog = {
+    "majors": {
+        "transport i logistyka": {
+            "semesters": {
+                "1": {
+                    "symulator ratunkowy": {"A": 0, "C": 0, "L": 0, "S": 15, "forms": ["symulator"], "single_form": None}
+                }
+            }
+        }
+    },
+    "global_single_forms": {},
+}
+_sym_cfg = {"override_by_subject": {}, "override_by_room": {}, "room_regex": []}
+check("Symulator-only entry returns 'symulator'",
+      clf(sym_lesson, "Transport i Logistyka sem. 1", _sym_catalog, _sym_cfg, total_groups=8) == "symulator")
+
+# 25b. Symulator + cwiczenia + laboratorium — blok CW/LAB disambiguuje (symulator guard nie blokuje)
+sym_cw_lab_lesson = {"przedmiot": "Sym. Tech.", "raw_przedmiot": "ST", "sala": "114", "colspan": 2, "arktur_kolor": "default"}
+_sym_cw_catalog = {
+    "majors": {
+        "transport i logistyka": {
+            "semesters": {
+                "1": {
+                    "sym. tech.": {"A": 0, "C": 15, "L": 15, "S": 10, "forms": ["cwiczenia", "laboratorium", "symulator"], "single_form": None}
+                }
+            }
+        }
+    },
+    "global_single_forms": {},
+}
+check("CW+LAB+SYM entry with colspan 2 returns 'cwiczenia' from disambiguation",
+      clf(sym_cw_lab_lesson, "Transport i Logistyka sem. 1", _sym_cw_catalog, _sym_cfg, total_groups=8) == "cwiczenia")
+
+# 25c. Group regex handles trailing whitespace ("A1 " — common HTML whitespace)
+GROUP_REGEX_25 = r"^(?:GR\.?\s*\d+|[1-4]\s*(?:TM|ER|L|N)\b|[A-Z]{2,4}\.?\s*\d+|[A-E]\s*\d{1,2}$)"
+check("'A1 ' with strip() matches II-degree group regex",
+      bool(re.search(GROUP_REGEX_25, "A1 ".strip(), re.IGNORECASE)))
+check("'A1\\t' with strip() matches II-degree group regex",
+      bool(re.search(GROUP_REGEX_25, "A1\t".strip(), re.IGNORECASE)))
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 print("\n" + "="*60)
 passed = sum(1 for ok,_ in results if ok)

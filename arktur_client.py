@@ -108,7 +108,7 @@ def pobierz_surowy_plan(plan_id: str) -> Tuple[str, List[str]]:
 
     grupy = []
     for h in soup.find_all("td", class_="komopcji"):
-        txt = h.get_text(strip=True)
+        txt = h.get_text(strip=True).strip()
 
         # Ignorujemy opisy zajęć, znaczniki czasu i nawiasy
         if "ETMON" in txt or "[" in txt or "{" in txt or ":" in txt or len(txt) > 12:

@@ -279,6 +279,8 @@ def classify_lesson_form(
             return "wyklad"
         # Dla podgrup ćwiczeniowych/laboratoryjnych
         forms = curriculum_entry.get("forms", [])
+        if "symulator" in forms and "cwiczenia" not in forms and "laboratorium" not in forms:
+            return "symulator"
         if "cwiczenia" in forms and "laboratorium" in forms:
             # a) Pracownia laboratoryjna / komputerowa / sala wielokrotna
             if any(re.search(p, room_lower) for p in [r'\blab\b', r'\bprac\b', r'\bmw\b', r'h\d+', r'\d+a\b']) or "," in sala:
