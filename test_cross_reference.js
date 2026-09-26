@@ -9,8 +9,10 @@ const assert = require("assert");
 
 console.log("\n🧪 Running CrossRef Unit Tests (Phase 1 TDD)...\n");
 
+const fs = require("fs");
 const ScheduleEngine = require("./web/js/schedule-engine.js");
-const academicCalendar = require("./academic_calendar.json");
+const academicCalendarPath = fs.existsSync("./data/academic_calendar.json") ? "./data/academic_calendar.json" : "./academic_calendar.json";
+const academicCalendar = require(academicCalendarPath);
 const engine = ScheduleEngine.create(academicCalendar);
 
 let CrossRef;

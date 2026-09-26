@@ -11,7 +11,7 @@ Przeczytaj przed pierwszą zmianą w kodzie.
 scrapper.py          Pobiera HTML z arktur.umg.edu.pl, parsuje, generuje JSON i ICS
 build_static.py      Punkt wejścia buildu — wywołuje scrapper, zapisuje do dist/
 web/app.js           Frontend PWA (vanilla JS, 2290 linii) — czyta wygenerowane JSONy
-academic_calendar.json  Jedyne źródło prawdy o dniach wolnych, zamianach i przerwach
+data/academic_calendar.json Jedyne źródło prawdy o dniach wolnych, zamianach i przerwach
 CONTEXT.md           Słownik pojęć domenowych — przeczytaj przed zmianą nazewnictwa
 tests.py             Regresja Pythona (16 testów)
 test_calendar.js     TDD logiki spotkań w JS
@@ -126,8 +126,8 @@ Nie edytuj samodzielnie:
 
 | Plik | Dlaczego |
 |------|---------|
-| `academic_calendar.json` | Dane rektorskie — muszą być sprawdzone z oficjalnym kalendarzem UMG |
-| `subjects_manual.json` | Aliasy nazw przedmiotów — mogą wpłynąć na ICS i cross-reference |
+| `data/academic_calendar.json` | Dane rektorskie — muszą być sprawdzone z oficjalnym kalendarzem UMG |
+| `data/subjects_manual.json` | Aliasy nazw przedmiotów — mogą wpłynąć na ICS i cross-reference |
 | `TODO.md` | Backlog projektu |
 
 Zaproponuj zmianę, poczekaj na potwierdzenie.

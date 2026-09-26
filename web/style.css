@@ -910,6 +910,134 @@ body {
   border-left-color: var(--form-symulator);
 }
 
+/* Lesson Form Color Legend (Disclosure) */
+.legend-disclosure {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 0.5rem;
+  margin-top: 0.15rem;
+}
+
+.legend-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  padding: 0.2rem 0.35rem;
+  border-radius: 6px;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.legend-summary::-webkit-details-marker {
+  display: none;
+}
+
+.legend-summary:hover {
+  color: var(--text-primary);
+  background: var(--bg-card-subtle);
+}
+
+.legend-summary:focus-visible {
+  outline: 2px solid var(--brand-accent);
+  outline-offset: 2px;
+}
+
+.legend-summary-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.legend-summary-title {
+  white-space: nowrap;
+}
+
+.legend-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.legend-dot.form-wyklad { background-color: var(--form-wyklad); }
+.legend-dot.form-cwiczenia { background-color: var(--form-cwiczenia); }
+.legend-dot.form-laboratorium { background-color: var(--form-laboratorium); }
+.legend-dot.form-symulator { background-color: var(--form-symulator); }
+
+.legend-chevron {
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--text-secondary);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-block;
+}
+
+.legend-disclosure[open] .legend-chevron {
+  transform: rotate(90deg);
+}
+
+.legend-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.45rem;
+  margin: 0.5rem 0 0.15rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  background-color: var(--bg-card-subtle);
+  border: 1px solid var(--border-subtle);
+  border-left-width: 4px;
+  box-shadow: var(--shadow-sm);
+  transition: background-color 0.15s ease;
+}
+
+.legend-item.form-wyklad { border-left-color: var(--form-wyklad); }
+.legend-item.form-cwiczenia { border-left-color: var(--form-cwiczenia); }
+.legend-item.form-laboratorium { border-left-color: var(--form-laboratorium); }
+.legend-item.form-symulator { border-left-color: var(--form-symulator); }
+
+.legend-label {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.legend-abbr {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.legend-item.form-wyklad .legend-abbr { color: var(--form-wyklad); }
+.legend-item.form-cwiczenia .legend-abbr { color: var(--form-cwiczenia); }
+.legend-item.form-laboratorium .legend-abbr { color: var(--form-laboratorium); }
+.legend-item.form-symulator .legend-abbr { color: var(--form-symulator); }
+
 .lesson-title {
   font-size: 0.98rem;
   font-weight: 700;

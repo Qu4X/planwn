@@ -17,7 +17,9 @@ logger = logging.getLogger(__name__)
 
 DNI_MAPA = {"1": "PON", "2": "WT", "3": "ŚR", "4": "CZW", "5": "PT", "6": "SOB"}
 
-MANUAL_DICT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "subjects_manual.json")
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+_DATA_PATH = os.path.join(_BASE_DIR, "data", "subjects_manual.json")
+MANUAL_DICT_PATH = _DATA_PATH if os.path.exists(_DATA_PATH) else os.path.join(_BASE_DIR, "subjects_manual.json")
 
 
 def load_manual_subjects(path: Optional[str] = None) -> Dict[str, str]:

@@ -1,6 +1,8 @@
 const assert = require("assert");
+const fs = require("fs");
 const ScheduleEngine = require("./web/js/schedule-engine.js");
-const academicCalendar = require("./academic_calendar.json");
+const academicCalendarPath = fs.existsSync("./data/academic_calendar.json") ? "./data/academic_calendar.json" : "./academic_calendar.json";
+const academicCalendar = require(academicCalendarPath);
 
 // Domain engine instance
 const engine = ScheduleEngine.create(academicCalendar);

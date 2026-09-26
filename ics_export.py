@@ -9,7 +9,9 @@ from models import LessonDict
 
 logger = logging.getLogger(__name__)
 
-ACADEMIC_CALENDAR_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "academic_calendar.json")
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+_DATA_PATH = os.path.join(_BASE_DIR, "data", "academic_calendar.json")
+ACADEMIC_CALENDAR_PATH = _DATA_PATH if os.path.exists(_DATA_PATH) else os.path.join(_BASE_DIR, "academic_calendar.json")
 
 WEEKDAY_TO_CODE = {0: "PON", 1: "WT", 2: "ŚR", 3: "CZW", 4: "PT", 5: "SOB", 6: "ND"}
 

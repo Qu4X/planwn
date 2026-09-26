@@ -273,6 +273,36 @@
         <button class="day-tab hidden" data-day="ND">Nd</button>
         <button class="day-tab active" data-day="ALL">Cały tydzień</button>
       </div>
+
+      <!-- Lesson form color legend disclosure -->
+      <details class="legend-disclosure" id="legend-disclosure">
+        <summary class="legend-summary">
+          <span class="legend-summary-left">
+            <span class="legend-summary-title">Legenda form zajęć</span>
+            <span class="legend-preview" aria-hidden="true">
+              <span class="legend-dot form-wyklad" title="Wykład"></span>
+              <span class="legend-dot form-cwiczenia" title="Ćwiczenia"></span>
+              <span class="legend-dot form-laboratorium" title="Laboratorium"></span>
+              <span class="legend-dot form-symulator" title="Symulator"></span>
+            </span>
+          </span>
+          <span class="legend-chevron" aria-hidden="true">›</span>
+        </summary>
+        <ul class="legend-list" role="list">
+          <li class="legend-item form-wyklad">
+            <span class="legend-label"><strong class="legend-abbr">W</strong> Wykład</span>
+          </li>
+          <li class="legend-item form-cwiczenia">
+            <span class="legend-label"><strong class="legend-abbr">Ćw</strong> Ćwiczenia</span>
+          </li>
+          <li class="legend-item form-laboratorium">
+            <span class="legend-label"><strong class="legend-abbr">Lab</strong> Laboratorium</span>
+          </li>
+          <li class="legend-item form-symulator">
+            <span class="legend-label"><strong class="legend-abbr">Sym</strong> Symulator</span>
+          </li>
+        </ul>
+      </details>
     </section>
 
     <!-- Calendar Notice / Day Replacement Alert -->

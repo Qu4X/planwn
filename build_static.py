@@ -27,13 +27,24 @@ from models import LessonDict, RoomScheduleEntry, TeacherScheduleEntry
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+SRC_DATA_DIR = os.path.join(BASE_DIR, "data")
 WEB_DIR = os.path.join(BASE_DIR, "web")
 DIST_DIR = os.path.join(BASE_DIR, "dist")
 DATA_DIR = os.path.join(DIST_DIR, "data")
 SCHEDULES_DIR = os.path.join(DATA_DIR, "schedules")
 CALENDARS_DIR = os.path.join(DIST_DIR, "calendars")
-CURRICULUM_FORMS_PATH = os.path.join(BASE_DIR, "wn_curriculum_forms.json")
-FORMS_MANUAL_PATH = os.path.join(BASE_DIR, "forms_manual.json")
+
+
+def _get_data_path(filename: str) -> str:
+    """Returns path to reference data file, checking data/ first then falling back to BASE_DIR."""
+    p = os.path.join(SRC_DATA_DIR, filename)
+    if os.path.exists(p):
+        return p
+    return os.path.join(BASE_DIR, filename)
+
+
+CURRICULUM_FORMS_PATH = _get_data_path("wn_curriculum_forms.json")
+FORMS_MANUAL_PATH = _get_data_path("forms_manual.json")
 
 
 def setup_dist_directories():
@@ -85,7 +96,7 @@ def setup_dist_directories():
         logger.info("Copied web/js/ -> dist/js/")
 
     # Copy academic_calendar.json to dist/data/
-    cal_src = os.path.join(BASE_DIR, "academic_calendar.json")
+    cal_src = _get_data_path("academic_calendar.json")
     cal_dst = os.path.join(DATA_DIR, "academic_calendar.json")
     if os.path.exists(cal_src):
         shutil.copy2(cal_src, cal_dst)
@@ -504,7 +515,7 @@ def build(limit=None, plan_ids=None, filter_query=None):
         json.dump(plans_metadata, f, ensure_ascii=False, indent=2)
 
     # Merge manual subjects with discovered subjects
-    manual_subjects_path = os.path.join(BASE_DIR, "subjects_manual.json")
+    manual_subjects_path = _get_data_path("subjects_manual.json")
     manual_subjects = {}
     if os.path.exists(manual_subjects_path):
         try:
@@ -573,7 +584,7 @@ def build_cross_reference_indexes(plans_metadata=None, schedules_dir=SCHEDULES_D
         return False
 
     # Load WN official subject catalog
-    wn_catalog_path = os.path.join(BASE_DIR, "wn_subjects_catalog.json")
+    wn_catalog_path = _get_data_path("wn_subjects_catalog.json")
     wn_catalog = {}
     if os.path.exists(wn_catalog_path):
         try:
