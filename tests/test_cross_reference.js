@@ -9,15 +9,15 @@ const assert = require("assert");
 
 console.log("\n🧪 Running CrossRef Unit Tests (Phase 1 TDD)...\n");
 
-const fs = require("fs");
-const ScheduleEngine = require("./web/js/schedule-engine.js");
-const academicCalendarPath = fs.existsSync("./data/academic_calendar.json") ? "./data/academic_calendar.json" : "./academic_calendar.json";
-const academicCalendar = require(academicCalendarPath);
+const path = require("path");
+const ROOT_DIR = path.resolve(__dirname, "..");
+const ScheduleEngine = require(path.join(ROOT_DIR, "web/js/schedule-engine.js"));
+const academicCalendar = require(path.join(ROOT_DIR, "data/academic_calendar.json"));
 const engine = ScheduleEngine.create(academicCalendar);
 
 let CrossRef;
 try {
-  CrossRef = require("./web/js/cross-reference.js");
+  CrossRef = require(path.join(ROOT_DIR, "web/js/cross-reference.js"));
 } catch (e) {
   CrossRef = null;
 }

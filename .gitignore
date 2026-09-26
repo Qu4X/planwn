@@ -1,8 +1,8 @@
-# Twój testowy skrypt (podmień na dokładną nazwę pliku)
-test_scrapper.py
-scrapper_test.py
-test*.py
-!tests.py
+# Skrypty testowe i zrzuty
+/test_scrapper.py
+/scrapper_test.py
+/test_*.py
+!/tests/
 strpza6_response.txt
 
 # Środowisko wirtualne

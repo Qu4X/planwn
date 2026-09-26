@@ -2,10 +2,10 @@ const assert = require("assert");
 
 console.log("\n🧪 Running ScheduleEngine Unit Tests (Red/Green Loop)...\n");
 
-const fs = require("fs");
-const ScheduleEngine = require("./web/js/schedule-engine.js");
-const academicCalendarPath = fs.existsSync("./data/academic_calendar.json") ? "./data/academic_calendar.json" : "./academic_calendar.json";
-const academicCalendar = require(academicCalendarPath);
+const path = require("path");
+const ROOT_DIR = path.resolve(__dirname, "..");
+const ScheduleEngine = require(path.join(ROOT_DIR, "web/js/schedule-engine.js"));
+const academicCalendar = require(path.join(ROOT_DIR, "data/academic_calendar.json"));
 
 // --- Test 1: Module exports and constants ---
 console.log("-- Test 1: Eksportowane stałe i fabryka");

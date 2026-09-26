@@ -1,8 +1,8 @@
 const assert = require("assert");
-const fs = require("fs");
-const ScheduleEngine = require("./web/js/schedule-engine.js");
-const academicCalendarPath = fs.existsSync("./data/academic_calendar.json") ? "./data/academic_calendar.json" : "./academic_calendar.json";
-const academicCalendar = require(academicCalendarPath);
+const path = require("path");
+const ROOT_DIR = path.resolve(__dirname, "..");
+const ScheduleEngine = require(path.join(ROOT_DIR, "web/js/schedule-engine.js"));
+const academicCalendar = require(path.join(ROOT_DIR, "data/academic_calendar.json"));
 
 // Domain engine instance
 const engine = ScheduleEngine.create(academicCalendar);
@@ -12,7 +12,7 @@ const getRoomOccupancyAt = (...args) => engine.getRoomOccupancyAt(...args);
 const isTeachingDay = (...args) => engine.isTeachingDay(...args);
 
 // UI helpers and state from app.js
-const { getSafeGroupName, parsePlanInfo, getAcademicInfoForWeek, updateCalendarNotice, renderSchedule, renderLessonCard, shouldShowChangelog, openChangelogModal, closeChangelogModal, comparePlans, getPlanSortKey, populatePlanSelect, onStudyModeChange, state, elements } = require("./web/app.js");
+const { getSafeGroupName, parsePlanInfo, getAcademicInfoForWeek, updateCalendarNotice, renderSchedule, renderLessonCard, shouldShowChangelog, openChangelogModal, closeChangelogModal, comparePlans, getPlanSortKey, populatePlanSelect, onStudyModeChange, state, elements } = require(path.join(ROOT_DIR, "web/app.js"));
 
 console.log("\n🧪 Running Calendar Engine TDD Tests...\n");
 

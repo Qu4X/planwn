@@ -1,9 +1,15 @@
 """
 Targeted regression tests for every change made in the bug-fix session.
-Run with: .venv\Scripts\python.exe tests.py
+Run with: .venv\Scripts\python.exe tests/test_backend.py
 """
+import os
 import re
 import sys
+
+# Ensure repository root is in sys.path
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
 
 # Ensure UTF-8 output on Windows terminal
 if hasattr(sys.stdout, "reconfigure"):
@@ -25,7 +31,10 @@ from scrapper import _wspolny_parser_html, generuj_ics
 
 # ── 1. Parser smoke-test ──────────────────────────────────────────────────────
 print("\n-- 1. Parser (real HTML fixture) ------------------------------------")
-with open("strpza6_response.txt", encoding="utf-8", errors="replace") as f:
+fixture_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "strpza6_response.txt")
+if not os.path.exists(fixture_path):
+    fixture_path = os.path.join(REPO_ROOT, "strpza6_response.txt")
+with open(fixture_path, encoding="utf-8", errors="replace") as f:
     html = f.read()
 data, mn, mx = _wspolny_parser_html(html)
 total_slots = sum(len(slots) for slots in data.values())
@@ -578,10 +587,11 @@ ics_output = generate_nst_ics(sample_nst_schedule, "GR.01")
 check("generate_nst_ics produces valid iCal with VEVENT", "BEGIN:VEVENT" in ics_output and "Matematyka" in ics_output)
 
 # 26e. Regression test for Saturday multi-group & multi-period classes without gridlines (2026-11-21)
-import os
 from nst_parser import parse_pdf_schedule
 
-sample_pdf_path = "cache_nst_pdf/TiL_I.pdf"
+sample_pdf_path = os.path.join(REPO_ROOT, "cache_nst_pdf", "TiL_I.pdf")
+if not os.path.exists(sample_pdf_path):
+    sample_pdf_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "cache_nst_pdf", "TiL_I.pdf")
 if os.path.exists(sample_pdf_path):
     parsed_pdf = parse_pdf_schedule(sample_pdf_path)
     gr4_nov21 = parsed_pdf.get("GR.04", {}).get("2026-11-21", [])

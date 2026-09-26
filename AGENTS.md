@@ -13,8 +13,8 @@ build_static.py      Punkt wejścia buildu — wywołuje scrapper, zapisuje do d
 web/app.js           Frontend PWA (vanilla JS, 2290 linii) — czyta wygenerowane JSONy
 data/academic_calendar.json Jedyne źródło prawdy o dniach wolnych, zamianach i przerwach
 CONTEXT.md           Słownik pojęć domenowych — przeczytaj przed zmianą nazewnictwa
-tests.py             Regresja Pythona (16 testów)
-test_calendar.js     TDD logiki spotkań w JS
+tests/test_backend.py   Regresja Pythona
+tests/test_calendar.js  TDD logiki spotkań w JS
 ```
 
 Pełna architektura i słownik → [`CONTEXT.md`](CONTEXT.md)
@@ -24,8 +24,8 @@ Pełna architektura i słownik → [`CONTEXT.md`](CONTEXT.md)
 ## Testy — uruchom przed i po każdej zmianie
 
 ```powershell
-.venv\Scripts\python.exe tests.py   # Windows
-node test_calendar.js
+.venv\Scripts\python.exe tests/test_backend.py   # Windows
+node tests/test_calendar.js
 ```
 
 Oba muszą przejść. Jeśli jeden czerwony — napraw przed commitem.
@@ -36,7 +36,7 @@ Oba muszą przejść. Jeśli jeden czerwony — napraw przed commitem.
 
 **Bug fix bez testu regresyjnego = niekompletna zmiana.**
 
-Dodaj test do `tests.py` (Python) lub `test_calendar.js` (JS) który:
+Dodaj test do `tests/test_backend.py` (Python) lub `tests/test_calendar.js` (JS) który:
 1. Przed fixem jest czerwony.
 2. Po fixie jest zielony.
 
