@@ -421,7 +421,7 @@ console.log("✅ [PASS] Przedmioty co 2 tygodnie precyzyjnie respektują swój c
 
 // --- TEST 11: Format licznika w UI (x/y oraz 'Ostatnie zajęcia') ---
 console.log("\n-- Test 11: Format licznika spotkań w UI (x/y oraz 'Ostatnie zajęcia')");
-const { getLessonProgress } = require("./web/app.js");
+const { getLessonProgress } = require(path.join(ROOT_DIR, "web/app.js"));
 
 // 1. Zwykłe spotkanie w trakcie cyklu (np. 6. z 7 spotkań BHP w zamieniony piątek 13.11)
 const prog6 = getLessonProgress(lessonHalf1, "ŚR", mon11, "2026-11-13");
