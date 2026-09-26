@@ -8,13 +8,19 @@ Przeczytaj przed pierwszą zmianą w kodzie.
 ## Architektura (skrót)
 
 ```
-scrapper.py          Pobiera HTML z arktur.umg.edu.pl, parsuje, generuje JSON i ICS
-build_static.py      Punkt wejścia buildu — wywołuje scrapper, zapisuje do dist/
-web/app.js           Frontend PWA (vanilla JS, 2290 linii) — czyta wygenerowane JSONy
+scrapper.py               Fasada scrapera HTML (arktur_client + arktur_parser)
+nst_client.py             Pobieranie planów studiów niestacjonarnych (PDF) z arktur
+nst_parser.py             Parser siatki PDF planów niestacjonarnych (pdfplumber)
+build_static.py           Punkt wejścia buildu — generuje pliki JSON i ICS do dist/
 data/academic_calendar.json Jedyne źródło prawdy o dniach wolnych, zamianach i przerwach
-CONTEXT.md           Słownik pojęć domenowych — przeczytaj przed zmianą nazewnictwa
-tests/test_backend.py   Regresja Pythona
-tests/test_calendar.js  TDD logiki spotkań w JS
+data/subjects_manual.json Aliasy i konfiguracja klasyfikacji form przedmiotów
+web/app.js                Główny kontroler frontendu PWA (vanilla JS)
+web/js/schedule-engine.js Czysty silnik domenowy kalendarza i spotkań
+web/js/cross-reference.js Silnik i UI wyszukiwarki sal, wykładowców i przedmiotów
+tests/test_backend.py     Regresja Pythona (backend, parser HTML/PDF, ICS)
+tests/test_calendar.js    TDD logiki spotkań i UI w JS
+tests/test_cross_reference.js TDD modali sal, wykładowców i przedmiotów w JS
+tests/test_schedule_engine.js TDD czystego silnika harmonogramu w JS
 ```
 
 Pełna architektura i słownik → [`CONTEXT.md`](CONTEXT.md)
@@ -24,8 +30,8 @@ Pełna architektura i słownik → [`CONTEXT.md`](CONTEXT.md)
 ## Testy — uruchom przed i po każdej zmianie
 
 ```powershell
-.venv\Scripts\python.exe tests/test_backend.py   # Windows
-node tests/test_calendar.js
+.venv\Scripts\python.exe tests/test_backend.py   # Windows Python
+npm test                                        # JS frontend (wszystkie 3 zestawy testów)
 ```
 
 Oba muszą przejść. Jeśli jeden czerwony — napraw przed commitem.
@@ -36,7 +42,7 @@ Oba muszą przejść. Jeśli jeden czerwony — napraw przed commitem.
 
 **Bug fix bez testu regresyjnego = niekompletna zmiana.**
 
-Dodaj test do `tests/test_backend.py` (Python) lub `tests/test_calendar.js` (JS) który:
+Dodaj test do `tests/test_backend.py` (Python) lub odpowiedniego pliku w `tests/` (JS) który:
 1. Przed fixem jest czerwony.
 2. Po fixie jest zielony.
 
@@ -56,7 +62,7 @@ test(scope):   testy bez zmian produkcyjnych
 ci(scope):     pipeline i deployment
 ```
 
-Scope = moduł lub obszar (np. `calendar`, `pwa`, `parser`, `ics`, `web`).
+Scope = moduł lub obszar (np. `calendar`, `pwa`, `parser`, `ics`, `web`, `nst`).
 
 Dobry: `fix(ics): use UTC-aware datetime for DTSTAMP`
 Zły: `fixed stuff`
@@ -82,13 +88,13 @@ const safeGroup = group.replace(/[^\w-]/g, '_');
 // Przykład: "GR. 1" → "GR__1"
 ```
 
-Gdy zmieniasz jedno, zmień drugie. Sprawdź w `tests.py` sekcja "Filename sanitisation".
+Gdy zmieniasz jedno, zmień drugie. Sprawdź w `tests/test_backend.py` sekcja "Filename sanitisation".
 
 ### Kontrakt 2 — logika kalendarza akademickiego
 
 `academic_calendar.json` jest parsowany niezależnie przez:
 - `scrapper.py` — przy generowaniu ICS (build time)
-- `web/app.js` — przy wyświetlaniu spotkań (runtime)
+- `web/js/schedule-engine.js` / `web/app.js` — przy wyświetlaniu spotkań (runtime)
 
 Gdy zmieniasz reguły interpretacji dat (holidays, breaks, daySwaps) w jednym miejscu,
 sprawdź czy drugie zachowuje się tak samo dla tego samego tygodnia.
@@ -103,10 +109,10 @@ sprawdź czy drugie zachowuje się tak samo dla tego samego tygodnia.
 Parsuje komórki `<td id="td_...">`, chunki zajęć, kolory fontów, dane AJAX.
 Wrażliwa na zmiany struktury HTML uczelni. Poprawki błędów: OK. Refaktor strukturalny: zapytaj.
 
-### `getLessonMeetingInfo` w `web/app.js`
+### `getLessonMeetingInfo` w `web/js/schedule-engine.js`
 
 Liczy spotkania z uwzględnieniem daySwaps, holidays i przerw.
-Ma pokrycie TDD w `test_calendar.js`. Pętla zawiera guard na `"Inny"` (nieznany dzień)
+Ma pokrycie TDD w `tests/test_calendar.js` i `tests/test_schedule_engine.js`. Pętla zawiera guard na `"Inny"` (nieznany dzień)
 i twardy cap 200 iteracji — nie usuwaj tych zabezpieczeń.
 
 ---
@@ -114,7 +120,7 @@ i twardy cap 200 iteracji — nie usuwaj tych zabezpieczeń.
 ## Nowe zależności — zawsze zapytaj użytkownika
 
 Nie dodawaj pakietów do `requirements.txt` bez zgody właściciela.
-Projekt celowo ma trzy zależności: `requests`, `beautifulsoup4`, `icalendar`.
+Projekt bazuje na minimalnym zestawie: `requests`, `beautifulsoup4`, `icalendar`, `pdfplumber`.
 
 Jeśli nowa zależność jest potrzebna: zaproponuj ją i poczekaj na odpowiedź.
 
