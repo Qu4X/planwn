@@ -1,0 +1,12 @@
+{
+  "name": "planwn",
+  "version": "3.10.0",
+  "description": "Nowoczesny, responsywny plan zajęć dla studentów Wydziału Nawigacyjnego Uniwersytetu Morskiego w Gdyni",
+  "private": true,
+  "scripts": {
+    "test": "node tests/test_calendar.js && node tests/test_cross_reference.js && node tests/test_schedule_engine.js",
+    "test:calendar": "node tests/test_calendar.js",
+    "test:crossref": "node tests/test_cross_reference.js",
+    "test:engine": "node tests/test_schedule_engine.js"
+  }
+}
