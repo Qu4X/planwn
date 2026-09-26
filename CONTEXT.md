@@ -100,6 +100,30 @@ Statyczny plik w formacie iCalendar (`.ics`), reprezentujący jednorazową migaw
 _Avoid_: Zrzut planu, backup kalendarza, eksport offline.
 
 
+## Tryby Studiów i Formaty Danych
+
+**Studia stacjonarne**:
+Kształcenie w trybie dziennym (od poniedziałku do piątku). Harmonogram bazuje na powtarzalnej tygodniowej siatce planu (`PON`, `WT`, `ŚR`, `CZW`, `PT`), z uwzględnieniem cykli dwutygodniowych, połówek semestru oraz zarządzeń rektorskich o zamianach dni.
+_Avoid_: Studia dzienne.
+
+**Studia niestacjonarne (NST)**:
+Kształcenie w trybie zaocznym (weekendowe zjazdy: piątek popołudnie, sobota, niedziela). Harmonogram definiowany jest wyłącznie konkretnymi datami kalendarzowymi ISO (`YYYY-MM-DD`) w publikowanych plikach PDF, bez tygodniowej siatki bazowej.
+_Avoid_: Studia zaoczne, zaoczni.
+
+**Plan zjazdowy (format ISO)**:
+Struktura danych planu niestacjonarnego, w której kluczami są konkretne daty (`YYYY-MM-DD`), a nie nazwy dni tygodnia. **Zarządzenia rektorskie o zamianach dni (`daySwaps`) NIE mają zastosowania do planów NST**.
+_Avoid_: Plan datowany, kalendarz zjazdów.
+
+## Powiązania i Obłożenie (Cross-Reference)
+
+**Indeks powiązań (Cross-Reference)**:
+Zagregowana, zdeduplikowana baza relacji wygenerowana ze wszystkich planów UMG (`cross_reference.json`), mapująca powiązania między salami, wykładowcami, przedmiotami i grupami.
+_Avoid_: Baza danych, indeks globalny.
+
+**Globalne obłożenie sal**:
+Weryfikacja dostępności sal w czasie rzeczywistym na podstawie zagregowanych danych ze wszystkich planów uczelni (`getRoomOccupancyAt`), z uwzględnieniem cykli, przerw i zamian rektorskich.
+_Avoid_: Wolne sale, sprawdzarka sal.
+
 ## Granice systemu / Scope & Constraints
 
 **Zakres wydziałowy (Faculty Scope)**:
