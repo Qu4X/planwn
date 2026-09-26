@@ -1,6 +1,19 @@
 # Plan WN
 
+[![CI](https://github.com/Qu4X/planwn/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/Qu4X/planwn/actions)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
+[![Live](https://img.shields.io/badge/demo-live-brightgreen)](https://qu4x.github.io/planwn/)
+
 An unofficial schedule viewer for students of the Faculty of Navigation at Gdynia Maritime University (UMG). It ingests schedule data from the university's systems and displays it in a fast, mobile-friendly progressive web app (PWA).
+
+🔗 **Live app:** https://qu4x.github.io/planwn/
+
+<p align="center">
+  <img src="docs/screenshots/ss2.png" alt="Widok planu zajęć" width="32%">
+  <img src="docs/screenshots/ss1.png" alt="Panel boczny z narzędziami" width="32%">
+  <img src="docs/screenshots/ss3.png" alt="Wyszukiwarka wolnych sal" width="32%">
+</p>
 
 ## Table of Contents
 
@@ -10,7 +23,10 @@ An unofficial schedule viewer for students of the Faculty of Navigation at Gdyni
 - [Local Setup](#local-setup)
 - [Configuration](#configuration)
 - [Testing](#testing)
+- [Deployment](#deployment)
 - [Data Source](#data-source)
+- [Contributing](#contributing)
+- [License](#license)
 
 ---
 
@@ -95,7 +111,7 @@ Dependencies: `requests`, `beautifulsoup4`, `icalendar`, `pdfplumber`.
    pip install -r requirements.txt
    ```
 
-3. Run a test build (limited to 3 plans for quick iteration):
+3. Run a test build (limited to 3 plans, so the build finishes in seconds instead of minutes — useful for quick iteration):
 
    ```bash
    python build_static.py --limit 3
@@ -150,7 +166,31 @@ node tests/test_schedule_engine.js
 
 ---
 
+## Deployment
+
+The `.github/workflows/` CI/CD pipeline runs automatically on every push to `main` and on a daily schedule (04:00 UTC) to keep schedules up to date. Each run executes `build_static.py`, then publishes the contents of `dist/` to GitHub Pages. No manual deployment steps are required.
+
+---
+
 ## Data Source
 
 Schedule data originates from [arktur.umg.edu.pl](https://arktur.umg.edu.pl/planyzaj/strpza5.php). This project is community-maintained and is not officially affiliated with Gdynia Maritime University.
 
+---
+
+## Contributing
+
+Contributions are welcome:
+
+1. Fork the repository and create a feature branch.
+2. Make your changes, keeping the frontend build-tool-free (vanilla HTML/CSS/JS).
+3. Run the full test suite (Python + JavaScript, see [Testing](#testing)) before opening a PR.
+4. Open a pull request describing the change and its motivation.
+
+If you spot incorrect schedule data, check `data/subjects_manual.json` and `data/forms_manual.json` first — most classification issues are fixed there rather than in code.
+
+---
+
+## License
+
+This project is licensed under the [MIT License](LICENSE) — see the LICENSE file for details.
