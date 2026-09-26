@@ -233,14 +233,23 @@ check("Malformed cell ID defaults to 0_0_0", key_empty == "0_0_0", f"got {key_em
 # ── 15. Reindex precondition check (S5 Speculative Generality) ───────────────
 print("\n-- 15. Reindex precondition check (S5) ------------------------------")
 import tempfile
+import json
 from build_static import build_cross_reference_indexes
 
 with tempfile.TemporaryDirectory() as empty_tmp:
     res_empty = build_cross_reference_indexes(schedules_dir=empty_tmp)
     check("Empty directory safely fails reindex", res_empty is False)
 
-res_valid = build_cross_reference_indexes()
-check("Valid dist directory succeeds reindex", res_valid is True)
+with tempfile.TemporaryDirectory() as valid_tmp:
+    with open(os.path.join(valid_tmp, "1_GR_1.json"), "w", encoding="utf-8") as f:
+        json.dump({"PON": {}}, f)
+    out_tmp = os.path.join(valid_tmp, "cross_reference.json")
+    res_valid = build_cross_reference_indexes(
+        plans_metadata={"plans": {"1": {"name": "Test", "groups": ["GR 1"]}}},
+        schedules_dir=valid_tmp,
+        output_path=out_tmp
+    )
+    check("Valid dist directory succeeds reindex", res_valid is True)
 
 # ── 16. Typed schedule models (S3 Data Clumps) ────────────────────────────────
 print("\n-- 16. Typed schedule models (S3) -----------------------------------")
