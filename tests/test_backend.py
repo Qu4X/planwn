@@ -32,18 +32,19 @@ from scrapper import _wspolny_parser_html, generuj_ics
 # ── 1. Parser smoke-test ──────────────────────────────────────────────────────
 print("\n-- 1. Parser (real HTML fixture) ------------------------------------")
 fixture_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "strpza6_response.txt")
-if not os.path.exists(fixture_path):
-    fixture_path = os.path.join(REPO_ROOT, "strpza6_response.txt")
-with open(fixture_path, encoding="utf-8", errors="replace") as f:
-    html = f.read()
-data, mn, mx = _wspolny_parser_html(html)
-total_slots = sum(len(slots) for slots in data.values())
-all_lessons = [info for slots in data.values() for sd in slots.values() for info in sd.values()]
-required_keys = {"przedmiot","prowadzacy","godziny","sala","height","colspan","data_start","tygodnie"}
-check("Parser returns lessons", total_slots > 0, f"total_slots={total_slots}")
-check("Slot range sensible", 0 <= mn < mx, f"mn={mn}, mx={mx}")
-check("All lessons have 8 keys", all(required_keys.issubset(l.keys()) for l in all_lessons),
-      f"{sum(1 for l in all_lessons if not required_keys.issubset(l.keys()))} lessons missing keys")
+if os.path.exists(fixture_path):
+    with open(fixture_path, encoding="utf-8", errors="replace") as f:
+        html = f.read()
+    data, mn, mx = _wspolny_parser_html(html)
+    total_slots = sum(len(slots) for slots in data.values())
+    all_lessons = [info for slots in data.values() for sd in slots.values() for info in sd.values()]
+    required_keys = {"przedmiot","prowadzacy","godziny","sala","height","colspan","data_start","tygodnie"}
+    check("Parser returns lessons", total_slots > 0, f"total_slots={total_slots}")
+    check("Slot range sensible", 0 <= mn < mx, f"mn={mn}, mx={mx}")
+    check("All lessons have 8 keys", all(required_keys.issubset(l.keys()) for l in all_lessons),
+          f"{sum(1 for l in all_lessons if not required_keys.issubset(l.keys()))} lessons missing keys")
+else:
+    print(f"  [SKIP] 1. Parser real HTML fixture not found at {fixture_path!r}")
 
 # ── 2. Week count default (15 for full semester) ─────────────────────────────
 print("\n-- 2. Week count default (should be 15 for full semester) -----------")

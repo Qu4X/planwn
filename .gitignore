@@ -2,8 +2,8 @@
 /test_scrapper.py
 /scrapper_test.py
 /test_*.py
-!/tests/
-strpza6_response.txt
+/strpza6_response.txt
+!/tests/strpza6_response.txt
 
 # Środowisko wirtualne
 .venv/
