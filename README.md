@@ -125,17 +125,6 @@ All configuration and reference catalogs reside in the [`data/`](data/) director
 | `data/wn_curriculum_forms.json` | Hourly quotas per major/semester for automatic form classification. |
 | `data/wn_subjects_catalog.json` | Enriches subject views with degree majors and syllabus URLs. |
 
-### Adding a rector day swap
-
-Edit [`data/academic_calendar.json`](data/academic_calendar.json) and add an entry under `daySwaps`:
-
-```json
-"2027-04-01": { "replaceWith": "ŚR", "note": "Czwartek 01.04 - zajęcia ze środy" }
-```
-
-- The key is the target calendar date (`YYYY-MM-DD`).
-- `replaceWith` defines the source weekday plan to execute.
-
 ---
 
 ## Testing
