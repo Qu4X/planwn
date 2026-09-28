@@ -153,6 +153,7 @@ const state = {
   weekOffset: 0, // 0 = current week, 1 = next week, etc.
   daysView: savedDaysView, // "workdays" | "active_only" | "all"
   selectedDayTab: "ALL",
+  dismissedDuplicatePlans: new Set(),
   theme: typeof localStorage !== "undefined" && localStorage.getItem("umg_theme")
     ? localStorage.getItem("umg_theme")
     : (typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
@@ -400,6 +401,29 @@ function setupEventListeners() {
     updateDayTabsUI();
     renderSchedule();
   });
+
+  // Calendar notice interactions (switch duplicate plan or dismiss)
+  if (elements.calendarNotice) {
+    elements.calendarNotice.addEventListener("click", (e) => {
+      const switchBtn = e.target.closest("[data-switch-plan]");
+      if (switchBtn) {
+        const targetId = switchBtn.dataset.switchPlan;
+        if (targetId) {
+          onPlanChange(targetId);
+        }
+        return;
+      }
+
+      const dismissBtn = e.target.closest("[data-dismiss-plan]");
+      if (dismissBtn) {
+        const cleanName = dismissBtn.dataset.dismissPlan;
+        if (cleanName) {
+          state.dismissedDuplicatePlans.add(cleanName);
+          updateCalendarNotice();
+        }
+      }
+    });
+  }
 
   // Calendar Modal
   if (elements.calendarBtn) {
@@ -759,7 +783,12 @@ function comparePlans(planA, planB) {
     return keyA.semNum - keyB.semNum;
   }
 
-  return keyA.cleanName.localeCompare(keyB.cleanName, "pl", { sensitivity: "base" });
+  const cleanCmp = keyA.cleanName.localeCompare(keyB.cleanName, "pl", { sensitivity: "base" });
+  if (cleanCmp !== 0) return cleanCmp;
+
+  const verA = planA.version || "";
+  const verB = planB.version || "";
+  return verA.localeCompare(verB, "pl", { numeric: true });
 }
 
 function populatePlanSelect() {
@@ -774,13 +803,71 @@ function populatePlanSelect() {
     })
     .sort(([, a], [, b]) => comparePlans(a, b));
 
+  // Count cleanName occurrences in the current mode to distinguish duplicates
+  const nameCounts = {};
+  for (const [, plan] of sortedEntries) {
+    const info = parsePlanInfo(plan.clean_name || plan.name);
+    nameCounts[info.cleanName] = (nameCounts[info.cleanName] || 0) + 1;
+  }
+
   for (const [id, plan] of sortedEntries) {
     const opt = document.createElement("option");
     opt.value = id;
     const planInfo = parsePlanInfo(plan.clean_name || plan.name);
-    opt.textContent = planInfo.cleanName;
+    const isDuplicate = (nameCounts[planInfo.cleanName] || 0) > 1;
+    if (isDuplicate) {
+      const ver = plan.version || planInfo.version;
+      opt.textContent = ver ? `${planInfo.cleanName} (${ver})` : `${planInfo.cleanName} (inna wersja)`;
+    } else {
+      opt.textContent = planInfo.cleanName;
+    }
     elements.planSelect.appendChild(opt);
   }
+}
+
+function getDuplicatePlanInfo(planId) {
+  if (!planId || !state.plansData || !state.plansData.plans || !state.plansData.plans[planId]) {
+    return null;
+  }
+
+  const currentPlan = state.plansData.plans[planId];
+  const currentInfo = parsePlanInfo(currentPlan.clean_name || currentPlan.name);
+  const cleanName = currentInfo.cleanName;
+  if (!cleanName) return null;
+
+  if (state.dismissedDuplicatePlans && state.dismissedDuplicatePlans.has(cleanName)) {
+    return null;
+  }
+
+  const currentMode = state.studyMode || "stacjonarne";
+  const alternatives = [];
+
+  for (const [id, plan] of Object.entries(state.plansData.plans)) {
+    if (id === String(planId)) continue;
+    const planMode = plan.mode || (plan.name && /niestacjonarne/i.test(plan.name) ? "niestacjonarne" : "stacjonarne");
+    if (planMode !== currentMode) continue;
+
+    const info = parsePlanInfo(plan.clean_name || plan.name);
+    if (info.cleanName === cleanName) {
+      alternatives.push({
+        id,
+        version: plan.version || info.version,
+        publishedAt: plan.published_at || info.publishedAt,
+        name: plan.name,
+        cleanName: info.cleanName
+      });
+    }
+  }
+
+  if (alternatives.length === 0) return null;
+
+  return {
+    planId,
+    cleanName,
+    currentVersion: currentPlan.version || currentInfo.version,
+    currentPublishedAt: currentPlan.published_at || currentInfo.publishedAt,
+    alternatives
+  };
 }
 
 function onStudyModeChange(newMode) {
@@ -802,6 +889,9 @@ function onStudyModeChange(newMode) {
 function onPlanChange(planId, preferredGroup = null) {
   state.selectedPlanId = planId;
   state.selectedGroup = null;
+  if (elements.planSelect && elements.planSelect.value !== (planId || "")) {
+    elements.planSelect.value = planId || "";
+  }
 
   if (!planId) {
     if (elements.planMetaInfo) elements.planMetaInfo.classList.add("hidden");
@@ -1051,8 +1141,12 @@ function getAcademicInfoForWeek(targetMonday) {
 function updateCalendarNotice(academicInfo) {
   if (!elements.calendarNotice) return;
 
+  if (!academicInfo && typeof getAcademicInfoForWeek === "function" && typeof getWeekMonday === "function") {
+    academicInfo = getAcademicInfoForWeek(getWeekMonday(state.weekOffset));
+  }
+
   // During full break or exam periods, the schedule view displays a dedicated card; hide top banner
-  if (academicInfo.periodType === "break" || academicInfo.periodType === "exam") {
+  if (academicInfo && (academicInfo.periodType === "break" || academicInfo.periodType === "exam")) {
     elements.calendarNotice.classList.add("hidden");
     elements.calendarNotice.innerHTML = "";
     return;
@@ -1061,27 +1155,58 @@ function updateCalendarNotice(academicInfo) {
   const notices = [];
   const isNst = state.studyMode === "niestacjonarne";
 
-  // Retain day swaps and critical announcements (day swaps apply only to stacjonarne)
-  if (!isNst && academicInfo.daySwaps && academicInfo.daySwaps.length > 0) {
-    for (const swap of academicInfo.daySwaps) {
-      const cleanNote = (swap.note || "").replace(/\s*\(zarządzenie rektora\)/gi, "").trim();
-      notices.push(`
-        <div class="calendar-notice-item">
+  // Duplicate plan banner (if active plan has alternatives and not dismissed)
+  const dupInfo = getDuplicatePlanInfo(state.selectedPlanId);
+  if (dupInfo) {
+    const currentVerDesc = dupInfo.currentVersion
+      ? ` (wybrana: ${dupInfo.currentVersion}${dupInfo.currentPublishedAt ? ` z ${dupInfo.currentPublishedAt}` : ""})`
+      : "";
+    const switchButtons = dupInfo.alternatives.map(alt => {
+      const altLabel = alt.version
+        ? `Przełącz na ${alt.version}${alt.publishedAt ? ` (z ${alt.publishedAt})` : ""}`
+        : `Przełącz na inną wersję${alt.publishedAt ? ` (z ${alt.publishedAt})` : ""}`;
+      return `<button type="button" class="btn-notice-switch" data-switch-plan="${escapeHtml(alt.id)}">${escapeHtml(altLabel)}</button>`;
+    }).join("");
+
+    notices.push(`
+      <div class="calendar-notice-item notice-duplicate-plan">
+        <div class="notice-main">
           ${icon("warning", "notice-icon")}
-          <span class="notice-text"><strong>Zamiana dnia:</strong> ${escapeHtml(cleanNote)}</span>
+          <div class="notice-text">
+            <strong>Uwaga:</strong> Dla tego kierunku uczelnia opublikowała dwie wersje planu${escapeHtml(currentVerDesc)}. Jedna z wersji może zawierać wyłącznie spotkanie organizacyjne na 1. tydzień.
+          </div>
+          <button type="button" class="btn-notice-dismiss" data-dismiss-plan="${escapeHtml(dupInfo.cleanName)}" aria-label="Zamknij powiadomienie" title="Zamknij powiadomienie">✕</button>
         </div>
-      `);
-    }
+        <div class="notice-actions">
+          ${switchButtons}
+        </div>
+      </div>
+    `);
   }
 
-  if (academicInfo.announcements && academicInfo.announcements.length > 0) {
-    for (const ann of academicInfo.announcements) {
-      notices.push(`
-        <div class="calendar-notice-item">
-          ${icon("info", "notice-icon")}
-          <span class="notice-text"><strong>Komunikat:</strong> ${escapeHtml(ann)}</span>
-        </div>
-      `);
+  // Retain day swaps and critical announcements (day swaps apply only to stacjonarne)
+  if (academicInfo) {
+    if (!isNst && academicInfo.daySwaps && academicInfo.daySwaps.length > 0) {
+      for (const swap of academicInfo.daySwaps) {
+        const cleanNote = (swap.note || "").replace(/\s*\(zarządzenie rektora\)/gi, "").trim();
+        notices.push(`
+          <div class="calendar-notice-item">
+            ${icon("warning", "notice-icon")}
+            <span class="notice-text"><strong>Zamiana dnia:</strong> ${escapeHtml(cleanNote)}</span>
+          </div>
+        `);
+      }
+    }
+
+    if (academicInfo.announcements && academicInfo.announcements.length > 0) {
+      for (const ann of academicInfo.announcements) {
+        notices.push(`
+          <div class="calendar-notice-item">
+            ${icon("info", "notice-icon")}
+            <span class="notice-text"><strong>Komunikat:</strong> ${escapeHtml(ann)}</span>
+          </div>
+        `);
+      }
     }
   }
 
@@ -1898,6 +2023,8 @@ if (typeof module !== "undefined" && module.exports) {
     getPlanSortKey,
     populatePlanSelect,
     onStudyModeChange,
+    onPlanChange,
+    getDuplicatePlanInfo,
     state,
     elements
   };

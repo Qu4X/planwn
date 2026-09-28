@@ -1217,6 +1217,113 @@ body {
   min-width: 0;
 }
 
+/* Duplicate plan notice banner */
+.calendar-notice-item.notice-duplicate-plan {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  width: 100%;
+}
+
+.calendar-notice-item.notice-duplicate-plan .notice-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  width: 100%;
+}
+
+.calendar-notice-item.notice-duplicate-plan .notice-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-left: calc(20px + 0.6rem);
+}
+
+.btn-notice-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm, 6px);
+  background: #ca8a04;
+  color: #ffffff;
+  border: 1px solid #a16207;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.btn-notice-switch:hover {
+  background: #a16207;
+}
+
+.btn-notice-switch:active {
+  transform: scale(0.98);
+}
+
+.btn-notice-switch:focus-visible {
+  outline: 2px solid #ca8a04;
+  outline-offset: 2px;
+}
+
+.btn-notice-dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  font-size: 0.875rem;
+  line-height: 1;
+  color: #854d0e;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm, 4px);
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-left: auto;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.btn-notice-dismiss:hover {
+  background: rgba(133, 77, 14, 0.15);
+  color: #713f12;
+}
+
+.btn-notice-dismiss:focus-visible {
+  outline: 2px solid #ca8a04;
+  outline-offset: 2px;
+}
+
+[data-theme="dark"] .btn-notice-switch {
+  background: #a16207;
+  color: #fef08a;
+  border-color: #ca8a04;
+}
+
+[data-theme="dark"] .btn-notice-switch:hover {
+  background: #ca8a04;
+  color: #ffffff;
+}
+
+[data-theme="dark"] .btn-notice-dismiss {
+  color: #fef08a;
+}
+
+[data-theme="dark"] .btn-notice-dismiss:hover {
+  background: rgba(254, 240, 138, 0.15);
+  color: #ffffff;
+}
+
+@media (max-width: 600px) {
+  .calendar-notice-item.notice-duplicate-plan .notice-actions {
+    padding-left: 0;
+  }
+}
+
 [data-theme="dark"] .calendar-notice {
   background: #422006;
   color: #fef08a;

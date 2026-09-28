@@ -11,8 +11,7 @@ const getMonday = (...args) => engine.getMonday(...args);
 const getRoomOccupancyAt = (...args) => engine.getRoomOccupancyAt(...args);
 const isTeachingDay = (...args) => engine.isTeachingDay(...args);
 
-// UI helpers and state from app.js
-const { getSafeGroupName, parsePlanInfo, getAcademicInfoForWeek, updateCalendarNotice, renderSchedule, renderLessonCard, shouldShowChangelog, openChangelogModal, closeChangelogModal, comparePlans, getPlanSortKey, populatePlanSelect, onStudyModeChange, state, elements } = require(path.join(ROOT_DIR, "web/app.js"));
+const { getSafeGroupName, parsePlanInfo, getAcademicInfoForWeek, updateCalendarNotice, renderSchedule, renderLessonCard, shouldShowChangelog, openChangelogModal, closeChangelogModal, checkChangelogNotification, comparePlans, getPlanSortKey, populatePlanSelect, onStudyModeChange, getDuplicatePlanInfo, state, elements } = require(path.join(ROOT_DIR, "web/app.js"));
 
 console.log("\n🧪 Running Calendar Engine TDD Tests...\n");
 
@@ -1085,4 +1084,91 @@ assert.strictEqual(nstResolved["PT"].lessons.length, 1, "Piątkowe zajęcia NST 
 assert.strictEqual(nstResolved["PT"].lessons[0].przedmiot, "Nawigacja techniczna", "Zajęcia z piątku nie powinny być zastąpione środą");
 
 console.log("✅ [PASS] Dni zamienne są całkowicie wyłączone w trybie niestacjonarnym (brak banerów, brak zamian w silniku i UI).");
+ 
+// -- Test 26: Obsługa planów zduplikowanych (wer. X w dropdownie i baner z przełącznikiem)
+console.log("\n-- Test 26: Obsługa planów zduplikowanych (wer. X w dropdownie i baner z przełącznikiem)");
+
+state.studyMode = "stacjonarne";
+state.dismissedDuplicatePlans = new Set();
+state.plansData = {
+  plans: {
+    "101": {
+      name: "[TM Sem 1] Transport Morski pierwszego stopnia sem. 1 [2026-09-14 17:55] wer. 2",
+      clean_name: "Transport Morski sem. 1",
+      version: "wer. 2",
+      published_at: "2026-09-14 17:55",
+      mode: "stacjonarne",
+      groups: ["GR. 1", "GR. 2"]
+    },
+    "102": {
+      name: "[TM Sem 1] Transport Morski pierwszego stopnia sem. 1 [2026-09-20 12:00] wer. 3",
+      clean_name: "Transport Morski sem. 1",
+      version: "wer. 3",
+      published_at: "2026-09-20 12:00",
+      mode: "stacjonarne",
+      groups: ["GR. 1"]
+    },
+    "103": {
+      name: "[TiL Sem 3] Transport i Logistyka sem. 3 [2026-09-10 10:00]",
+      clean_name: "Transport i Logistyka sem. 3",
+      version: null,
+      published_at: "2026-09-10 10:00",
+      mode: "stacjonarne",
+      groups: ["GR. 1"]
+    }
+  }
+};
+
+// 26a. W dropdownie zduplikowane plany mają (wer. X), a pojedyncze nie
+fakeSelect.children = [];
+populatePlanSelect();
+const opt101 = fakeSelect.children.find(c => c.value === "101");
+const opt102 = fakeSelect.children.find(c => c.value === "102");
+const opt103 = fakeSelect.children.find(c => c.value === "103");
+
+assert.ok(opt101, "Plan 101 powinien być na liście");
+assert.ok(opt102, "Plan 102 powinien być na liście");
+assert.ok(opt103, "Plan 103 powinien być na liście");
+
+assert.strictEqual(opt101.textContent, "Transport Morski sem. 1 (wer. 2)", "Zduplikowany plan 101 powinien zawierać wersję");
+assert.strictEqual(opt102.textContent, "Transport Morski sem. 1 (wer. 3)", "Zduplikowany plan 102 powinien zawierać wersję");
+assert.strictEqual(opt103.textContent, "Transport i Logistyka sem. 3", "Unikalny plan 103 nie powinien zawierać wersji w nawiasie");
+
+// 26b. getDuplicatePlanInfo wykrywa alternatywy dla zduplikowanego planu
+const dup101 = getDuplicatePlanInfo("101");
+assert.ok(dup101, "Plan 101 powinien mieć wykryte duplikaty");
+assert.strictEqual(dup101.cleanName, "Transport Morski sem. 1");
+assert.strictEqual(dup101.currentVersion, "wer. 2");
+assert.strictEqual(dup101.alternatives.length, 1);
+assert.strictEqual(dup101.alternatives[0].id, "102");
+assert.strictEqual(dup101.alternatives[0].version, "wer. 3");
+
+const dup103 = getDuplicatePlanInfo("103");
+assert.strictEqual(dup103, null, "Unikalny plan 103 nie powinien mieć duplikatów");
+
+// 26c. updateCalendarNotice renderuje baner ostrzegawczy z przyciskiem przełączenia
+state.selectedPlanId = "101";
+elements.calendarNotice = {
+  innerHTML: "",
+  className: "",
+  classList: {
+    add(cls) { this.classes.add(cls); },
+    remove(cls) { this.classes.delete(cls); },
+    classes: new Set()
+  }
+};
+
+updateCalendarNotice({ periodType: "regular", daySwaps: [], announcements: [] });
+assert.ok(elements.calendarNotice.innerHTML.includes("notice-duplicate-plan"), "Baner powinien zawierać klasę notice-duplicate-plan");
+assert.ok(elements.calendarNotice.innerHTML.includes("data-switch-plan=\"102\""), "Baner powinien zawierać przycisk przełączenia na plan 102");
+assert.ok(elements.calendarNotice.innerHTML.includes("Przełącz na wer. 3"), "Przycisk powinien mieć tekst przełączenia na wer. 3");
+assert.ok(elements.calendarNotice.innerHTML.includes("data-dismiss-plan=\"Transport Morski sem. 1\""), "Baner powinien zawierać przycisk zamknięcia");
+
+// 26d. Zamknięcie banera zapamiętuje dismissed i ukrywa baner
+state.dismissedDuplicatePlans.add("Transport Morski sem. 1");
+assert.strictEqual(getDuplicatePlanInfo("101"), null, "Po dismissed getDuplicatePlanInfo powinno zwracać null");
+updateCalendarNotice({ periodType: "regular", daySwaps: [], announcements: [] });
+assert.ok(!elements.calendarNotice.innerHTML.includes("notice-duplicate-plan"), "Baner nie powinien być renderowany po zamknięciu");
+
+console.log("✅ [PASS] Obsługa zduplikowanych planów w dropdownie i banerze informacyjnym działa prawidłowo.");
 
