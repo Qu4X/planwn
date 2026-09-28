@@ -13,6 +13,7 @@ from arktur_client import (
     URL_PLAN,
     pobierz_dane_z_ajax,
     pobierz_liste_planow,
+    pobierz_plany_w_modyfikacji,
     pobierz_surowy_plan,
 )
 

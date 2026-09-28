@@ -11,7 +11,7 @@ const getMonday = (...args) => engine.getMonday(...args);
 const getRoomOccupancyAt = (...args) => engine.getRoomOccupancyAt(...args);
 const isTeachingDay = (...args) => engine.isTeachingDay(...args);
 
-const { getSafeGroupName, parsePlanInfo, getAcademicInfoForWeek, updateCalendarNotice, renderSchedule, renderLessonCard, shouldShowChangelog, openChangelogModal, closeChangelogModal, checkChangelogNotification, comparePlans, getPlanSortKey, populatePlanSelect, onStudyModeChange, getDuplicatePlanInfo, state, elements } = require(path.join(ROOT_DIR, "web/app.js"));
+const { getSafeGroupName, parsePlanInfo, getAcademicInfoForWeek, updateCalendarNotice, renderSchedule, renderLessonCard, shouldShowChangelog, openChangelogModal, closeChangelogModal, checkChangelogNotification, comparePlans, getPlanSortKey, populatePlanSelect, onStudyModeChange, getDuplicatePlanInfo, getPlanModificationInfo, state, elements } = require(path.join(ROOT_DIR, "web/app.js"));
 
 console.log("\n🧪 Running Calendar Engine TDD Tests...\n");
 
@@ -1171,4 +1171,77 @@ updateCalendarNotice({ periodType: "regular", daySwaps: [], announcements: [] })
 assert.ok(!elements.calendarNotice.innerHTML.includes("notice-duplicate-plan"), "Baner nie powinien być renderowany po zamknięciu");
 
 console.log("✅ [PASS] Obsługa zduplikowanych planów w dropdownie i banerze informacyjnym działa prawidłowo.");
+ 
+// --- TEST 27: Obsługa planów w trakcie modyfikacji przez uczelnię ---
+console.log("\n-- Test 27: Obsługa planów w trakcie modyfikacji przez uczelnię ([modyfikowany])");
+
+// 27a. parsePlanInfo poprawnie oczyszcza znacznik [modyfikowany]
+const rawModPlan = "[TM Sem 1] Transport Morski pierwszego stopnia sem. 1 [modyfikowany] [2026-09-28 08:25] wer. 3";
+const parsedMod = parsePlanInfo(rawModPlan);
+assert.strictEqual(parsedMod.cleanName, "Transport Morski sem. 1", "cleanName nie powinien zawierać [modyfikowany]");
+assert.strictEqual(parsedMod.version, "wer. 3", "Wersja powinna zostać wyodrębniona");
+assert.strictEqual(parsedMod.publishedAt, "2026-09-28 08:25");
+
+// 27b. getPlanModificationInfo zwraca dane modyfikacji dla planu
+state.plansData = {
+  plans: {
+    "557": {
+      name: "Transport Morski sem. 1 wer. 2",
+      clean_name: "Transport Morski sem. 1",
+      version: "wer. 2",
+      mode: "stacjonarne",
+      groups: ["GR.01"],
+      modification: {
+        is_modifying: true,
+        draft_version: "wer. 3",
+        draft_date: "2026-09-28 08:25"
+      }
+    },
+    "558": {
+      name: "Nawigacja sem. 1 wer. 1",
+      clean_name: "Nawigacja sem. 1",
+      version: "wer. 1",
+      mode: "stacjonarne",
+      groups: ["GR.01"]
+    }
+  }
+};
+state.selectedPlanId = "557";
+state.dismissedModificationPlans.clear();
+
+const modInfo557 = getPlanModificationInfo("557");
+assert.ok(modInfo557, "Plan 557 powinien posiadać modInfo");
+assert.strictEqual(modInfo557.currentVersion, "wer. 2");
+assert.strictEqual(modInfo557.draftVersion, "wer. 3");
+assert.strictEqual(modInfo557.draftDate, "2026-09-28 08:25");
+assert.strictEqual(modInfo557.cleanName, "Transport Morski sem. 1");
+
+const modInfo558 = getPlanModificationInfo("558");
+assert.strictEqual(modInfo558, null, "Plan 558 nie jest modyfikowany");
+
+// 27c. updateCalendarNotice renderuje baner notice-plan-modifying
+elements.calendarNotice = {
+  innerHTML: "",
+  className: "",
+  classList: {
+    add(cls) { this.classes.add(cls); },
+    remove(cls) { this.classes.delete(cls); },
+    classes: new Set()
+  }
+};
+
+updateCalendarNotice({ periodType: "regular", daySwaps: [], announcements: [] });
+assert.ok(elements.calendarNotice.innerHTML.includes("notice-plan-modifying"), "Baner powinien zawierać klasę notice-plan-modifying");
+assert.ok(elements.calendarNotice.innerHTML.includes("Plan w trakcie modyfikacji przez uczelnię:"), "Baner powinien zawierać nagłówek o modyfikacji");
+assert.ok(elements.calendarNotice.innerHTML.includes("Wyświetlamy ostatnią dostępną wersję (wer. 2)"), "Baner powinien informować o wer. 2");
+assert.ok(elements.calendarNotice.innerHTML.includes("Nowa wersja (wer. 3)"), "Baner powinien informować o wer. 3");
+assert.ok(elements.calendarNotice.innerHTML.includes('data-dismiss-modification="Transport Morski sem. 1"'), "Przycisk zamknięcia powinien zawierać klucz planu");
+
+// 27d. Zamknięcie powiadomienia
+state.dismissedModificationPlans.add("Transport Morski sem. 1");
+assert.strictEqual(getPlanModificationInfo("557"), null, "Po zamknięciu getPlanModificationInfo powinno zwracać null");
+updateCalendarNotice({ periodType: "regular", daySwaps: [], announcements: [] });
+assert.ok(!elements.calendarNotice.innerHTML.includes("notice-plan-modifying"), "Baner nie powinien być widoczny po zamknięciu");
+
+console.log("✅ [PASS] Obsługa planów w trakcie modyfikacji działa prawidłowo.");
 

@@ -1217,15 +1217,17 @@ body {
   min-width: 0;
 }
 
-/* Duplicate plan notice banner */
-.calendar-notice-item.notice-duplicate-plan {
+/* Duplicate plan & plan modification notice banners */
+.calendar-notice-item.notice-duplicate-plan,
+.calendar-notice-item.notice-plan-modifying {
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
   width: 100%;
 }
 
-.calendar-notice-item.notice-duplicate-plan .notice-main {
+.calendar-notice-item.notice-duplicate-plan .notice-main,
+.calendar-notice-item.notice-plan-modifying .notice-main {
   display: flex;
   align-items: flex-start;
   gap: 0.6rem;

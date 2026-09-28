@@ -732,6 +732,52 @@ check("_extract_lesson_details zwraca dict dla prawidłowych zajęć", ok_result
 if ok_result:
     check("Prawidłowe zajęcia: przedmiot zawiera Matematyka", "Matematyka" in ok_result.get("przedmiot", ""))
 
+# ── 27. Plany w trakcie modyfikacji przez uczelnię ([modyfikowany]) ───────────
+print("\n-- 27. Plany w trakcie modyfikacji przez uczelnię --------------------")
+from unittest.mock import patch, MagicMock
+from arktur_client import pobierz_liste_planow, pobierz_plany_w_modyfikacji
+from build_static import parse_plan_title
+
+# 27a. parse_plan_title oczyszcza [modyfikowany]
+raw_mod_title = "[TM Sem 1] Transport Morski pierwszego stopnia sem. 1 [modyfikowany] [2026-09-28 08:25] wer. 3"
+p_title = parse_plan_title(raw_mod_title)
+check("parse_plan_title usuwa [modyfikowany] z clean_name",
+      p_title["clean_name"] == "Transport Morski sem. 1",
+      f"got {p_title['clean_name']}")
+check("parse_plan_title wyciąga poprawną wersję",
+      p_title["version"] == "wer. 3",
+      f"got {p_title['version']}")
+check("parse_plan_title wyciąga poprawną datę",
+      p_title["published_at"] == "2026-09-28 08:25",
+      f"got {p_title['published_at']}")
+
+# 27b. pobierz_liste_planow filtruje value="0" oraz [modyfikowany]
+html_with_mod = """
+<select name="kierunek">
+  <option value="557">[TM Sem 1] Transport Morski sem. 1 [2026-09-14 17:55] wer. 2</option>
+  <option value="0">[TM Sem 1] Transport Morski sem. 1 [modyfikowany] [2026-09-28 08:25] wer. 3</option>
+  <option value="558">Nawigacja sem. 1 wer. 1</option>
+</select>
+"""
+mock_resp = MagicMock()
+mock_resp.text = html_with_mod
+mock_resp.raise_for_status = MagicMock()
+
+with patch("arktur_client.requests.get", return_value=mock_resp):
+    active_plans = pobierz_liste_planow()
+    mod_plans = pobierz_plany_w_modyfikacji()
+
+check("pobierz_liste_planow nie zawiera planu o ID 0", "0" not in active_plans.values())
+check("pobierz_liste_planow zawiera aktywne plany 557 i 558", "557" in active_plans.values() and "558" in active_plans.values())
+check("pobierz_plany_w_modyfikacji zawiera wpis o modyfikacji", len(mod_plans) == 1)
+if mod_plans:
+    check("mod_plans raw_name contains [modyfikowany]", "[modyfikowany]" in mod_plans[0]["raw_name"])
+    check("mod_plans value is 0", mod_plans[0]["value"] == "0")
+    mod_parsed = parse_plan_title(mod_plans[0]["raw_name"])
+    check("mod_plans draft_version is wer. 3", mod_parsed["version"] == "wer. 3")
+    check("mod_plans draft_date is 2026-09-28 08:25", mod_parsed["published_at"] == "2026-09-28 08:25")
+    check("mod_plans clean_name matches 557", mod_parsed["clean_name"] == p_title["clean_name"])
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 print("\n" + "="*60)
 passed = sum(1 for ok,_ in results if ok)

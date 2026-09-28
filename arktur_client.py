@@ -43,6 +43,36 @@ def pobierz_liste_planow() -> Dict[str, str]:
         return {}
 
 
+def pobierz_plany_w_modyfikacji(html_content: Optional[str] = None) -> List[Dict[str, str]]:
+    """
+    Wykrywa plany ze statusem [modyfikowany] lub value="0" na liście kierunków Arktura.
+    Zwraca listę słowników z surową nazwą planu oraz wyekstrahowanymi metadanymi roboczymi.
+    """
+    try:
+        if html_content is None:
+            r = requests.get(URL_LISTA, headers=DEFAULT_HEADERS, timeout=10)
+            r.raise_for_status()
+            html_text = r.text
+        else:
+            html_text = html_content
+
+        soup = BeautifulSoup(html_text, 'html.parser')
+        modyfikowane = []
+        for opt in soup.find_all("option"):
+            text = opt.get_text().strip()
+            val = (opt.get("value") or "").strip()
+            if val == "0" or "[modyfikowany]" in text.lower():
+                if text:
+                    modyfikowane.append({
+                        "raw_name": text,
+                        "value": val
+                    })
+        return modyfikowane
+    except Exception as e:
+        logger.error(f"Nie udało się pobrać listy planów w modyfikacji: {e}")
+        return []
+
+
 def pobierz_dane_z_ajax(
     session: requests.Session,
     ajax_val: str,

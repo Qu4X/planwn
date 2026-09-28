@@ -154,6 +154,7 @@ const state = {
   daysView: savedDaysView, // "workdays" | "active_only" | "all"
   selectedDayTab: "ALL",
   dismissedDuplicatePlans: new Set(),
+  dismissedModificationPlans: new Set(),
   theme: typeof localStorage !== "undefined" && localStorage.getItem("umg_theme")
     ? localStorage.getItem("umg_theme")
     : (typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
@@ -419,6 +420,16 @@ function setupEventListeners() {
         const cleanName = dismissBtn.dataset.dismissPlan;
         if (cleanName) {
           state.dismissedDuplicatePlans.add(cleanName);
+          updateCalendarNotice();
+        }
+        return;
+      }
+
+      const dismissModBtn = e.target.closest("[data-dismiss-modification]");
+      if (dismissModBtn) {
+        const cleanName = dismissModBtn.dataset.dismissModification;
+        if (cleanName) {
+          state.dismissedModificationPlans.add(cleanName);
           updateCalendarNotice();
         }
       }
@@ -695,6 +706,7 @@ function parsePlanInfo(rawName) {
 
   // 4. Strip prefix like [TM Sem 1] or [something]
   let clean = rawName.replace(/^\[[^\]]+\]\s*/, "");
+  clean = clean.replace(/\s*\[modyfikowany\]\s*/gi, " ");
 
   // 5. Strip suffix date and version: [2026-...] wer. ...
   clean = clean.replace(/\s*\[\d{4}-\d{2}-\d{2}[^\]]*\]\s*(?:wer\.?\s*\d+)?/gi, "");
@@ -867,6 +879,33 @@ function getDuplicatePlanInfo(planId) {
     currentVersion: currentPlan.version || currentInfo.version,
     currentPublishedAt: currentPlan.published_at || currentInfo.publishedAt,
     alternatives
+  };
+}
+
+function getPlanModificationInfo(planId) {
+  if (!planId || !state.plansData || !state.plansData.plans || !state.plansData.plans[planId]) {
+    return null;
+  }
+
+  const plan = state.plansData.plans[planId];
+  if (!plan.modification || !plan.modification.is_modifying) {
+    return null;
+  }
+
+  const planInfo = parsePlanInfo(plan.clean_name || plan.name);
+  const cleanName = planInfo.cleanName;
+  if (!cleanName) return null;
+
+  if (state.dismissedModificationPlans && state.dismissedModificationPlans.has(cleanName)) {
+    return null;
+  }
+
+  return {
+    planId,
+    cleanName,
+    currentVersion: plan.version || planInfo.version,
+    draftVersion: plan.modification.draft_version,
+    draftDate: plan.modification.draft_date
   };
 }
 
@@ -1179,6 +1218,24 @@ function updateCalendarNotice(academicInfo) {
         </div>
         <div class="notice-actions">
           ${switchButtons}
+        </div>
+      </div>
+    `);
+  }
+
+  // Plan under university modification notice (if active plan is being edited and not dismissed)
+  const modInfo = getPlanModificationInfo(state.selectedPlanId);
+  if (modInfo) {
+    const curVer = modInfo.currentVersion ? ` (${modInfo.currentVersion})` : "";
+    const draftVer = modInfo.draftVersion ? ` (${modInfo.draftVersion})` : "";
+    notices.push(`
+      <div class="calendar-notice-item notice-plan-modifying">
+        <div class="notice-main">
+          ${icon("warning", "notice-icon")}
+          <div class="notice-text">
+            <strong>Plan w trakcie modyfikacji przez uczelnię:</strong> Wyświetlamy ostatnią dostępną wersję${escapeHtml(curVer)}. Nowa wersja${escapeHtml(draftVer)} pojawi się automatycznie po zakończeniu prac przez dziekanat.
+          </div>
+          <button type="button" class="btn-notice-dismiss" data-dismiss-modification="${escapeHtml(modInfo.cleanName)}" aria-label="Zamknij powiadomienie" title="Zamknij powiadomienie">✕</button>
         </div>
       </div>
     `);
@@ -2025,6 +2082,7 @@ if (typeof module !== "undefined" && module.exports) {
     onStudyModeChange,
     onPlanChange,
     getDuplicatePlanInfo,
+    getPlanModificationInfo,
     state,
     elements
   };

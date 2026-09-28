@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Optional
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("build_static")
 
-from arktur_client import pobierz_liste_planow, pobierz_surowy_plan
+from arktur_client import pobierz_liste_planow, pobierz_surowy_plan, pobierz_plany_w_modyfikacji
 from arktur_parser import przetworz_plan_na_grafike, _wspolny_parser_html
 from ics_export import generuj_ics, generate_nst_ics, load_academic_calendar
 from nst_client import fetch_nst_plans_list, download_pdf_file
@@ -154,6 +154,7 @@ def parse_plan_title(raw_name: str) -> dict:
 
     # Oczyszczenie nazwy
     clean = re.sub(r'^\[[^\]]+\]\s*', '', raw_name)
+    clean = re.sub(r'\s*\[modyfikowany\]\s*', ' ', clean, flags=re.IGNORECASE)
     clean = re.sub(r'\s*\[\d{4}-\d{2}-\d{2}[^\]]*\]\s*(?:wer\.?\s*\d+)?', '', clean, flags=re.IGNORECASE)
     clean = re.sub(r'\s*\b(?:wer\.?|wersja)\s*\d+\b', '', clean, flags=re.IGNORECASE)
     clean = re.sub(r'\s*(?:pierwszego|drugiego)\s+stopnia\s*', ' ', clean, flags=re.IGNORECASE)
@@ -343,6 +344,21 @@ def build(limit=None, plan_ids=None, filter_query=None):
 
     logger.info(f"Found {len(plany_slownik)} plans.")
 
+    # Fetch plans currently marked as [modyfikowany] or draft (value=0) on Arktur
+    plany_modyfikowane = pobierz_plany_w_modyfikacji()
+    modifying_map = {}
+    for mod_item in plany_modyfikowane:
+        mod_parsed = parse_plan_title(mod_item["raw_name"])
+        clean_key = mod_parsed["clean_name"]
+        if clean_key:
+            modifying_map[clean_key] = {
+                "is_modifying": True,
+                "draft_version": mod_parsed["version"],
+                "draft_date": mod_parsed["published_at"]
+            }
+    if modifying_map:
+        logger.info(f"Detected {len(modifying_map)} plans currently being modified on Arktur: {list(modifying_map.keys())}")
+
     # Filter/limit if specified
     plan_items = list(plany_slownik.items())
     if plan_ids:
@@ -380,7 +396,7 @@ def build(limit=None, plan_ids=None, filter_query=None):
             continue
 
         parsed_title = parse_plan_title(plan_name)
-        plans_metadata["plans"][plan_id_str] = {
+        plan_entry = {
             "name": plan_name,
             "clean_name": parsed_title["clean_name"],
             "published_at": parsed_title["published_at"],
@@ -388,6 +404,10 @@ def build(limit=None, plan_ids=None, filter_query=None):
             "groups": grupy,
             "mode": "stacjonarne"
         }
+        if parsed_title["clean_name"] in modifying_map:
+            plan_entry["modification"] = modifying_map[parsed_title["clean_name"]]
+
+        plans_metadata["plans"][plan_id_str] = plan_entry
 
         # Parse schedule once for all groups in this plan
         parsed_schedule = _wspolny_parser_html(html_text)
