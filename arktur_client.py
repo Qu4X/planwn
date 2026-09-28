@@ -33,7 +33,11 @@ def pobierz_liste_planow() -> Dict[str, str]:
         r = requests.get(URL_LISTA, headers=DEFAULT_HEADERS, timeout=10)
         r.raise_for_status()
         soup = BeautifulSoup(r.text, 'html.parser')
-        return {opt.get_text().strip(): opt.get("value") for opt in soup.find_all("option") if opt.get("value")}
+        return {
+            opt.get_text().strip(): opt.get("value")
+            for opt in soup.find_all("option")
+            if opt.get("value") and opt.get("value").strip() != "0"
+        }
     except Exception as e:
         logger.error(f"Nie udało się pobrać listy kierunków: {e}")
         return {}
