@@ -1173,7 +1173,7 @@ function updateCalendarNotice(academicInfo) {
         <div class="notice-main">
           ${icon("warning", "notice-icon")}
           <div class="notice-text">
-            <strong>Uwaga:</strong> Dla tego kierunku uczelnia opublikowała dwie wersje planu${escapeHtml(currentVerDesc)}. Jedna z wersji może zawierać wyłącznie spotkanie organizacyjne na 1. tydzień.
+            <strong>Uwaga:</strong> Dla tego kierunku uczelnia opublikowała dwie wersje planu${escapeHtml(currentVerDesc)}.
           </div>
           <button type="button" class="btn-notice-dismiss" data-dismiss-plan="${escapeHtml(dupInfo.cleanName)}" aria-label="Zamknij powiadomienie" title="Zamknij powiadomienie">✕</button>
         </div>
