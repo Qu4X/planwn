@@ -1,5 +1,5 @@
-name: 📅 Zgłoszenie nowego wydarzenia studenckiego
-description: Formularz dodania wydarzenia do planu zajęć WN (GitOps)
+name: "📅 Zgłoszenie nowego wydarzenia studenckiego"
+description: "Formularz dodania wydarzenia do planu zajęć WN (GitOps)"
 title: "[Wydarzenie]: "
 labels: ["event-proposal"]
 body:
@@ -13,7 +13,7 @@ body:
     id: title
     attributes:
       label: Tytuł wydarzenia
-      description: Krótki i czytelny tytuł widoczny na karcie w planie (np. "Czwartkowe Flanki Integracyjne").
+      description: 'Krótki i czytelny tytuł widoczny na karcie w planie (np. "Czwartkowe Flanki Integracyjne").'
       placeholder: "Np. Czwartkowe Flanki"
     validations:
       required: true
@@ -22,7 +22,7 @@ body:
     id: date
     attributes:
       label: Data wydarzenia (RRRR-MM-DD)
-      description: Dokładna data w formacie ISO RRRR-MM-DD (np. 2026-10-08).
+      description: "Dokładna data w formacie ISO RRRR-MM-DD (np. 2026-10-08)."
       placeholder: "2026-10-08"
     validations:
       required: true
@@ -31,7 +31,7 @@ body:
     id: time_start
     attributes:
       label: Godzina rozpoczęcia (GG:MM)
-      description: Godzina w formacie 24h GG:MM (np. 18:00). Pozostaw puste, jeśli wydarzenie trwa cały dzień.
+      description: "Godzina w formacie 24h GG:MM (np. 18:00). Pozostaw puste, jeśli wydarzenie trwa cały dzień."
       placeholder: "18:00"
     validations:
       required: false
@@ -40,7 +40,7 @@ body:
     id: time_end
     attributes:
       label: Godzina zakończenia (GG:MM)
-      description: Godzina w formacie 24h GG:MM (np. 22:00).
+      description: "Godzina w formacie 24h GG:MM (np. 22:00)."
       placeholder: "22:00"
     validations:
       required: false
@@ -49,7 +49,7 @@ body:
     id: type
     attributes:
       label: Typ i styl wydarzenia
-      description: Wybierz kategorię – system automatycznie ustawi tło, akcent kolorystyczny i ikonę.
+      description: "Wybierz kategorię – system automatycznie ustawi tło, akcent kolorystyczny i ikonę."
       options:
         - "flanki (Flanki i integracja przy piwie 🍻 - złote tło)"
         - "party (Impreza studencka, juwenalia 🎉 - fioletowe tło)"
@@ -63,7 +63,7 @@ body:
     id: location
     attributes:
       label: Miejsce / Lokalizacja
-      description: Gdzie odbywa się wydarzenie? (np. "Polanka Redłowska", "Aula Główna", "Klub Studencki").
+      description: 'Gdzie odbywa się wydarzenie? (np. "Polanka Redłowska", "Aula Główna", "Klub Studencki").'
       placeholder: "Np. Polanka Redłowska"
     validations:
       required: false
@@ -72,7 +72,7 @@ body:
     id: description
     attributes:
       label: Pełny opis wydarzenia
-      description: Opis widoczny w oknie po kliknięciu w kartę wydarzenia.
+      description: "Opis widoczny w oknie po kliknięciu w kartę wydarzenia."
       placeholder: "Krótki opis, zasady, co zabrać ze sobą..."
     validations:
       required: false
@@ -81,7 +81,7 @@ body:
     id: url
     attributes:
       label: Link zewnętrzny (opcjonalnie)
-      description: Link do wydarzenia na FB, map Google lub formularza zapisów.
+      description: "Link do wydarzenia na FB, map Google lub formularza zapisów."
       placeholder: "https://..."
     validations:
       required: false
@@ -90,7 +90,7 @@ body:
     id: button_text
     attributes:
       label: Tekst na przycisku linku (opcjonalnie)
-      description: Własna treść przycisku (np. "Otwórz mapę", "Zapisz się", domyślnie: "Więcej informacji").
+      description: 'Własna treść przycisku (np. "Otwórz mapę", "Zapisz się", domyślnie: "Więcej informacji").'
       placeholder: "Np. Zobacz na mapie"
     validations:
       required: false
