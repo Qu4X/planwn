@@ -868,10 +868,11 @@ console.log("✅ [PASS] getRoomOccupancyAt poprawnie weryfikuje aktywność zaj�
 // ─── Test 21: Powiadomienie o nowościach (Changelog Modal & shouldShowChangelog) ────
 console.log("\n-- Test 21: Powiadomienie o nowościach (Changelog Popup Modal)");
 
-// 1. shouldShowChangelog logic
 assert.strictEqual(shouldShowChangelog("3.8.0", null), true, "Dla nowego użytkownika (brak zapisu) powinno pokazać modal");
 assert.strictEqual(shouldShowChangelog("3.8.0", "3.7.0"), true, "Dla nowszej wersji powinno pokazać modal");
 assert.strictEqual(shouldShowChangelog("3.8.0", "3.8.0"), false, "Dla tej samej wersji NIE powinno pokazywać modala");
+assert.strictEqual(shouldShowChangelog("3.8.1", "3.8.0"), false, "Dla wydania patch (3.8.1 vs 3.8.0) NIE powinno pokazywać modala");
+assert.strictEqual(shouldShowChangelog("3.9.0", "3.8.1"), true, "Dla nowego wydania minor (3.9.0 vs 3.8.1) powinno pokazać modal");
 assert.strictEqual(shouldShowChangelog(null, "3.8.0"), false, "Brak nowej wersji nie powinien wywołać modala");
 
 // 2. Interakcja z elementami DOM i localStorage
@@ -1244,4 +1245,86 @@ updateCalendarNotice({ periodType: "regular", daySwaps: [], announcements: [] })
 assert.ok(!elements.calendarNotice.innerHTML.includes("notice-plan-modifying"), "Baner nie powinien być widoczny po zamknięciu");
 
 console.log("✅ [PASS] Obsługa planów w trakcie modyfikacji działa prawidłowo.");
+
+// --- TEST 28: System Wydarzeń Globalnych — renderowanie w widoku planu ---
+console.log("\n-- Test 28: System Wydarzeń Globalnych — renderowanie na dole dnia w widoku planu");
+
+const EventsService = require(path.join(ROOT_DIR, "web/js/events-service.js"));
+EventsService.events = [
+  {
+    id: "inauguracja-2026",
+    date: "2026-10-01",
+    time_start: "11:00",
+    time_end: "14:00",
+    title: "Uroczysta Inauguracja Roku Akademickiego",
+    type: "academic",
+    badge: "Rektorat",
+    icon: "🎓",
+    color: "#0d3b66"
+  }
+];
+
+// Wybierz dzień z wydarzeniem: Czwartek 01.10.2026
+const oct1Date = new Date(2026, 9, 1);
+const oct1Mon = getMonday(oct1Date);
+state.weekOffset = Math.round((oct1Mon - curMon) / (7 * 86400000));
+state.selectedDayTab = "CZW";
+state.scheduleData = {
+  "CZW": {
+    "08:00": {
+      przedmiot: "Nawigacja",
+      godziny: "08:00 - 09:30",
+      sala: "101",
+      prowadzacy: "Dr Nowak",
+      co_ile: 1,
+      od_tyg: 1,
+      tygodnie: 15
+    }
+  },
+  "PT": {
+    "08:00": {
+      przedmiot: "Matematyka",
+      godziny: "08:00 - 09:30",
+      sala: "201",
+      prowadzacy: "Dr Kowalski",
+      co_ile: 1,
+      od_tyg: 1,
+      tygodnie: 15
+    }
+  }
+};
+
+// 28a. Widok pojedynczego dnia z wydarzeniem
+renderSchedule();
+assert.ok(mockScheduleContent.innerHTML.includes("day-events-section"), "Czwartek 01.10 powinien zawierać sekcję .day-events-section na dole");
+assert.ok(mockScheduleContent.innerHTML.includes("Uroczysta Inauguracja Roku Akademickiego"), "Powinien zawierać tytuł wydarzenia");
+assert.ok(mockScheduleContent.innerHTML.includes("11:00 – 14:00"), "Powinien zawierać godziny wydarzenia");
+assert.ok(mockScheduleContent.innerHTML.includes("Nawigacja"), "Zwykłe zajęcia dydaktyczne powinny pozostać nienaruszone");
+
+// 28b. Widok pojedynczego dnia bez wydarzenia (Piątek 02.10)
+state.selectedDayTab = "PT";
+renderSchedule();
+assert.ok(!mockScheduleContent.innerHTML.includes("day-events-section"), "Piątek 02.10 nie ma wydarzeń — brak sekcji .day-events-section w DOM");
+assert.ok(mockScheduleContent.innerHTML.includes("Matematyka"), "Zajęcia z matematyki powinny być wyrenderowane");
+
+// 28c. Widok pełnego tygodnia (desktop)
+state.selectedDayTab = "ALL";
+renderSchedule();
+assert.ok(mockScheduleContent.innerHTML.includes("day-events-section"), "Siatka tygodnia powinna zawierać sekcję wydarzeń w kolumnie czwartkowej");
+
+// 28d. Widok tygodnia i dnia bez zajęć — weryfikacja stabilności elementów stanu pustego
+state.scheduleData = { "PON": {} };
+state.selectedDayTab = "PON";
+EventsService.events = [];
+assert.doesNotThrow(() => {
+  renderSchedule();
+}, "renderSchedule na pustym planie nie powinien rzucać ReferenceError dla titleEl/descEl");
+
+state.selectedDayTab = "ALL";
+assert.doesNotThrow(() => {
+  renderSchedule();
+}, "renderSchedule na pustym tygodniu nie powinien rzucać ReferenceError");
+
+console.log("✅ [PASS] System wydarzeń renderuje się prawidłowo na dole dnia i nie narusza zajęć dydaktycznych.");
+
 

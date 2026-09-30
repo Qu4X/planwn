@@ -1,5 +1,5 @@
 // Service Worker for Plan WN PWA
-const CACHE_NAME = 'plan-umg-v3.10';
+const CACHE_NAME = 'plan-umg-v3.10.0';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -7,6 +7,7 @@ const STATIC_ASSETS = [
   './app.js',
   './js/schedule-engine.js',
   './js/cross-reference.js',
+  './js/events-service.js',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',

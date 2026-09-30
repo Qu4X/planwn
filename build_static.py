@@ -52,6 +52,13 @@ def setup_dist_directories():
     os.makedirs(SCHEDULES_DIR, exist_ok=True)
     os.makedirs(CALENDARS_DIR, exist_ok=True)
 
+    # Sync app version from package.json into sw.js and index.html
+    try:
+        from scripts.sync_version import sync_version
+        sync_version()
+    except Exception as e:
+        logger.warning(f"Version sync skipped: {e}")
+
     # Copy web assets (index.html, style.css, app.js, manifest, service worker, icons) to dist/
     web_assets = [
         "index.html",
@@ -101,6 +108,13 @@ def setup_dist_directories():
     if os.path.exists(cal_src):
         shutil.copy2(cal_src, cal_dst)
         logger.info("Copied academic_calendar.json -> dist/data/")
+
+    # Copy events.json to dist/data/
+    events_src = _get_data_path("events.json")
+    events_dst = os.path.join(DATA_DIR, "events.json")
+    if os.path.exists(events_src):
+        shutil.copy2(events_src, events_dst)
+        logger.info("Copied events.json -> dist/data/")
 
 
 def regenerate_all_ics():

@@ -1,0 +1,107 @@
+name: 📅 Zgłoszenie nowego wydarzenia studenckiego
+description: Formularz dodania wydarzenia do planu zajęć WN (GitOps)
+title: "[Wydarzenie]: "
+labels: ["event-proposal"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### 📢 Dodaj wydarzenie do Planu WN
+        Wypełnij poniższe pola. Po zatwierdzeniu przez moderatora (etykieta `approved`), wydarzenie zostanie automatycznie dodane do bazy i opublikowane w aplikacji.
+
+  - type: input
+    id: title
+    attributes:
+      label: Tytuł wydarzenia
+      description: Krótki i czytelny tytuł widoczny na karcie w planie (np. "Czwartkowe Flanki Integracyjne").
+      placeholder: "Np. Czwartkowe Flanki"
+    validations:
+      required: true
+
+  - type: input
+    id: date
+    attributes:
+      label: Data wydarzenia (RRRR-MM-DD)
+      description: Dokładna data w formacie ISO RRRR-MM-DD (np. 2026-10-08).
+      placeholder: "2026-10-08"
+    validations:
+      required: true
+
+  - type: input
+    id: time_start
+    attributes:
+      label: Godzina rozpoczęcia (GG:MM)
+      description: Godzina w formacie 24h GG:MM (np. 18:00). Pozostaw puste, jeśli wydarzenie trwa cały dzień.
+      placeholder: "18:00"
+    validations:
+      required: false
+
+  - type: input
+    id: time_end
+    attributes:
+      label: Godzina zakończenia (GG:MM)
+      description: Godzina w formacie 24h GG:MM (np. 22:00).
+      placeholder: "22:00"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Typ i styl wydarzenia
+      description: Wybierz kategorię – system automatycznie ustawi tło, akcent kolorystyczny i ikonę.
+      options:
+        - "flanki (Flanki i integracja przy piwie 🍻 - złote tło)"
+        - "party (Impreza studencka, juwenalia 🎉 - fioletowe tło)"
+        - "academic (Uczelnia, rektorat, godziny dziekańskie 🎓)"
+        - "warning (Ważne terminy, stypendia, zapisy ⚠️)"
+        - "info (Koła naukowe, ogłoszenia ogólne 📌)"
+    validations:
+      required: true
+
+  - type: input
+    id: location
+    attributes:
+      label: Miejsce / Lokalizacja
+      description: Gdzie odbywa się wydarzenie? (np. "Polanka Redłowska", "Aula Główna", "Klub Studencki").
+      placeholder: "Np. Polanka Redłowska"
+    validations:
+      required: false
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Pełny opis wydarzenia
+      description: Opis widoczny w oknie po kliknięciu w kartę wydarzenia.
+      placeholder: "Krótki opis, zasady, co zabrać ze sobą..."
+    validations:
+      required: false
+
+  - type: input
+    id: url
+    attributes:
+      label: Link zewnętrzny (opcjonalnie)
+      description: Link do wydarzenia na FB, map Google lub formularza zapisów.
+      placeholder: "https://..."
+    validations:
+      required: false
+
+  - type: input
+    id: button_text
+    attributes:
+      label: Tekst na przycisku linku (opcjonalnie)
+      description: Własna treść przycisku (np. "Otwórz mapę", "Zapisz się", domyślnie: "Więcej informacji").
+      placeholder: "Np. Zobacz na mapie"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: target_mode
+    attributes:
+      label: Kto powinien widzieć to wydarzenie?
+      options:
+        - "all (Wszyscy studenci - stacjonarni i niestacjonarni)"
+        - "stacjonarne (Tylko studia stacjonarne / dzienne)"
+        - "niestacjonarne (Tylko studia niestacjonarne / zaoczne)"
+    validations:
+      required: true

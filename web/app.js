@@ -124,6 +124,10 @@ const _ScheduleEngine = (typeof ScheduleEngine !== "undefined")
 
 let engine = _ScheduleEngine ? _ScheduleEngine.create(ACADEMIC_CALENDAR) : null;
 
+const _EventsService = (typeof EventsService !== "undefined")
+  ? EventsService
+  : (typeof require !== "undefined" ? require("./js/events-service.js") : null);
+
 const savedDaysView = typeof localStorage !== "undefined"
   ? (localStorage.getItem("umg_days_view") || (localStorage.getItem("umg_show_weekends") === "true" ? "all" : "workdays"))
   : "workdays";
@@ -226,7 +230,9 @@ const elements = typeof document !== "undefined" ? {
   confirmChangelogBtn: document.getElementById("confirm-changelog-btn"),
   changelogVersionBadge: document.getElementById("changelog-version-badge"),
   changelogDate: document.getElementById("changelog-date"),
-  changelogFeaturesList: document.getElementById("changelog-features-list")
+  changelogFeaturesList: document.getElementById("changelog-features-list"),
+  eventDetailsDialog: document.getElementById("event-details-dialog"),
+  closeEventDialogBtn: document.getElementById("close-event-dialog")
 } : {};
 
 // Initialize App
@@ -237,6 +243,7 @@ if (typeof document !== "undefined") {
     initPwaInstall();
     initCrossRefUI();
     loadAcademicCalendarConfig();
+    loadEventsData();
     updateDayTabsUI();
     loadPlans();
   });
@@ -282,6 +289,19 @@ async function loadAcademicCalendarConfig() {
     }
   } catch (e) {
     // Keep inline defaults if offline or file unavailable
+  }
+}
+
+async function loadEventsData() {
+  if (_EventsService && typeof _EventsService.loadEvents === "function") {
+    try {
+      await _EventsService.loadEvents("data/events.json");
+      if (state.scheduleData) {
+        renderSchedule();
+      }
+    } catch (e) {
+      console.warn("[Events] Could not load events:", e);
+    }
   }
 }
 
@@ -501,6 +521,27 @@ function setupEventListeners() {
       }
     });
   }
+  if (elements.closeEventDialogBtn) {
+    elements.closeEventDialogBtn.addEventListener("click", () => {
+      if (_EventsService && typeof _EventsService.closeEventModal === "function") {
+        _EventsService.closeEventModal();
+      }
+    });
+  }
+  if (elements.eventDetailsDialog) {
+    elements.eventDetailsDialog.addEventListener("click", (e) => {
+      const rect = elements.eventDetailsDialog.getBoundingClientRect();
+      const isInDialog = (
+        rect.top <= e.clientY && e.clientY <= rect.top + rect.height &&
+        rect.left <= e.clientX && e.clientX <= rect.left + rect.width
+      );
+      if (!isInDialog || e.target === elements.eventDetailsDialog) {
+        if (_EventsService && typeof _EventsService.closeEventModal === "function") {
+          _EventsService.closeEventModal();
+        }
+      }
+    });
+  }
   if (elements.reportMailBtn) {
     elements.reportMailBtn.addEventListener("click", (e) => {
       e.preventDefault();
@@ -530,7 +571,11 @@ function setupEventListeners() {
       closeAboutModal();
       if (window.CrossRef && window.CrossRef.UI) window.CrossRef.UI.closeModal();
       closeCalendarModal();
+      closeChangelogModal();
       if (typeof closeIosModal === "function") closeIosModal();
+      if (_EventsService && typeof _EventsService.closeEventModal === "function") {
+        _EventsService.closeEventModal();
+      }
     }
   });
 
@@ -607,6 +652,26 @@ function setupEventListeners() {
         }
         return;
       }
+      const eventCard = e.target.closest(".event-card");
+      if (eventCard && eventCard.dataset.eventId) {
+        e.stopPropagation();
+        if (_EventsService && typeof _EventsService.openEventModal === "function") {
+          _EventsService.openEventModal(eventCard.dataset.eventId, eventCard);
+        }
+        return;
+      }
+    });
+
+    elements.scheduleContent.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        const eventCard = e.target.closest(".event-card");
+        if (eventCard && eventCard.dataset.eventId) {
+          e.preventDefault();
+          if (_EventsService && typeof _EventsService.openEventModal === "function") {
+            _EventsService.openEventModal(eventCard.dataset.eventId, eventCard);
+          }
+        }
+      }
     });
   }
 
@@ -681,6 +746,15 @@ async function loadPlans() {
 
     updateWeekDisplay();
     updateDayTabsUI();
+
+    // Load global events in background and re-render if schedule is active
+    if (_EventsService && typeof _EventsService.loadEvents === "function") {
+      _EventsService.loadEvents().then(() => {
+        if (state.scheduleData) {
+          renderSchedule();
+        }
+      }).catch(() => {});
+    }
 
     // Check for feature updates and display "Co nowego?" modal if applicable
     checkChangelogNotification();
@@ -1446,9 +1520,27 @@ function renderSchedule() {
   const iconEl = document.getElementById("no-classes-icon");
   const titleEl = document.getElementById("no-classes-title");
   const descEl = document.getElementById("no-classes-desc");
+  // Context for events filtering
+  const planObj = state.plansData && state.plansData.plans && state.selectedPlanId ? state.plansData.plans[state.selectedPlanId] : null;
+  const planInfo = planObj ? parsePlanInfo(planObj.clean_name || planObj.name) : null;
+  const eventContext = {
+    studyMode: state.studyMode || "stacjonarne",
+    degree: planInfo && planInfo.isSecondDegree ? 2 : 1
+  };
+
+  let weekHasEvents = false;
+  if (_EventsService && typeof _EventsService.hasEventOnDate === "function") {
+    for (const day of DNI_TYGODNIA) {
+      const dKey = filteredSchedule[day] && filteredSchedule[day].dateKey;
+      if (dKey && _EventsService.hasEventOnDate(dKey, eventContext)) {
+        weekHasEvents = true;
+        break;
+      }
+    }
+  }
 
   // Check empty states
-  if (totalLessonsInWeek === 0) {
+  if (totalLessonsInWeek === 0 && !weekHasEvents) {
     elements.scheduleContent.classList.add("hidden");
     elements.noClassesState.classList.remove("hidden");
 
@@ -1515,7 +1607,7 @@ function renderSchedule() {
 
   let html = "";
 
-  // Check if chosen single day has lessons
+  // Check if chosen single day has lessons or events
   if (daysToDisplay.length === 1) {
     const day = daysToDisplay[0];
     const dayData = filteredSchedule[day] || { lessons: [] };
@@ -1525,7 +1617,14 @@ function renderSchedule() {
     const dayAcc = DNI_MIEJSCOWNIK[day] || day;
     const dayDateFormatted = dayData.date ? `${String(dayData.date.getDate()).padStart(2, "0")}.${String(dayData.date.getMonth() + 1).padStart(2, "0")}` : "";
 
-    if (lessons.length === 0) {
+    const eventsForDay = (_EventsService && typeof _EventsService.getEventsForDate === "function")
+      ? _EventsService.getEventsForDate(dayData.dateKey, eventContext)
+      : [];
+    const eventsHtml = (_EventsService && typeof _EventsService.renderEventsSection === "function")
+      ? _EventsService.renderEventsSection(eventsForDay)
+      : "";
+
+    if (lessons.length === 0 && eventsForDay.length === 0) {
       elements.scheduleContent.classList.add("hidden");
       elements.noClassesState.classList.remove("hidden");
 
@@ -1559,14 +1658,27 @@ function renderSchedule() {
       swapBadge = `<div class="day-swap-badge" title="${escapeHtml(cleanNote)}">${icon("swap_horiz", "", "width: 1.1em; height: 1.1em; vertical-align: middle;")} Plan z ${targetDayGen}</div>`;
     }
 
+    let emptyLessonsNotice = "";
+    if (lessons.length === 0) {
+      if (dayData.swap) {
+        const targetDayGen = DNI_DOPELNIACZ[dayData.swap.replaceWith] || dayData.swap.replaceWith;
+        emptyLessonsNotice = `<p class="placeholder-text" style="text-align:center; padding: 1.25rem 1rem; color: var(--text-secondary); font-size: 0.9rem;">Dzień realizowany według planu z ${targetDayGen}. Brak zaplanowanych zajęć.</p>`;
+      } else if (dayData.holiday) {
+        emptyLessonsNotice = `<p class="placeholder-text" style="text-align:center; padding: 1.25rem 1rem; color: var(--text-secondary); font-size: 0.9rem;">${escapeHtml(dayData.holiday)} – brak zajęć dydaktycznych.</p>`;
+      } else {
+        emptyLessonsNotice = `<p class="placeholder-text" style="text-align:center; padding: 1.25rem 1rem; color: var(--text-secondary); font-size: 0.9rem;">Brak zaplanowanych zajęć dydaktycznych w tym dniu.</p>`;
+      }
+    }
+
     html += `<div class="day-group">
       <div class="day-header">
         <span class="day-header-title">${headerTitle}</span>
         ${swapBadge}
       </div>
       <div class="lessons-list">
-        ${lessons.map((l) => renderLessonCard(l, targetMonday)).join("")}
+        ${lessons.length > 0 ? lessons.map((l) => renderLessonCard(l, targetMonday)).join("") : emptyLessonsNotice}
       </div>
+      ${eventsHtml}
     </div>`;
   } else {
     // Multi-day / Desktop week view
@@ -1576,6 +1688,13 @@ function renderSchedule() {
       const lessons = dayData.lessons;
       const isToday = day === todayCode && state.weekOffset === 0;
       const dayDateFormatted = dayData.date ? `${String(dayData.date.getDate()).padStart(2, "0")}.${String(dayData.date.getMonth() + 1).padStart(2, "0")}` : "";
+
+      const colEvents = (_EventsService && typeof _EventsService.getEventsForDate === "function")
+        ? _EventsService.getEventsForDate(dayData.dateKey, eventContext)
+        : [];
+      const colEventsHtml = (_EventsService && typeof _EventsService.renderEventsSection === "function")
+        ? _EventsService.renderEventsSection(colEvents)
+        : "";
 
       let swapBadge = "";
       if (dayData.swap) {
@@ -1615,6 +1734,7 @@ function renderSchedule() {
           : emptyDayContent
         }
         </div>
+        ${colEventsHtml}
       </div>`;
     }
     html += `</div>`;
@@ -1770,10 +1890,16 @@ function copyCalendarUrl() {
 const CHANGELOG_STORAGE_KEY = "last_seen_changelog_version";
 let currentPendingChangelogVersion = null;
 
+function extractMajorMinor(ver) {
+  if (!ver) return "";
+  const match = String(ver).trim().match(/^v?(\d+\.\d+)/);
+  return match ? match[1] : String(ver).trim();
+}
+
 function shouldShowChangelog(latestVersion, lastSeenVersion) {
   if (!latestVersion) return false;
   if (!lastSeenVersion) return true;
-  return String(latestVersion).trim() !== String(lastSeenVersion).trim();
+  return extractMajorMinor(latestVersion) !== extractMajorMinor(lastSeenVersion);
 }
 
 function openChangelogModal(changelogEntry) {
@@ -2083,6 +2209,8 @@ if (typeof module !== "undefined" && module.exports) {
     onPlanChange,
     getDuplicatePlanInfo,
     getPlanModificationInfo,
+    _EventsService,
+    loadEventsData,
     state,
     elements
   };

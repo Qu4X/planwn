@@ -778,6 +778,101 @@ if mod_plans:
     check("mod_plans draft_date is 2026-09-28 08:25", mod_parsed["published_at"] == "2026-09-28 08:25")
     check("mod_plans clean_name matches 557", mod_parsed["clean_name"] == p_title["clean_name"])
 
+# ── 28. Walidacja schematu bazy wydarzeń (data/events.json) ────────────────────
+print("\n-- 28. Walidacja schematu bazy wydarzeń (data/events.json) -----------")
+events_json_path = os.path.join(REPO_ROOT, "data", "events.json")
+check("Plik data/events.json istnieje", os.path.exists(events_json_path))
+
+events_data = None
+try:
+    with open(events_json_path, "r", encoding="utf-8") as ef:
+        events_data = json.load(ef)
+    check("Plik data/events.json zawiera poprawny format JSON", isinstance(events_data, list))
+except Exception as e:
+    check(f"Plik data/events.json zawiera poprawny format JSON (error: {e})", False)
+
+if isinstance(events_data, list):
+    date_regex = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+    time_regex = re.compile(r"^\d{2}:\d{2}$")
+    all_valid = True
+    for ev in events_data:
+        ev_id = ev.get("id")
+        ev_date = ev.get("date")
+        ev_start = ev.get("time_start")
+        ev_end = ev.get("time_end")
+        ev_title = ev.get("title")
+
+        if not (ev_id and ev_title and ev_date and date_regex.match(ev_date)):
+            all_valid = False
+            break
+        if ev_start and not time_regex.match(ev_start):
+            all_valid = False
+            break
+        if ev_end and not time_regex.match(ev_end):
+            all_valid = False
+            break
+
+    check("Wszystkie wpisy wydarzeń posiadają prawidłowe ID, tytuł, daty ISO i godziny", all_valid)
+
+# ── 29. Test GitOps Issue Form Parser (scripts/add_event_from_issue.py) ───────
+print("\n-- 29. GitOps Issue Form Parser --------------------------------------")
+sys.path.insert(0, os.path.join(REPO_ROOT, "scripts"))
+try:
+    from add_event_from_issue import parse_issue_markdown, slugify
+
+    mock_issue_body = """
+### Tytuł wydarzenia
+
+Czwartkowe Flanki
+
+### Data wydarzenia (RRRR-MM-DD)
+
+2026-10-08
+
+### Godzina rozpoczęcia (GG:MM)
+
+18:00
+
+### Godzina zakończenia (GG:MM)
+
+22:00
+
+### Typ i styl wydarzenia
+
+flanki (Flanki i integracja przy piwie 🍻 - złote tło)
+
+### Miejsce / Lokalizacja
+
+Polanka Redłowska
+
+### Pełny opis wydarzenia
+
+Tradycyjne spotkanie na polance.
+
+### Link zewnętrzny (opcjonalnie)
+
+https://maps.app.goo.gl/example
+
+### Tekst na przycisku linku (opcjonalnie)
+
+Otwórz mapę
+
+### Kto powinien widzieć to wydarzenie?
+
+all (Wszyscy studenci - stacjonarni i niestacjonarni)
+"""
+    res = parse_issue_markdown(mock_issue_body)
+    check("parse_issue_markdown extracts title", res["title"] == "Czwartkowe Flanki")
+    check("parse_issue_markdown extracts date", res["date"] == "2026-10-08")
+    check("parse_issue_markdown extracts time_start", res["time_start"] == "18:00")
+    check("parse_issue_markdown extracts time_end", res["time_end"] == "22:00")
+    check("parse_issue_markdown cleans type to flanki", res["type"] == "flanki")
+    check("parse_issue_markdown extracts button_text", res["button_text"] == "Otwórz mapę")
+    check("parse_issue_markdown extracts target_mode", res["target_mode"] == "all")
+    check("slugify creates url-friendly slug", slugify("Czwartkowe Flanki 2026!") == "czwartkowe-flanki-2026")
+except Exception as e:
+    check(f"GitOps Issue Form Parser error: {e}", False)
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 print("\n" + "="*60)
 passed = sum(1 for ok,_ in results if ok)

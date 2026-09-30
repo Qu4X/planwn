@@ -1,5 +1,17 @@
 [
   {
+    "version": "3.10.0",
+    "date": "2026-10-01",
+    "features": [
+	  "Pełne wsparcie dla planów studiów niestacjonarnych (NST) oraz II stopnia.",
+      "Usprawniona wyszukiwarka wolnych sal uwzględniająca cykle 2-tygodniowe.",
+      "Nowy system Wydarzeń i Ogłoszeń Studenckich w planie zajęć.",
+      "Karty wydarzeń i okno szczegółów z mapą, opisem i linkami zewnętrznymi.",
+      "Automatyczne dodawanie wydarzeń przez zgłoszenia GitHub Issues.",
+	  "Zwiększony kontrast plakietek w trybie ciemnym (WCAG AA)."
+    ]
+  },
+  {
     "version": "3.9.0",
     "date": "2026-09-25",
     "features": [

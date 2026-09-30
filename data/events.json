@@ -1,0 +1,43 @@
+[
+  {
+    "_comment": "Szablon wydarzenia. Ustaw 'enabled': true (lub usuń to pole), aby aktywować.",
+    "enabled": false,
+    "id": "szablon-inauguracja",
+    "date": "2026-10-01",
+    "time_start": "11:00",
+    "time_end": "14:00",
+    "title": "Uroczysta Inauguracja Roku Akademickiego (Szablon)",
+    "description": "Uroczyste rozpoczęcie roku akademickiego 2026/2027. Zgodnie z zarządzeniem Rektora obowiązują godziny wolne od zajęć.",
+    "location": "Aula Główna UMG",
+    "url": "https://umg.edu.pl",
+    "type": "academic",
+    "badge": "Rektorat",
+    "icon": "🎓",
+    "color": "#0d3b66",
+    "target": {
+      "mode": "all",
+      "degree": "all"
+    }
+  },
+  {
+    "_comment": "Flaneczki",
+    "enabled": true,
+    "id": "inauguracja-flanki",
+    "date": "2026-10-01",
+    "time_start": "21:00",
+    "time_end": "",
+    "title": "Rozpoczęcie sezonu!",
+    "description": "Uroczyste rozpoczęcie sezonu 2026/2027. Zgodnie z zarządzeniem flanekmajstra obowiązuje zaopatrzenie w napoje procentowe.",
+    "location": "Bulwar Nadmorski",
+    "url": "https://maps.app.goo.gl/CKJ4E4oBH213DcMd9",
+    "button_text": "Otwórz lokalizację w Google Maps",
+    "type": "flanki",
+    "badge": "Flanki",
+    "icon": "🍻",
+    "color": "#d97706",
+    "target": {
+      "mode": "all",
+      "degree": "all"
+    }
+  }
+]
