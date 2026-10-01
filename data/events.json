@@ -39,5 +39,25 @@
       "mode": "all",
       "degree": "all"
     }
+  },
+  {
+  "enabled": true,
+  "id": "proba-generalna-inauguracja-2026",
+  "date": "2026-10-02",
+  "time_start": "14:00",
+  "time_end": "17:00",
+  "title": "Próba generalna przed Inauguracją Roku Akademickiego",
+  "description": "Próba generalna o godz. 15:00 dla studentów I roku studiów stacjonarnych wszystkich Wydziałów (obecność obowiązkowa). Od godz. 14:00 obowiązują godziny rektorskie.",
+  "location": "Nabrzeże Pomorskie (vis-à-vis Akwarium Gdyńskiego przy „Darze Młodzieży”)",
+  "url": "https://www.umg.edu.pl/aktualnosci/2026/inauguracja-roku-akademickiego-20262027",
+  "button_text": "Więcej informacji",
+  "type": "academic",
+  "badge": "Rektorat",
+  "icon": "📜",
+  "color": "#0d3b66",
+  "target": {
+    "mode": "stacjonarne",
+    "degree": "1"
+    }
   }
 ]
