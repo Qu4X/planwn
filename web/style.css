@@ -150,6 +150,15 @@ body {
   height: 100%;
 }
 
+.brand-logo {
+  width: 32px;
+  height: 32px;
+  display: block;
+  flex-shrink: 0;
+  user-select: none;
+  object-fit: contain;
+}
+
 .logo {
   font-size: 1.55rem;
   line-height: 1;
@@ -764,6 +773,11 @@ body {
 }
 
 .day-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
   flex: 1 0 auto;
   min-width: 44px;
   padding: 0.45rem 0.55rem;
@@ -777,6 +791,29 @@ body {
   cursor: pointer;
   transition: all 0.15s;
   white-space: nowrap;
+}
+
+.day-tab-indicator {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--brand-amber);
+  flex-shrink: 0;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.day-tab.active .day-tab-indicator {
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.85);
+}
+
+[data-theme="dark"] .day-tab-indicator {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+[data-theme="dark"] .day-tab.active .day-tab-indicator {
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.9);
 }
 
 .day-tab[data-day="ALL"] {

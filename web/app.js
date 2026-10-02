@@ -1392,9 +1392,10 @@ function updateWeekDisplay() {
 }
 
 function updateDayTabsUI(filteredSchedule = null) {
+  if (!elements.dayTabs) return;
   let schedule = filteredSchedule;
+  const targetMonday = getWeekMonday(state.weekOffset);
   if (!schedule && state.scheduleData) {
-    const targetMonday = getWeekMonday(state.weekOffset);
     schedule = {};
     for (let dIdx = 0; dIdx < DNI_TYGODNIA.length; dIdx++) {
       const day = DNI_TYGODNIA[dIdx];
@@ -1423,9 +1424,16 @@ function updateDayTabsUI(filteredSchedule = null) {
           }
         }
       }
-      schedule[day] = { hasLessons };
+      schedule[day] = { hasLessons, dateKey };
     }
   }
+
+  const planObj = state.plansData && state.plansData.plans && state.selectedPlanId ? state.plansData.plans[state.selectedPlanId] : null;
+  const planInfo = planObj ? parsePlanInfo(planObj.clean_name || planObj.name) : null;
+  const eventContext = {
+    studyMode: state.studyMode || "stacjonarne",
+    degree: planInfo && planInfo.isSecondDegree ? 2 : 1
+  };
 
   elements.dayTabs.querySelectorAll(".day-tab").forEach((tab) => {
     const day = tab.dataset.day;
@@ -1434,19 +1442,58 @@ function updateDayTabsUI(filteredSchedule = null) {
       return;
     }
 
+    const dIdx = DNI_TYGODNIA.indexOf(day);
+    let dateKey = (schedule && schedule[day] && schedule[day].dateKey) || null;
+    if (!dateKey && dIdx !== -1) {
+      const dayDate = new Date(targetMonday);
+      dayDate.setDate(targetMonday.getDate() + dIdx);
+      dateKey = formatDateISO(dayDate);
+    }
+
+    const matchingEvents = (dateKey && _EventsService && typeof _EventsService.getEventsForDate === "function")
+      ? _EventsService.getEventsForDate(dateKey, eventContext)
+      : [];
+
     let shouldShow = true;
     if (state.daysView === "workdays") {
       shouldShow = day !== "SOB" && day !== "ND";
     } else if (state.daysView === "active_only") {
-      if (schedule && schedule[day]) {
-        shouldShow = schedule[day].lessons ? schedule[day].lessons.length > 0 : Boolean(schedule[day].hasLessons);
-      }
+      const hasClasses = schedule && schedule[day]
+        ? (schedule[day].lessons ? schedule[day].lessons.length > 0 : Boolean(schedule[day].hasLessons))
+        : false;
+      shouldShow = hasClasses || matchingEvents.length > 0;
     } else if (state.daysView === "all") {
       shouldShow = true;
     }
 
     tab.classList.toggle("hidden", !shouldShow);
     tab.classList.toggle("active", day === state.selectedDayTab);
+
+    // Dynamiczny wskaźnik wydarzenia (Event indicator dot)
+    let indicator = tab.querySelector(".day-tab-indicator");
+    if (matchingEvents.length > 0) {
+      const topEvent = matchingEvents[0];
+      const themeDetails = (_EventsService && typeof _EventsService.getThemeDetails === "function")
+        ? _EventsService.getThemeDetails(topEvent)
+        : { color: "#d97706" };
+      const dotColor = themeDetails.color || "#d97706";
+      const eventTitles = matchingEvents.map(e => e.title).filter(Boolean).join(", ");
+      const accessibleLabel = eventTitles
+        ? `Wydarzenie: ${eventTitles}`
+        : "Wydarzenie zaplanowane na ten dzień";
+
+      if (!indicator) {
+        indicator = document.createElement("span");
+        indicator.className = "day-tab-indicator";
+        tab.appendChild(indicator);
+      }
+      indicator.style.backgroundColor = dotColor;
+      indicator.setAttribute("role", "status");
+      indicator.setAttribute("aria-label", accessibleLabel);
+      indicator.title = accessibleLabel;
+    } else if (indicator) {
+      indicator.remove();
+    }
   });
 
   if (state.selectedDayTab !== "ALL") {
@@ -2211,6 +2258,7 @@ if (typeof module !== "undefined" && module.exports) {
     getPlanModificationInfo,
     _EventsService,
     loadEventsData,
+    updateDayTabsUI,
     state,
     elements
   };

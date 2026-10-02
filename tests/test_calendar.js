@@ -11,7 +11,7 @@ const getMonday = (...args) => engine.getMonday(...args);
 const getRoomOccupancyAt = (...args) => engine.getRoomOccupancyAt(...args);
 const isTeachingDay = (...args) => engine.isTeachingDay(...args);
 
-const { getSafeGroupName, parsePlanInfo, getAcademicInfoForWeek, updateCalendarNotice, renderSchedule, renderLessonCard, shouldShowChangelog, openChangelogModal, closeChangelogModal, checkChangelogNotification, comparePlans, getPlanSortKey, populatePlanSelect, onStudyModeChange, getDuplicatePlanInfo, getPlanModificationInfo, state, elements } = require(path.join(ROOT_DIR, "web/app.js"));
+const { getSafeGroupName, parsePlanInfo, getAcademicInfoForWeek, updateCalendarNotice, renderSchedule, renderLessonCard, shouldShowChangelog, openChangelogModal, closeChangelogModal, checkChangelogNotification, comparePlans, getPlanSortKey, populatePlanSelect, onStudyModeChange, getDuplicatePlanInfo, getPlanModificationInfo, updateDayTabsUI, state, elements } = require(path.join(ROOT_DIR, "web/app.js"));
 
 console.log("\n🧪 Running Calendar Engine TDD Tests...\n");
 
@@ -1326,5 +1326,150 @@ assert.doesNotThrow(() => {
 }, "renderSchedule na pustym tygodniu nie powinien rzucać ReferenceError");
 
 console.log("✅ [PASS] System wydarzeń renderuje się prawidłowo na dole dnia i nie narusza zajęć dydaktycznych.");
+
+// --- TEST 29: Wskaźniki wydarzeń na zakładkach dni (Day Tabs Indicator Badges - Issue #10) ---
+console.log("\n-- Test 29: Wskaźniki wydarzeń na zakładkach dni (Issue #10)");
+
+function createMockTab(dayName) {
+  const tab = {
+    dataset: { day: dayName },
+    classList: {
+      classes: new Set(),
+      add(c) { this.classes.add(c); },
+      remove(c) { this.classes.delete(c); },
+      toggle(c, force) {
+        if (force === undefined) {
+          if (this.classes.has(c)) this.classes.delete(c);
+          else this.classes.add(c);
+        } else if (force) {
+          this.classes.add(c);
+        } else {
+          this.classes.delete(c);
+        }
+      },
+      contains(c) { return this.classes.has(c); }
+    },
+    children: [],
+    querySelector(selector) {
+      if (selector === ".day-tab-indicator") {
+        return this.children.find(child => child.className === "day-tab-indicator") || null;
+      }
+      return null;
+    },
+    appendChild(child) {
+      child.parentElement = this;
+      this.children.push(child);
+      return child;
+    }
+  };
+  return tab;
+}
+
+const mockDayTabsList = ["PON", "WT", "ŚR", "CZW", "PT", "SOB", "ND", "ALL"].map(createMockTab);
+
+const prevDayTabs = elements.dayTabs;
+elements.dayTabs = {
+  querySelectorAll(sel) {
+    if (sel === ".day-tab") return mockDayTabsList;
+    return [];
+  },
+  querySelector(sel) {
+    const match = sel.match(/data-day="([^"]+)"/);
+    if (match) {
+      return mockDayTabsList.find(t => t.dataset.day === match[1]) || null;
+    }
+    return null;
+  }
+};
+
+const originalCreateElement = global.document.createElement;
+global.document.createElement = function(tag) {
+  return {
+    tagName: tag.toUpperCase(),
+    className: "",
+    style: {},
+    attributes: {},
+    setAttribute(k, v) { this.attributes[k] = String(v); },
+    getAttribute(k) { return this.attributes[k] || null; },
+    remove() {
+      if (this.parentElement) {
+        const idx = this.parentElement.children.indexOf(this);
+        if (idx !== -1) this.parentElement.children.splice(idx, 1);
+      }
+    }
+  };
+};
+
+state.studyMode = "stacjonarne";
+state.selectedPlanMetadata = { degree: 1 };
+state.selectedDayTab = "PON";
+
+const testNow = new Date();
+const currentTestMonday = getMonday(testNow);
+const testOctMonday = getMonday(new Date(2026, 9, 1)); // 2026-10-01 (Czwartek)
+state.weekOffset = Math.round((testOctMonday - currentTestMonday) / (7 * 86400000));
+
+const EventsServiceModule = require(path.join(ROOT_DIR, "web/js/events-service.js"));
+EventsServiceModule.events = [
+  {
+    id: "inauguracja-2026",
+    date: "2026-10-01", // Czwartek
+    title: "Inauguracja",
+    type: "academic",
+    color: "#0d3b66",
+    target: { mode: "all", degree: "all" },
+    enabled: true
+  },
+  {
+    id: "flanki-stacj-2026",
+    date: "2026-10-02", // Piątek
+    title: "Flanki Integracyjne",
+    type: "flanki",
+    color: "#d97706",
+    target: { mode: "stacjonarne", degree: 1 },
+    enabled: true
+  }
+];
+
+// Wywołaj updateDayTabsUI()
+updateDayTabsUI();
+
+const czwTab = mockDayTabsList.find(t => t.dataset.day === "CZW");
+const ptTab = mockDayTabsList.find(t => t.dataset.day === "PT");
+const ponTab = mockDayTabsList.find(t => t.dataset.day === "PON");
+
+const czwInd = czwTab.querySelector(".day-tab-indicator");
+const ptInd = ptTab.querySelector(".day-tab-indicator");
+const ponInd = ponTab.querySelector(".day-tab-indicator");
+
+assert.ok(czwInd, "Zakładka Czw powinna posiadać indykator wydarzenia 01.10");
+assert.strictEqual(czwInd.style.backgroundColor, "#0d3b66", "Kolor indykatora Czw powinien odpowiadać stylowi akademickiemu (#0d3b66)");
+assert.strictEqual(czwInd.attributes["role"], "status", "Indykator powinien posiadać role=status");
+assert.ok(czwInd.attributes["aria-label"].includes("Inauguracja"), "aria-label powinien zawierać nazwę wydarzenia");
+
+assert.ok(ptInd, "Zakładka Pt powinna posiadać indykator wydarzenia 02.10 (flanki dla stacjonarnych)");
+assert.strictEqual(ptInd.style.backgroundColor, "#d97706", "Kolor indykatora Pt powinien być złoty (#d97706)");
+
+assert.strictEqual(ponInd, null, "Zakładka Pon bez wydarzeń nie powinna posiadać indykatora");
+
+// Przełączenie trybu studiów na niestacjonarne
+state.studyMode = "niestacjonarne";
+updateDayTabsUI();
+
+assert.ok(czwTab.querySelector(".day-tab-indicator"), "Czw (target: all) nadal ma indykator po przełączeniu na niestacjonarne");
+assert.strictEqual(ptTab.querySelector(".day-tab-indicator"), null, "Pt (target: stacjonarne) NIE ma indykatora w trybie niestacjonarnym");
+
+// Przełączenie tygodnia
+state.studyMode = "stacjonarne";
+state.weekOffset += 1;
+updateDayTabsUI();
+
+assert.strictEqual(czwTab.querySelector(".day-tab-indicator"), null, "Po przełączeniu na inny tydzień indykator Czw znika");
+
+// Restore
+elements.dayTabs = prevDayTabs;
+global.document.createElement = originalCreateElement;
+
+console.log("✅ [PASS] Wskaźniki wydarzeń na zakładkach dni (Issue #10) działają prawidłowo, reagują na tryb studiów, zmianę tygodnia i posiadają atrybuty a11y.");
 
 
