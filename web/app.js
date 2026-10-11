@@ -1933,7 +1933,9 @@ function openCalendarModal() {
   }
 
   // Device detection to recommend appropriate ecosystem (iOS vs Android / other)
-  const isApple = /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent) && !window.MSStream;
+  const navUserAgent = (typeof navigator !== "undefined" && navigator.userAgent) ||
+    (typeof window !== "undefined" && window.navigator && window.navigator.userAgent) || "";
+  const isApple = /iPhone|iPad|iPod|Macintosh/.test(navUserAgent) && !(typeof window !== "undefined" && window.MSStream);
   if (elements.calAppleCard && elements.calGoogleCard) {
     elements.calAppleCard.classList.toggle("recommended", isApple);
     elements.calGoogleCard.classList.toggle("recommended", !isApple);
@@ -2082,11 +2084,14 @@ async function checkChangelogNotification() {
 let deferredPrompt = null;
 
 function isAppStandalone() {
-  return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  const isMatchMedia = typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(display-mode: standalone)").matches;
+  const isStandaloneProp = typeof window !== "undefined" && window.navigator && window.navigator.standalone === true;
+  return Boolean(isMatchMedia || isStandaloneProp);
 }
 
 function isIosDevice() {
-  const ua = window.navigator.userAgent.toLowerCase();
+  const ua = ((typeof window !== "undefined" && window.navigator && window.navigator.userAgent) ||
+    (typeof navigator !== "undefined" && navigator.userAgent) || "").toLowerCase();
   return /iphone|ipad|ipod/.test(ua);
 }
 

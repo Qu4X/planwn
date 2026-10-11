@@ -1664,7 +1664,9 @@ function createMockDialog() {
 state.selectedPlanId = "555";
 state.selectedGroup = "GR. 01";
 global.window.location = { origin: "https://planwn.example.com", pathname: "/" };
-global.window.navigator = { userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" };
+const mockNavigatorObj = { userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" };
+global.navigator = mockNavigatorObj;
+global.window.navigator = mockNavigatorObj;
 const mockCalDialog = createMockDialog();
 elements.calendarModal = mockCalDialog;
 testOpenCalendarModal();
