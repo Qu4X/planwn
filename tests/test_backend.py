@@ -889,8 +889,111 @@ all (Wszyscy studenci - stacjonarni i niestacjonarni)
     check("parse_issue_markdown extracts button_text", res["button_text"] == "Otwórz mapę")
     check("parse_issue_markdown extracts target_mode", res["target_mode"] == "all")
     check("slugify creates url-friendly slug", slugify("Czwartkowe Flanki 2026!") == "czwartkowe-flanki-2026")
+
+    # 29b. Bezpieczeństwo URL - odrzucanie javascript: i nieobsługiwanych schematów
+    xss_issue_body = mock_issue_body.replace("https://maps.app.goo.gl/example", "javascript:alert(1)")
+    res_xss = parse_issue_markdown(xss_issue_body)
+    check("parse_issue_markdown odrzuca javascript: URL", res_xss["url"] is None, f"got {res_xss['url']}")
+
+    ftp_issue_body = mock_issue_body.replace("https://maps.app.goo.gl/example", "ftp://files.example.com")
+    res_ftp = parse_issue_markdown(ftp_issue_body)
+    check("parse_issue_markdown odrzuca ftp: URL", res_ftp["url"] is None, f"got {res_ftp['url']}")
 except Exception as e:
     check(f"GitOps Issue Form Parser error: {e}", False)
+
+# ── 30. Quality Gate w build_static.py ────────────────────────────────────────
+print("\n-- 30. Quality Gate w build_static.py --------------------------------")
+import build_static
+
+# 30a. Awaryjne przerwanie buildu, gdy Arktur zwraca 0 grup (np. zmiana HTML / awaria scrapera)
+with tempfile.TemporaryDirectory() as tmp_dist:
+    tmp_data = os.path.join(tmp_dist, "data")
+    tmp_sched = os.path.join(tmp_data, "schedules")
+    tmp_cal = os.path.join(tmp_dist, "calendars")
+    os.makedirs(tmp_sched, exist_ok=True)
+    os.makedirs(tmp_cal, exist_ok=True)
+    try:
+        with patch("build_static.DIST_DIR", tmp_dist), \
+             patch("build_static.DATA_DIR", tmp_data), \
+             patch("build_static.SCHEDULES_DIR", tmp_sched), \
+             patch("build_static.CALENDARS_DIR", tmp_cal), \
+             patch("build_static.setup_dist_directories"), \
+             patch("build_static.pobierz_liste_planow", return_value={"Transport Morski": "999"}), \
+             patch("build_static.pobierz_plany_w_modyfikacji", return_value=[]), \
+             patch("build_static.pobierz_surowy_plan", return_value=("<html></html>", [])), \
+             patch("build_static.fetch_nst_plans_list", return_value=[]):
+            build_static.build()
+        check("Quality gate: build() przerywa z kodem 1 przy braku przetworzonych grup", False, "build() zakończył się bez błędu (0 grup!)")
+    except SystemExit as se:
+        check("Quality gate: build() przerywa z kodem 1 przy braku przetworzonych grup", se.code == 1, f"exit code: {se.code}")
+    except Exception as e:
+        check(f"Quality gate 30a: nieoczekiwany wyjątek: {e}", False)
+
+# 30b. Awaryjne przerwanie buildu, gdy generowanie indeksów cross-reference zwróci błąd (False)
+with tempfile.TemporaryDirectory() as tmp_dist:
+    tmp_data = os.path.join(tmp_dist, "data")
+    tmp_sched = os.path.join(tmp_data, "schedules")
+    tmp_cal = os.path.join(tmp_dist, "calendars")
+    os.makedirs(tmp_sched, exist_ok=True)
+    os.makedirs(tmp_cal, exist_ok=True)
+    try:
+        with patch("build_static.DIST_DIR", tmp_dist), \
+             patch("build_static.DATA_DIR", tmp_data), \
+             patch("build_static.SCHEDULES_DIR", tmp_sched), \
+             patch("build_static.CALENDARS_DIR", tmp_cal), \
+             patch("build_static.setup_dist_directories"), \
+             patch("build_static.pobierz_liste_planow", return_value={"Transport Morski": "999"}), \
+             patch("build_static.pobierz_plany_w_modyfikacji", return_value=[]), \
+             patch("build_static.pobierz_surowy_plan", return_value=("<html></html>", ["GR. 1"])), \
+             patch("build_static.przetworz_plan_na_grafike", return_value=({"PON": {}}, 1, 1)), \
+             patch("build_static.fetch_nst_plans_list", return_value=[]), \
+             patch("build_static.build_cross_reference_indexes", return_value=False):
+            build_static.build(limit=1)
+        check("Quality gate: build() przerywa z kodem 1 gdy indeksowanie nie powiodło się", False, "build() zakończył się bez błędu mimo błędu indeksów")
+    except SystemExit as se:
+        check("Quality gate: build() przerywa z kodem 1 gdy indeksowanie nie powiodło się", se.code == 1, f"exit code: {se.code}")
+    except Exception as e:
+        check(f"Quality gate 30b: nieoczekiwany wyjątek: {e}", False)
+
+# ── 31. Poprawność końców linii w plikach .ics (RFC 5545 CRLF bez podwójnego \\r)
+print("\n-- 31. Pliki .ics bez podwójnego carriage return (\\r\\r\\n) na Windows --")
+import tempfile
+from ics_export import generuj_ics
+
+# Przetestuj czy zapisany plik ICS nie zawiera podwójnych znaków powrotu karetki
+test_cal_dict = {
+    "PON": {
+        "08:00": {
+            "przedmiot": "Nawigacja",
+            "prowadzacy": "Jan Kowalski",
+            "sala": "101",
+            "godziny": "08:00-09:35",
+            "data_start": "2026-10-05",
+            "tygodnie": 1,
+            "co_ile": 1
+        }
+    }
+}
+ics_text_res = generuj_ics(test_cal_dict, "GR. 1")
+
+# Symulacja zapisu w build_static: weryfikacja b'\r\r\n'
+with tempfile.NamedTemporaryFile(suffix=".ics", delete=False) as tmp_f:
+    tmp_path = tmp_f.name
+
+try:
+    # Zapis w trybie binarnym
+    with open(tmp_path, "wb") as f_out:
+        f_out.write(ics_text_res.encode("utf-8") if isinstance(ics_text_res, str) else ics_text_res)
+
+    with open(tmp_path, "rb") as f_in:
+        raw_bytes = f_in.read()
+
+    check("Zapisany ICS zawiera standardowe CRLF b'\\r\\n'", b"\r\n" in raw_bytes)
+    check("Zapisany ICS NIE zawiera podwójnego b'\\r\\r\\n'", b"\r\r\n" not in raw_bytes)
+finally:
+    if os.path.exists(tmp_path):
+        os.remove(tmp_path)
+
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 print("\n" + "="*60)

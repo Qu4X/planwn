@@ -31,7 +31,7 @@ Pełna architektura i słownik → [`CONTEXT.md`](CONTEXT.md)
 
 ```powershell
 .venv\Scripts\python.exe tests/test_backend.py   # Windows Python
-npm test                                        # JS frontend (wszystkie 3 zestawy testów)
+npm test                                        # JS frontend (wszystkie 4 zestawy testów)
 ```
 
 Oba muszą przejść. Jeśli jeden czerwony — napraw przed commitem.

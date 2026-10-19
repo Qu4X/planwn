@@ -56,7 +56,12 @@ def parse_issue_markdown(body: str) -> dict:
     type_raw = get_val("Typ i styl")
     location = get_val("Miejsce")
     description = get_val("Pełny opis")
-    url = get_val("Link")
+    url_raw = get_val("Link")
+    url = None
+    if url_raw:
+        url_clean = url_raw.strip()
+        if re.match(r"^https?://", url_clean, re.IGNORECASE):
+            url = url_clean
     button_text = get_val("Tekst na przycisku")
     target_mode_raw = get_val("Kto powinien")
 

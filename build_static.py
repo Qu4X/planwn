@@ -137,8 +137,8 @@ def regenerate_all_ics():
                     dane_plaskie = json.load(f)
                 ics_text = generuj_ics(dane_plaskie, group_name, academic_calendar=academic_cal)
                 ics_path = os.path.join(CALENDARS_DIR, f"{base_name}.ics")
-                with open(ics_path, "w", encoding="utf-8") as f:
-                    f.write(ics_text)
+                with open(ics_path, "wb") as f:
+                    f.write(ics_text.encode("utf-8") if isinstance(ics_text, str) else ics_text)
                 count += 1
             except Exception as e:
                 logger.error(f"Błąd generowania ICS dla {filename}: {e}")
@@ -451,8 +451,8 @@ def build(limit=None, plan_ids=None, filter_query=None):
                 ics_text = generuj_ics(dane_plaskie, grupa)
                 ics_filename = f"{plan_id_str}_{safe_grupa}.ics"
                 ics_path = os.path.join(CALENDARS_DIR, ics_filename)
-                with open(ics_path, "w", encoding="utf-8") as icsf:
-                    icsf.write(ics_text)
+                with open(ics_path, "wb") as icsf:
+                    icsf.write(ics_text.encode("utf-8") if isinstance(ics_text, str) else ics_text)
 
                 total_groups_processed += 1
 
@@ -521,8 +521,8 @@ def build(limit=None, plan_ids=None, filter_query=None):
                     ics_text = generate_nst_ics(dates_dict, group_name)
                     ics_filename = f"{plan_id_nst}_{safe_group}.ics"
                     ics_path = os.path.join(CALENDARS_DIR, ics_filename)
-                    with open(ics_path, "w", encoding="utf-8") as icsf:
-                        icsf.write(ics_text)
+                    with open(ics_path, "wb") as icsf:
+                        icsf.write(ics_text.encode("utf-8") if isinstance(ics_text, str) else ics_text)
 
                     total_groups_processed += 1
                 except Exception as ge:
@@ -531,10 +531,11 @@ def build(limit=None, plan_ids=None, filter_query=None):
     except Exception as nst_err:
         logger.error(f"Error while processing part-time (NST) plans: {nst_err}")
 
-    # Write plans.json metadata file (merge with existing plans if subset was processed)
+    # Write plans.json metadata file (merge with existing plans only if subset was processed)
     plans_json_path = os.path.join(DATA_DIR, "plans.json")
     existing_plans = {}
-    if os.path.exists(plans_json_path):
+    is_subset = bool(limit or plan_ids or filter_query)
+    if is_subset and os.path.exists(plans_json_path):
         try:
             with open(plans_json_path, "r", encoding="utf-8") as f:
                 existing_data = json.load(f)
@@ -567,12 +568,24 @@ def build(limit=None, plan_ids=None, filter_query=None):
         if raw == res and len(raw) <= 4 and raw.isupper():
             logger.warning(f"⚠️ Unresolved subject abbreviation: '{raw}' - consider adding to subjects_manual.json")
 
+    # Quality gate: abort build if scraping produced too few groups
+    min_required_groups = 1 if (limit or plan_ids or filter_query) else 10
+    if total_groups_processed < min_required_groups:
+        logger.error(
+            f"Quality gate failure: total_groups_processed ({total_groups_processed}) < "
+            f"minimum required ({min_required_groups}). Aborting build."
+        )
+        sys.exit(1)
+
     # Generate cross-reference index files
-    build_cross_reference_indexes(plans_metadata)
+    if not build_cross_reference_indexes(plans_metadata):
+        logger.error("Quality gate failure: Failed to build cross-reference indexes. Aborting build.")
+        sys.exit(1)
 
     elapsed = (datetime.now() - start_time).total_seconds()
     logger.info(f"Build complete in {elapsed:.1f}s!")
     logger.info(f"Summary: {len(plans_metadata['plans'])} plans, {total_groups_processed} group schedules & calendars generated in dist/")
+    return total_groups_processed
 
 
 def _is_same_cycle(

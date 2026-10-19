@@ -102,6 +102,12 @@
       <path fill="currentColor"
         d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
     </symbol>
+    <symbol id="icon-visibility" viewBox="0 -960 960 960">
+      <path d="M480-320q75 0 127.5-52.5T660-500q0-75-52.5-127.5T480-680q-75 0-127.5 52.5T300-500q0 75 52.5 127.5T480-320Zm0-72q-45 0-76.5-31.5T372-500q0-45 31.5-76.5T480-608q45 0 76.5 31.5T588-500q0 45-31.5 76.5T480-392Zm0 192q-146 0-266-81.5T40-500q54-137 174-218.5T480-800q146 0 266 81.5T920-500q-54 137-174 218.5T480-200Z"/>
+    </symbol>
+    <symbol id="icon-visibility_off" viewBox="0 -960 960 960">
+      <path d="m644-428-58-58q9-47-27-88t-93-32l-58-58q17-5 35-7.5t37-2.5q75 0 127.5 52.5T660-500q0 19-2.5 37T644-428Zm128 126-58-56q38-29 67.5-63.5T832-500q-50-101-143.5-160.5T480-720q-29 0-57 4t-55 12l-62-62q41-17 84-25.5t90-8.5q151 0 269 83.5T920-500q-23 59-60.5 109.5T772-302Zm20 246L624-224q-35 11-70.5 17.5T480-200q-151 0-269-83.5T40-500q21-53 53-98.5t77-81.5L56-792l56-56 736 736-56 56ZM222-626q-41 32-73 70.5T98-500q50 101 143.5 160.5T480-280q33 0 65.5-5t60.5-15l-64-64q-15 4-30 6t-32 2q-75 0-127.5-52.5T300-500q0-16 2-31t6-29l-86-66Z"/>
+    </symbol>
   </svg>
 
   <header class="app-header">
@@ -201,17 +207,17 @@
             <use href="#icon-meeting_room"></use>
           </svg> <span class="btn-text">Znajdź wolną salę</span>
         </button>
+        <button id="events-btn" class="btn-secondary btn-sidebar-tool" title="Wydarzenia"
+          style="margin-top: 0.5rem;">
+          <svg class="icon btn-tool-icon" aria-hidden="true">
+            <use href="#icon-event_upcoming"></use>
+          </svg> <span class="btn-text">Wydarzenia</span>
+        </button>
         <button id="calendar-btn" class="btn-secondary btn-sidebar-tool" title="Dodaj do kalendarza"
           style="margin-top: 0.5rem;">
           <svg class="icon btn-tool-icon" aria-hidden="true">
             <use href="#icon-calendar_month"></use>
           </svg> <span class="btn-text">Dodaj do kalendarza</span>
-        </button>
-        <button id="pwa-install-btn" class="btn-secondary btn-sidebar-tool hidden" title="Zainstaluj aplikację"
-          style="margin-top: 0.5rem;">
-          <svg class="icon btn-tool-icon" aria-hidden="true">
-            <use href="#icon-install_mobile"></use>
-          </svg> <span class="btn-text" id="pwa-install-btn-text">Zainstaluj aplikację</span>
         </button>
         <button id="about-app-btn" class="btn-secondary btn-sidebar-tool" title="O aplikacji"
           style="margin-top: 0.5rem;">
@@ -308,6 +314,19 @@
 
     <!-- Calendar Notice / Day Replacement Alert -->
     <div id="calendar-notice" class="calendar-notice hidden"></div>
+
+    <!-- Hidden Lessons Alert Banner -->
+    <div id="hidden-lessons-banner" class="hidden-lessons-banner hidden" role="region" aria-label="Informacja o ukrytych terminach zajęć">
+      <div class="hidden-lessons-banner-content">
+        <svg class="icon" aria-hidden="true" style="width: 1.15em; height: 1.15em; flex-shrink: 0;"><use href="#icon-visibility_off"></use></svg>
+        <span id="hidden-lessons-banner-text">Ukryto terminy zajęć</span>
+      </div>
+      <div class="hidden-lessons-banner-actions">
+        <button type="button" id="preview-hidden-lessons-btn" class="btn-banner-action">Pokaż ukryte</button>
+        <button type="button" id="restore-hidden-lessons-btn" class="btn-banner-action primary">Przywróć wszystkie</button>
+        <button type="button" id="dismiss-hidden-lessons-btn" class="btn-banner-close" aria-label="Zamknij informację" title="Zamknij informację">✕</button>
+      </div>
+    </div>
 
     <!-- Timetable view -->
     <section id="schedule-container" class="schedule-section">
@@ -412,6 +431,10 @@
             <span>Pobierz plik kalendarza (.ics)</span>
           </a>
         </div>
+
+        <p class="calendar-scope-notice" style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 1rem; line-height: 1.4;">
+          * Plik kalendarza i subskrypcja zawierają pełny oficjalny plan grupy bez uwzględnienia terminów ukrytych w przeglądarce.
+        </p>
       </div>
     </div>
   </dialog>
@@ -554,6 +577,30 @@
               <line x1="10" y1="14" x2="21" y2="3"></line>
             </svg>
           </a>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Events List Modal (Wydarzenia) -->
+  <dialog id="events-modal" class="modal-dialog events-modal-dialog" aria-labelledby="events-modal-title" closedby="any">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-header-titles">
+          <span class="cross-modal-badge" style="background: rgba(217, 119, 6, 0.15); color: #d97706;">Kalendarium</span>
+          <h3 id="events-modal-title" style="display: flex; align-items: center; gap: 0.4rem;">
+            <span>📅</span> <span>Wydarzenia</span>
+          </h3>
+        </div>
+        <button id="close-events-modal" class="btn-close" aria-label="Zamknij">
+          <svg class="icon" aria-hidden="true">
+            <use href="#icon-close"></use>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body events-modal-body">
+        <div id="events-modal-list" class="events-modal-list">
+          <!-- Dynamic events list rendered by JS -->
         </div>
       </div>
     </div>

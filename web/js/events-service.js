@@ -278,14 +278,20 @@
       }
 
       if (footerEl && linkEl) {
-        if (event.url) {
-          linkEl.href = event.url;
+        const isValidUrl = typeof event.url === "string" && /^https?:\/\//i.test(event.url.trim());
+        if (isValidUrl) {
+          linkEl.href = event.url.trim();
           const linkTextEl = dialog.querySelector("#event-dialog-link-text") || linkEl.querySelector("span");
           if (linkTextEl) {
             linkTextEl.textContent = event.button_text || event.link_text || "Więcej informacji";
           }
           footerEl.classList.remove("hidden");
         } else {
+          if (typeof linkEl.removeAttribute === "function") {
+            linkEl.removeAttribute("href");
+          } else {
+            delete linkEl.href;
+          }
           footerEl.classList.add("hidden");
         }
       }

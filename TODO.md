@@ -10,7 +10,7 @@ Rejestr decyzji, zaległości i planowanych usprawnień wynikających z modelowa
 - [ ] **Widok zbiorczy dla wszystkich grup**: Dodanie widoku porównawczego (dzień / tydzień) prezentującego zajęcia wszystkich grup danego kierunku i semestru jednocześnie w przejrzystej siatce.
 
 ### 2. Społeczność i integracja studencka (`web/`)
-- [ ] **Czwartkowy komunikat o flankach**: Wyświetlanie w czwartki lekkiego, studenckiego baneru / powiadomienia przypominającego o tradycji integracyjnej (flanki).
+- [x] **Czwartkowy komunikat o flankach**: Wyświetlanie w czwartki lekkiego, studenckiego baneru / powiadomienia przypominającego o tradycji integracyjnej (flanki).
 
 ### 3. Scraping i integracja z Arkturem (`arktur_client.py`, `build_static.py`)
 - [ ] **Inteligentne sprawdzanie aktualizacji (Conditional Scraping)**: Weryfikacja daty publikacji i wersji `[YYYY-MM-DD HH:MM] wer. X` przed pobieraniem pełnej siatki i dziesiątek zapytań AJAX, minimalizując obciążenie serwera Arktura.

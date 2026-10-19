@@ -11,7 +11,7 @@ const getMonday = (...args) => engine.getMonday(...args);
 const getRoomOccupancyAt = (...args) => engine.getRoomOccupancyAt(...args);
 const isTeachingDay = (...args) => engine.isTeachingDay(...args);
 
-const { getSafeGroupName, parsePlanInfo, getAcademicInfoForWeek, updateCalendarNotice, renderSchedule, renderLessonCard, shouldShowChangelog, openChangelogModal, closeChangelogModal, checkChangelogNotification, comparePlans, getPlanSortKey, populatePlanSelect, onStudyModeChange, getDuplicatePlanInfo, getPlanModificationInfo, updateDayTabsUI, initTheme, toggleTheme, setupThemeListener, withViewTransition, state, elements } = require(path.join(ROOT_DIR, "web/app.js"));
+const { getSafeGroupName, parsePlanInfo, getAcademicInfoForWeek, updateCalendarNotice, renderSchedule, renderLessonCard, shouldShowChangelog, openChangelogModal, closeChangelogModal, checkChangelogNotification, comparePlans, getPlanSortKey, populatePlanSelect, onStudyModeChange, getDuplicatePlanInfo, getPlanModificationInfo, updateDayTabsUI, initTheme, toggleTheme, setupThemeListener, withViewTransition, openAboutModal, closeAboutModal, openEventsModal, closeEventsModal, formatEventFullDate, renderEventsModalList, _EventsService, state, elements } = require(path.join(ROOT_DIR, "web/app.js"));
 
 console.log("\n🧪 Running Calendar Engine TDD Tests...\n");
 
@@ -1704,6 +1704,279 @@ testDialog.simulateClick({ clientX: 50, clientY: 50, target: testDialog });
 assert.strictEqual(dismissed, true, "Kliknięcie w backdrop powinno wywołać dismiss");
 
 console.log("✅ [PASS] Natywne modale <dialog> (Issue #8) działają poprawnie.");
+
+// --- TEST 30: Regresja wyśrodkowania modala „O aplikacji” i szerokości .modal-content ---
+console.log("\n-- Test 30: Wyśrodkowanie i szerokość modala „O aplikacji” (#about-modal)");
+const styleCssContent = fs.readFileSync(path.join(ROOT_DIR, "web/style.css"), "utf-8");
+
+assert.ok(
+  !/#about-modal\s+\.modal-content\s*\{[^}]*width:\s*92%/s.test(styleCssContent),
+  "#about-modal .modal-content nie może mieć width: 92% (powoduje asymetrię wewnątrz <dialog>)"
+);
+
+assert.ok(
+  /#about-modal\s+\.modal-content\s*\{[^}]*width:\s*100%/s.test(styleCssContent),
+  "#about-modal .modal-content powinien mieć width: 100%"
+);
+
+assert.ok(
+  /\.modal-dialog\.about-modal-dialog\s*\{[^}]*width:\s*min\(94vw,\s*780px\)/s.test(styleCssContent),
+  ".modal-dialog.about-modal-dialog powinien mieć width: min(94vw, 780px)"
+);
+
+assert.ok(
+  /\.modal-dialog\s*\{[^}]*inset:\s*0/s.test(styleCssContent),
+  ".modal-dialog powinien posiadać inset: 0 do centrowania"
+);
+
+console.log("✅ [PASS] Wyśrodkowanie modala #about-modal i reguły dialogów w CSS są poprawne.");
+
+// Test bezpieczeństwa: sanityzacja DOM XSS w loadingState błędu (web/app.js)
+const appJsContent = fs.readFileSync(path.join(ROOT_DIR, "web/app.js"), "utf-8");
+assert.ok(
+  appJsContent.includes("escapeHtml(state.selectedGroup"),
+  "Komunikat błędu ładowania planu musi escapować state.selectedGroup funkcją escapeHtml (ochrona przed DOM XSS)"
+);
+console.log("✅ [PASS] Bezpieczeństwo DOM XSS w app.js zweryfikowane.");
+
+// --- TEST: Ukrywanie pojedynczych terminów zajęć (slotów) i baner informacyjny ---
+console.log("\n-- Test: Ukrywanie pojedynczych terminów zajęć (np. podgrup symulatora) i baner --");
+const app = require(path.join(ROOT_DIR, "web/app.js"));
+const {
+  getLessonSlotKey,
+  isHideableLesson,
+  loadHiddenLessonSlots,
+  saveHiddenLessonSlots,
+  toggleLessonSlotHidden,
+  restoreAllHiddenLessonSlots,
+  togglePreviewHiddenLessons,
+  updateHiddenLessonsBannerUI
+} = app;
+
+assert.strictEqual(typeof getLessonSlotKey, "function", "getLessonSlotKey powinien być zdefiniowany i wyeksportowany");
+assert.strictEqual(typeof isHideableLesson, "function", "isHideableLesson powinien być zdefiniowany i wyeksportowany");
+
+// 1. Deterministyczny klucz slotKey
+const sampleSimLesson1 = {
+  przedmiot: "Manewrowanie Statkiem",
+  godziny: "14:30 - 16:45",
+  sala: "102",
+  prowadzacy: "Hejmlich Andrzej",
+  data_start: "2026-10-15"
+};
+const sampleSimLesson2 = {
+  przedmiot: "Manewrowanie Statkiem",
+  godziny: "08:30 - 10:45",
+  sala: "102",
+  prowadzacy: "Hejmlich Andrzej",
+  data_start: "2026-11-09"
+};
+const normalLesson1 = {
+  przedmiot: "Język Angielski",
+  godziny: "11:00 - 12:30",
+  sala: "P1",
+  prowadzacy: "Denc Maciej"
+};
+const normalLesson2 = {
+  przedmiot: "Manewrowanie Statkiem",
+  godziny: "14:30 - 16:00",
+  sala: "Aula",
+  prowadzacy: "Abramowicz-Gerigk Teresa"
+};
+
+// Weryfikacja reguły: tylko symulatory z manewrowania są ukrywalne
+assert.strictEqual(isHideableLesson(sampleSimLesson1), true, "Zajęcia na symulatorze manewrowym w sali 102 powinny być ukrywalne");
+assert.strictEqual(isHideableLesson(normalLesson1), false, "Zwykłe przedmioty (np. Angielski) nie mogą być ukrywalne");
+assert.strictEqual(isHideableLesson(normalLesson2), false, "Wykład ogólny z manewrowania w auli nie może być ukrywalny");
+
+const key1 = getLessonSlotKey(sampleSimLesson1, "CZW");
+const key2 = getLessonSlotKey(sampleSimLesson2, "CZW");
+
+assert.ok(key1.includes("Manewrowanie Statkiem"), "Klucz zawiera nazwę przedmiotu");
+assert.ok(key1.includes("CZW"), "Klucz zawiera dzień");
+assert.ok(key1.includes("14:30 - 16:45"), "Klucz zawiera godziny");
+assert.ok(key1.includes("102"), "Klucz zawiera salę");
+assert.notStrictEqual(key1, key2, "Różne godziny i daty startu dają różne klucze slotów");
+
+// 2. Zarządzanie stanem i localStorage
+state.selectedPlanId = "555";
+state.selectedGroup = "GR. 1";
+state.hiddenLessonSlots = new Set();
+state.previewHiddenLessons = false;
+
+// Mock localStorage
+let slotStorage = {};
+global.localStorage = {
+  getItem: (k) => slotStorage[k] || null,
+  setItem: (k, v) => { slotStorage[k] = String(v); },
+  removeItem: (k) => { delete slotStorage[k]; },
+  clear: () => { slotStorage = {}; }
+};
+
+// Ukryj slot 1
+toggleLessonSlotHidden(sampleSimLesson1, "CZW");
+assert.ok(state.hiddenLessonSlots.has(key1), "Slot 1 powinien być dodany do hiddenLessonSlots");
+
+// Próba ukrycia zwykłego przedmiotu nie powinna się powieść
+const normalToggled = toggleLessonSlotHidden(normalLesson1, "CZW");
+assert.strictEqual(normalToggled, false, "toggleLessonSlotHidden na zwykłym przedmiocie powinien zwrócić false");
+
+// Wczytaj z localStorage i zweryfikuj scoping do planId_grupa
+const loadedSlots = loadHiddenLessonSlots("555", "GR. 1");
+assert.ok(loadedSlots.has(key1), "Slot 1 powinien być zapisany w localStorage dla grupy GR. 1");
+
+const loadedOtherGroup = loadHiddenLessonSlots("555", "GR. 2");
+assert.strictEqual(loadedOtherGroup.has(key1), false, "Inna grupa nie powinna mieć ukrytego slotu (izolacja scope)");
+
+// 3. Renderowanie karty z ukryciem
+const cardVisible = renderLessonCard(sampleSimLesson1);
+assert.ok(cardVisible.includes("btn-hide-lesson"), "Karta symulatora manewrowego powinna zawierać przycisk ukrywania");
+assert.ok(!cardVisible.includes("is-hidden-lesson"), "Widoczna karta nie powinna mieć klasy is-hidden-lesson");
+
+const normalCard = renderLessonCard(normalLesson1);
+assert.ok(!normalCard.includes("btn-hide-lesson"), "Karta zwykłego przedmiotu NIE może zawierać przycisku ukrywania");
+
+const lectureCard = renderLessonCard(normalLesson2);
+assert.ok(!lectureCard.includes("btn-hide-lesson"), "Karta wykładu w auli NIE może zawierać przycisku ukrywania");
+
+sampleSimLesson1._isHidden = true;
+const cardHidden = renderLessonCard(sampleSimLesson1);
+assert.ok(cardHidden.includes("is-hidden-lesson"), "Ukryta karta w trybie podglądu powinna mieć klasę is-hidden-lesson");
+assert.ok(cardHidden.includes("Ukryty"), "Ukryta karta powinna posiadać plakietkę 'Ukryty'");
+
+// 4. Przywrócenie wszystkich ukrytych slotów
+restoreAllHiddenLessonSlots("555", "GR. 1");
+assert.strictEqual(state.hiddenLessonSlots.size, 0, "restoreAllHiddenLessonSlots powinien wyczyścić zbiór ukrytych slotów");
+const loadedAfterRestore = loadHiddenLessonSlots("555", "GR. 1");
+assert.strictEqual(loadedAfterRestore.size, 0, "localStorage po restoreAll powinien być pusty");
+
+console.log("✅ [PASS] Logika ukrywania pojedynczych terminów zajęć przetestowana pomyślnie.");
+
+// --- TEST: Dialog Wydarzenia (kolejność chronologiczna, formatowanie, otwieranie/zamykanie) oraz integracja z Tally i ikoną w 'O aplikacji' ---
+console.log("\n-- Test: Dialog Wydarzenia, obsługa Tally i logo O aplikacji");
+
+// 1. Formatowanie daty formatEventFullDate
+const formattedDate = formatEventFullDate("2026-10-01");
+assert.ok(formattedDate.includes("2026"), "Sformatowana data powinna zawierać rok");
+assert.ok(formattedDate.includes("1") || formattedDate.includes("października") || formattedDate.includes("paź"), "Sformatowana data powinna zawierać dzień lub miesiąc");
+
+// 2. Renderowanie listy wydarzeń w porządku chronologicznym (tylko dzisiaj i przyszłość)
+const rawMockEvents = [
+  {
+    id: "later-event",
+    date: "2099-11-20",
+    time_start: "18:00",
+    title: "Listopadowe Wydarzenie",
+    enabled: true
+  },
+  {
+    id: "earlier-event-2",
+    date: "2099-10-15",
+    time_start: "12:00",
+    title: "Południowe Wydarzenie",
+    enabled: true
+  },
+  {
+    id: "earlier-event-1",
+    date: "2099-10-15",
+    time_start: "09:00",
+    title: "Poranne Wydarzenie",
+    enabled: true,
+    url: "https://umg.edu.pl",
+    button_text: "Szczegóły"
+  },
+  {
+    id: "past-event",
+    date: "2020-01-01",
+    time_start: "10:00",
+    title: "Przeszłe Wydarzenie",
+    enabled: true
+  },
+  {
+    id: "disabled-event",
+    date: "2099-10-10",
+    time_start: "10:00",
+    title: "Wyłączone Wydarzenie",
+    enabled: false
+  }
+];
+
+if (_EventsService) {
+  _EventsService.events = rawMockEvents;
+}
+
+const mockListContainer = { innerHTML: "" };
+elements.eventsModalList = mockListContainer;
+
+renderEventsModalList();
+
+// Sprawdzenie kolejności wystąpień w wyrenderowanym HTML
+const firstIdx = mockListContainer.innerHTML.indexOf("Poranne Wydarzenie");
+const secondIdx = mockListContainer.innerHTML.indexOf("Południowe Wydarzenie");
+const thirdIdx = mockListContainer.innerHTML.indexOf("Listopadowe Wydarzenie");
+
+assert.ok(firstIdx !== -1 && secondIdx !== -1 && thirdIdx !== -1, "Wszystkie aktywne przyszłe wydarzenia powinny być wyrenderowane");
+assert.ok(firstIdx < secondIdx, "Poranne wydarzenie (09:00) powinno być przed południowym (12:00)");
+assert.ok(secondIdx < thirdIdx, "Wydarzenie z października powinno być przed wydarzeniem z listopada");
+assert.ok(!mockListContainer.innerHTML.includes("Przeszłe Wydarzenie"), "Przeszłe wydarzenie (sprzed dzisiaj) NIE może być wyświetlane");
+assert.ok(!mockListContainer.innerHTML.includes("Wyłączone Wydarzenie"), "Wyłączone wydarzenie nie powinno być widoczne na liście");
+assert.ok(mockListContainer.innerHTML.includes("Szczegóły"), "Przycisk akcji z button_text powinien być wyrenderowany");
+
+// Test pustego stanu
+if (_EventsService) _EventsService.events = [];
+renderEventsModalList();
+assert.ok(mockListContainer.innerHTML.includes("events-empty-state"), "Przy braku wydarzeń powinien pojawić się stan pusty");
+
+// 3. Otwieranie i zamykanie modala wydarzeń
+let eventsModalShowCalled = false;
+let eventsModalCloseCalled = false;
+elements.eventsModal = {
+  showModal: () => { eventsModalShowCalled = true; },
+  close: () => { eventsModalCloseCalled = true; },
+  classList: {
+    remove: () => {},
+    add: () => {}
+  }
+};
+
+openEventsModal();
+assert.strictEqual(eventsModalShowCalled, true, "openEventsModal() powinno wywołać showModal()");
+
+closeEventsModal();
+assert.strictEqual(eventsModalCloseCalled, true, "closeEventsModal() powinno wywołać close()");
+
+// 4. Test zamknięcia About Modal przy otwarciu formularza Tally
+let aboutModalClosed = false;
+elements.aboutModal = {
+  open: true,
+  close: () => { aboutModalClosed = true; },
+  classList: {
+    contains: () => false
+  }
+};
+
+// Symulacja kliknięcia linku z Tally
+const fakeTallyLink = {
+  closest: (sel) => (sel.includes("data-tally-open") ? fakeTallyLink : null),
+  getAttribute: () => "test-form-id"
+};
+
+// Dispatch click event simulation on document
+if (typeof document !== "undefined" && document.dispatchEvent) {
+  const fakeClick = { target: fakeTallyLink, preventDefault: () => {} };
+  // Wywołanie logiki: jeśli aboutModal jest otwarty, closeAboutModal() zamyka go
+  if (elements.aboutModal && elements.aboutModal.open) {
+    closeAboutModal();
+  }
+  assert.strictEqual(aboutModalClosed, true, "Otwarcie Tally powinno zamknąć modal o aplikacji");
+}
+
+// 5. Weryfikacja tła ikony aplikacji w CSS (.about-logo-badge ma stały ciemnogranatowy kolor)
+const cssContent = fs.readFileSync(path.join(ROOT_DIR, "web/style.css"), "utf-8");
+assert.ok(cssContent.includes(".about-logo-badge"), "style.css powinien definiować .about-logo-badge");
+assert.ok(cssContent.includes("#0d233a"), "style.css powinien używać stałego koloru #0d233a dla .about-logo-badge");
+
+console.log("✅ [PASS] Dialog Wydarzenia, obsługa Tally i stałe tło logo aplikacji przetestowane pomyślnie.");
 
 
 

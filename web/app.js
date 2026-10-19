@@ -159,6 +159,9 @@ const state = {
   selectedDayTab: "ALL",
   dismissedDuplicatePlans: new Set(),
   dismissedModificationPlans: new Set(),
+  hiddenLessonSlots: new Set(),
+  previewHiddenLessons: false,
+  dismissedHiddenLessonsBanner: false,
   theme: typeof localStorage !== "undefined" && localStorage.getItem("umg_theme")
     ? localStorage.getItem("umg_theme")
     : (typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
@@ -192,6 +195,11 @@ const elements = typeof document !== "undefined" ? {
   todayBtn: document.getElementById("today-btn"),
   dayTabs: document.getElementById("day-tabs"),
   calendarNotice: document.getElementById("calendar-notice"),
+  hiddenLessonsBanner: document.getElementById("hidden-lessons-banner"),
+  hiddenLessonsBannerText: document.getElementById("hidden-lessons-banner-text"),
+  previewHiddenLessonsBtn: document.getElementById("preview-hidden-lessons-btn"),
+  restoreHiddenLessonsBtn: document.getElementById("restore-hidden-lessons-btn"),
+  dismissHiddenLessonsBtn: document.getElementById("dismiss-hidden-lessons-btn"),
   loadingState: document.getElementById("loading-state"),
   emptyState: document.getElementById("empty-state"),
   noClassesState: document.getElementById("no-classes-state"),
@@ -232,7 +240,11 @@ const elements = typeof document !== "undefined" ? {
   changelogDate: document.getElementById("changelog-date"),
   changelogFeaturesList: document.getElementById("changelog-features-list"),
   eventDetailsDialog: document.getElementById("event-details-dialog"),
-  closeEventDialogBtn: document.getElementById("close-event-dialog")
+  closeEventDialogBtn: document.getElementById("close-event-dialog"),
+  eventsBtn: document.getElementById("events-btn"),
+  eventsModal: document.getElementById("events-modal"),
+  closeEventsModalBtn: document.getElementById("close-events-modal"),
+  eventsModalList: document.getElementById("events-modal-list")
 } : {};
 
 // Initialize App
@@ -493,6 +505,24 @@ function setupEventListeners() {
     });
   }
 
+  // Hidden lessons banner interactions
+  if (elements.previewHiddenLessonsBtn) {
+    elements.previewHiddenLessonsBtn.addEventListener("click", () => {
+      togglePreviewHiddenLessons();
+    });
+  }
+  if (elements.restoreHiddenLessonsBtn) {
+    elements.restoreHiddenLessonsBtn.addEventListener("click", () => {
+      restoreAllHiddenLessonSlots();
+    });
+  }
+  if (elements.dismissHiddenLessonsBtn) {
+    elements.dismissHiddenLessonsBtn.addEventListener("click", () => {
+      state.dismissedHiddenLessonsBanner = true;
+      updateHiddenLessonsBannerUI();
+    });
+  }
+
   // Calendar Modal
   if (elements.calendarBtn) {
     elements.calendarBtn.addEventListener("click", () => {
@@ -516,6 +546,18 @@ function setupEventListeners() {
       if (window.CrossRef && window.CrossRef.UI) window.CrossRef.UI.closeModal();
     });
   }
+
+  // Events Modal (Wydarzenia)
+  if (elements.eventsBtn) {
+    elements.eventsBtn.addEventListener("click", () => {
+      closeSidebar();
+      openEventsModal();
+    });
+  }
+  if (elements.closeEventsModalBtn) {
+    elements.closeEventsModalBtn.addEventListener("click", closeEventsModal);
+  }
+  if (elements.eventsModal) setupDialogBackdropDismiss(elements.eventsModal, closeEventsModal);
 
   // About App Modal
   if (elements.aboutAppBtn) {
@@ -565,20 +607,26 @@ function setupEventListeners() {
     });
   }
 
-  // Fallback for Tally modal: if Tally embed script is blocked by adblockers, open form directly
+  // Tally feedback / bug report handler: ensure about-modal is closed so popup is not obscured by native dialog Top Layer
   document.addEventListener("click", (e) => {
     const tallyLink = e.target.closest("a[data-tally-open], a[href*='tally-open=']");
-    if (tallyLink && (!window.Tally || typeof window.Tally.openPopup !== "function")) {
-      e.preventDefault();
-      const formId = tallyLink.getAttribute("data-tally-open") || "2E2vNj";
-      window.open(`https://tally.so/r/${formId}`, "_blank", "noopener");
+    if (tallyLink) {
+      if (elements.aboutModal && (elements.aboutModal.open || !elements.aboutModal.classList.contains("hidden"))) {
+        closeAboutModal();
+      }
+      if (!window.Tally || typeof window.Tally.openPopup !== "function") {
+        e.preventDefault();
+        const formId = tallyLink.getAttribute("data-tally-open") || "2E2vNj";
+        window.open(`https://tally.so/r/${formId}`, "_blank", "noopener");
+      }
     }
-  });
+  }, true);
 
   // Global Escape key handler to close any active modal
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       closeAboutModal();
+      closeEventsModal();
       if (window.CrossRef && window.CrossRef.UI) window.CrossRef.UI.closeModal();
       closeCalendarModal();
       closeChangelogModal();
@@ -643,9 +691,25 @@ function setupEventListeners() {
     });
   }
 
-  // Delegated clicks inside Schedule Cards (Teachers and Rooms)
+  // Delegated clicks inside Schedule Cards (Teachers, Rooms, and Hide Lesson)
   if (elements.scheduleContent) {
     elements.scheduleContent.addEventListener("click", (e) => {
+      const hideBtn = e.target.closest(".btn-hide-lesson");
+      if (hideBtn) {
+        e.stopPropagation();
+        const slotKey = hideBtn.dataset.slotKey;
+        if (slotKey) {
+          if (!state.hiddenLessonSlots) state.hiddenLessonSlots = new Set();
+          if (state.hiddenLessonSlots.has(slotKey)) {
+            state.hiddenLessonSlots.delete(slotKey);
+          } else {
+            state.hiddenLessonSlots.add(slotKey);
+          }
+          saveHiddenLessonSlots(state.selectedPlanId, state.selectedGroup, state.hiddenLessonSlots);
+          renderSchedule();
+        }
+        return;
+      }
       const roomBtn = e.target.closest(".lesson-room-btn");
       if (roomBtn && roomBtn.dataset.room) {
         e.stopPropagation();
@@ -709,13 +773,13 @@ function setupEventListeners() {
 }
 
 function openSidebar() {
-  elements.appSidebar.classList.add("open");
-  elements.sidebarBackdrop.classList.remove("hidden");
+  if (elements.appSidebar) elements.appSidebar.classList.add("open");
+  if (elements.sidebarBackdrop) elements.sidebarBackdrop.classList.remove("hidden");
 }
 
 function closeSidebar() {
-  elements.appSidebar.classList.remove("open");
-  elements.sidebarBackdrop.classList.add("hidden");
+  if (elements.appSidebar) elements.appSidebar.classList.remove("open");
+  if (elements.sidebarBackdrop) elements.sidebarBackdrop.classList.add("hidden");
 }
 
 // Load metadata: plans and groups
@@ -1096,6 +1160,139 @@ function getSafeGroupName(group) {
   return group ? String(group).replace(/[^\w-]/g, '_') : '';
 }
 
+// --- Hidden Lesson Slots Management ---
+
+// Określa, czy dany kafelek zajęć podlega ukrywaniu (dotyczy wyłącznie symulatorów z manewrowania statkiem)
+function isHideableLesson(lesson) {
+  if (!lesson) return false;
+  const p = (lesson.przedmiot || "").toLowerCase();
+  const rawP = (lesson.raw_przedmiot || "").toLowerCase();
+  const room = (lesson.sala || "").toLowerCase();
+
+  const isManeuvering = p.includes("manewrowani") || rawP.includes("manewrowani") || rawP === "ms" || p.includes("sym-man") || rawP.includes("sym-man");
+  if (!isManeuvering) return false;
+
+  // Wykluczamy tradycyjny wykład ogólny w auli (nie jest podgrupą symulatorową)
+  if (room.includes("aula") || room.includes("audytorium")) {
+    return false;
+  }
+
+  return true;
+}
+
+function getLessonSlotKey(lesson, day = null) {
+  if (!lesson) return "";
+  const baseDay = day || lesson.sourceDay || lesson.day || "PON";
+  const p = (lesson.przedmiot || "").trim();
+  const g = (lesson.godziny || "").trim();
+  const s = (lesson.sala || "").trim();
+  const w = (lesson.prowadzacy || "").trim();
+  const d = (lesson.data_start || "").trim();
+  return `${baseDay}__${p}__${g}__${s}__${w}__${d}`;
+}
+
+function getHiddenSlotsStorageKey(planId, group) {
+  const safeGroup = getSafeGroupName(group);
+  return `planwn_hidden_slots_${planId}_${safeGroup}`;
+}
+
+function loadHiddenLessonSlots(planId, group) {
+  if (!planId || !group || typeof localStorage === "undefined") return new Set();
+  try {
+    const raw = localStorage.getItem(getHiddenSlotsStorageKey(planId, group));
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? new Set(arr) : new Set();
+  } catch (e) {
+    console.error("Błąd odczytu ukrytych slotów:", e);
+    return new Set();
+  }
+}
+
+function saveHiddenLessonSlots(planId, group, slotsSet) {
+  if (!planId || !group || typeof localStorage === "undefined") return;
+  try {
+    const key = getHiddenSlotsStorageKey(planId, group);
+    if (!slotsSet || slotsSet.size === 0) {
+      localStorage.removeItem(key);
+    } else {
+      localStorage.setItem(key, JSON.stringify(Array.from(slotsSet)));
+    }
+  } catch (e) {
+    console.error("Błąd zapisu ukrytych slotów:", e);
+  }
+}
+
+function toggleLessonSlotHidden(lesson, day = null, forceState = null) {
+  if (!lesson || !isHideableLesson(lesson)) return false;
+  const slotKey = getLessonSlotKey(lesson, day);
+  if (!state.hiddenLessonSlots) {
+    state.hiddenLessonSlots = new Set();
+  }
+  const shouldHide = forceState !== null ? forceState : !state.hiddenLessonSlots.has(slotKey);
+  if (shouldHide) {
+    state.hiddenLessonSlots.add(slotKey);
+  } else {
+    state.hiddenLessonSlots.delete(slotKey);
+  }
+  saveHiddenLessonSlots(state.selectedPlanId, state.selectedGroup, state.hiddenLessonSlots);
+  return shouldHide;
+}
+
+function restoreAllHiddenLessonSlots(planId = state.selectedPlanId, group = state.selectedGroup) {
+  if (state.hiddenLessonSlots) {
+    state.hiddenLessonSlots.clear();
+  } else {
+    state.hiddenLessonSlots = new Set();
+  }
+  state.previewHiddenLessons = false;
+  saveHiddenLessonSlots(planId, group, state.hiddenLessonSlots);
+  if (typeof updateHiddenLessonsBannerUI === "function") {
+    updateHiddenLessonsBannerUI();
+  }
+  if (typeof renderSchedule === "function" && state.scheduleData) {
+    renderSchedule();
+  }
+}
+
+function togglePreviewHiddenLessons() {
+  state.previewHiddenLessons = !state.previewHiddenLessons;
+  if (typeof updateHiddenLessonsBannerUI === "function") {
+    updateHiddenLessonsBannerUI();
+  }
+  if (typeof renderSchedule === "function" && state.scheduleData) {
+    renderSchedule();
+  }
+}
+
+function formatHiddenCount(count) {
+  if (count === 1) return "1 ukryty termin zajęć";
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+    return `${count} ukryte terminy zajęć`;
+  }
+  return `${count} ukrytych terminów zajęć`;
+}
+
+function updateHiddenLessonsBannerUI() {
+  if (!elements.hiddenLessonsBanner) return;
+  const count = state.hiddenLessonSlots ? state.hiddenLessonSlots.size : 0;
+  if (count === 0 || state.dismissedHiddenLessonsBanner) {
+    elements.hiddenLessonsBanner.classList.add("hidden");
+    return;
+  }
+
+  elements.hiddenLessonsBanner.classList.remove("hidden");
+  if (elements.hiddenLessonsBannerText) {
+    elements.hiddenLessonsBannerText.textContent = `${formatHiddenCount(count)} w planie grupy`;
+  }
+  if (elements.previewHiddenLessonsBtn) {
+    elements.previewHiddenLessonsBtn.textContent = state.previewHiddenLessons ? "Ukryj ponownie" : "Pokaż ukryte";
+    elements.previewHiddenLessonsBtn.setAttribute("aria-pressed", state.previewHiddenLessons ? "true" : "false");
+  }
+}
+
 // Load schedule JSON for selected plan + group
 async function loadSchedule() {
   if (!state.selectedPlanId || !state.selectedGroup) return;
@@ -1114,6 +1311,11 @@ async function loadSchedule() {
     state.scheduleData = await response.json();
     elements.loadingState.classList.add("hidden");
 
+    // Load hidden slots scoped to planId + group
+    state.hiddenLessonSlots = loadHiddenLessonSlots(state.selectedPlanId, state.selectedGroup);
+    state.previewHiddenLessons = false;
+    state.dismissedHiddenLessonsBanner = false;
+
     // Smart initial week: jump to first active week if outside semester
     resolveInitialWeekOffset(state.scheduleData);
 
@@ -1121,7 +1323,7 @@ async function loadSchedule() {
     renderSchedule();
   } catch (err) {
     console.error(err);
-    elements.loadingState.innerHTML = `<p style="color: #ef4444;">Brak danych planu dla grupy ${state.selectedGroup}.</p>`;
+    elements.loadingState.innerHTML = `<p style="color: #ef4444;">Brak danych planu dla grupy ${escapeHtml(state.selectedGroup || "")}.</p>`;
   }
 }
 
@@ -1573,8 +1775,27 @@ function renderSchedule() {
   const weekResolution = engine ? engine.resolveWeekSchedule(targetMonday, state.scheduleData, scheduleOptions) : {};
   for (const day of DNI_TYGODNIA) {
     const dayStatus = weekResolution[day] || { lessons: [] };
+    const rawLessons = dayStatus.lessons || [];
+    const processedLessons = [];
+
+    for (const l of rawLessons) {
+      const baseDay = l.sourceDay || day;
+      const slotKey = getLessonSlotKey(l, baseDay);
+      const isSlotHidden = Boolean(isHideableLesson(l) && state.hiddenLessonSlots && state.hiddenLessonSlots.has(slotKey));
+
+      if (isSlotHidden) {
+        if (state.previewHiddenLessons) {
+          l._isHidden = true;
+          processedLessons.push(l);
+        }
+      } else {
+        l._isHidden = false;
+        processedLessons.push(l);
+      }
+    }
+
     filteredSchedule[day] = {
-      lessons: dayStatus.lessons || [],
+      lessons: processedLessons,
       swap: dayStatus.status === "daySwap" ? { replaceWith: dayStatus.swapReplaceWith, note: dayStatus.swapNote } : null,
       holiday: dayStatus.status === "holiday" ? dayStatus.message : null,
       date: dayStatus.dateObj,
@@ -1583,11 +1804,12 @@ function renderSchedule() {
       message: dayStatus.message,
       baseDayPreview: dayStatus.baseDayPreview
     };
-    totalLessonsInWeek += (dayStatus.lessons || []).length;
+    totalLessonsInWeek += processedLessons.length;
   }
 
   // Update day tabs based on filteredSchedule and current view mode
   updateDayTabsUI(filteredSchedule);
+  updateHiddenLessonsBannerUI();
 
   const iconEl = document.getElementById("no-classes-icon");
   const titleEl = document.getElementById("no-classes-title");
@@ -1748,7 +1970,7 @@ function renderSchedule() {
         ${swapBadge}
       </div>
       <div class="lessons-list">
-        ${lessons.length > 0 ? lessons.map((l) => renderLessonCard(l, targetMonday)).join("") : emptyLessonsNotice}
+        ${lessons.length > 0 ? lessons.map((l) => renderLessonCard(l, targetMonday, day)).join("") : emptyLessonsNotice}
       </div>
       ${eventsHtml}
     </div>`;
@@ -1802,7 +2024,7 @@ function renderSchedule() {
         </div>
         <div class="grid-lessons-list">
           ${lessons.length > 0
-          ? lessons.map((l) => renderLessonCard(l, targetMonday)).join("")
+          ? lessons.map((l) => renderLessonCard(l, targetMonday, day)).join("")
           : emptyDayContent
         }
         </div>
@@ -1815,13 +2037,34 @@ function renderSchedule() {
   elements.scheduleContent.innerHTML = html;
 }
 
-function renderLessonCard(lesson, targetMonday = null) {
+function renderLessonCard(lesson, targetMonday = null, day = null) {
   const safeTitle = escapeHtml(lesson.przedmiot || "Zajęcia");
   const safeTime = escapeHtml(lesson.godziny || "");
   const rawRoom = (lesson.sala || "").trim();
   const safeRoom = escapeHtml(rawRoom || "OL");
   const rawTeacher = (lesson.prowadzacy || "").trim();
   const safeTeacher = escapeHtml(rawTeacher);
+
+  const baseDay = day || lesson.sourceDay || lesson.day || "PON";
+  const slotKey = getLessonSlotKey(lesson, baseDay);
+  const isHidden = Boolean(lesson._isHidden);
+  const isHiddenClass = isHidden ? " is-hidden-lesson" : "";
+
+  const canHide = isHideableLesson(lesson);
+  const isSlotInSet = Boolean(state.hiddenLessonSlots && state.hiddenLessonSlots.has(slotKey));
+  const hideBtnIcon = (isHidden || isSlotInSet) ? "#icon-visibility" : "#icon-visibility_off";
+  const hideBtnTitle = (isHidden || isSlotInSet) ? "Przywróć ten termin zajęć" : "Ukryj ten termin zajęć";
+  const hideBtnAria = (isHidden || isSlotInSet) ? "Przywróć zajęcia" : "Ukryj zajęcia";
+
+  const hideBtnHtml = canHide ? `
+    <button type="button" class="btn-hide-lesson" data-slot-key="${escapeHtml(slotKey)}" data-day="${escapeHtml(baseDay)}" title="${hideBtnTitle}" aria-label="${hideBtnAria}">
+      <svg class="icon" aria-hidden="true"><use href="${hideBtnIcon}"></use></svg>
+    </button>
+  ` : "";
+
+  const hiddenBadge = isHidden
+    ? `<span class="hidden-lesson-badge" title="Ten termin zajęć jest ukryty w Twoim widoku">Ukryty</span>`
+    : "";
 
   const targetMon = targetMonday || getWeekMonday(state.weekOffset);
   const prog = getLessonProgress(lesson, lesson.sourceDay || "PON", targetMon, lesson.lessonDate || null);
@@ -1852,8 +2095,15 @@ function renderLessonCard(lesson, targetMonday = null) {
   const formClass = lesson.forma ? ` form-${escapeHtml(lesson.forma)}` : "";
 
   return `
-    <div class="lesson-card${formClass}">
-      <div class="lesson-title">${safeTitle}</div>
+    <div class="lesson-card${formClass}${isHiddenClass}" data-slot-key="${escapeHtml(slotKey)}" data-day="${escapeHtml(baseDay)}">
+      <div class="lesson-header-row">
+        <div class="lesson-title">${safeTitle}</div>
+        ${(canHide || hiddenBadge) ? `
+        <div class="lesson-card-actions">
+          ${hiddenBadge}
+          ${hideBtnHtml}
+        </div>` : ""}
+      </div>
       <div class="lesson-time">${safeTime}</div>
       <div class="lesson-room-wrapper">${roomHtml}${badgeHtml}</div>
       <div class="lesson-footer">
@@ -1972,6 +2222,127 @@ function closeAboutModal() {
     elements.aboutModal.close();
   } else {
     elements.aboutModal.classList.add("hidden");
+  }
+}
+
+function formatEventFullDate(dateISO) {
+  if (!dateISO) return "";
+  try {
+    const parts = dateISO.split("-");
+    if (parts.length === 3) {
+      const dt = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      let formatted = dt.toLocaleDateString("pl-PL", {
+        weekday: "short",
+        day: "numeric",
+        month: "long",
+        year: "numeric"
+      });
+      return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+    }
+  } catch (_) {}
+  return dateISO;
+}
+
+function renderEventsModalList() {
+  if (!elements.eventsModalList) return;
+  const events = (_EventsService && Array.isArray(_EventsService.events)) ? _EventsService.events : [];
+  const todayISO = formatDateISO(new Date());
+  const activeEvents = events
+    .filter(ev => ev && ev.enabled !== false && (!ev.date || ev.date >= todayISO))
+    .sort((a, b) => (a.date || "").localeCompare(b.date || "") || (a.time_start || "").localeCompare(b.time_start || ""));
+
+  if (activeEvents.length === 0) {
+    elements.eventsModalList.innerHTML = `<div class="events-empty-state" style="text-align:center; padding: 2rem 1rem; color: var(--text-secondary);">Brak zaplanowanych nadchodzących wydarzeń.</div>`;
+    return;
+  }
+
+  const itemsHtml = activeEvents.map(event => {
+    const theme = _EventsService && typeof _EventsService.getThemeDetails === "function"
+      ? _EventsService.getThemeDetails(event)
+      : { badge: "Wydarzenie", icon: "📌", color: "#3b82f6", type: "info" };
+
+    const dateFormatted = formatEventFullDate(event.date);
+
+    const metaParts = [];
+    if (event.time_start) {
+      const timeStr = event.time_end ? `${escapeHtml(event.time_start)} – ${escapeHtml(event.time_end)}` : escapeHtml(event.time_start);
+      metaParts.push(`<span>⏰ ${timeStr}</span>`);
+    }
+    if (event.location) {
+      metaParts.push(`<span>📍 ${escapeHtml(event.location)}</span>`);
+    }
+    const metaHtml = metaParts.length > 0 ? `<div class="events-modal-item-meta">${metaParts.join(" &bull; ")}</div>` : "";
+
+    const descHtml = event.description
+      ? `<p class="events-modal-item-desc">${escapeHtml(event.description)}</p>`
+      : "";
+
+    let targetLabel = "";
+    if (event.target && typeof event.target === "object") {
+      const parts = [];
+      if (event.target.mode === "stacjonarne") parts.push("Stacjonarne");
+      else if (event.target.mode === "niestacjonarne") parts.push("Niestacjonarne");
+      if (event.target.degree === 1) parts.push("I st.");
+      else if (event.target.degree === 2) parts.push("II st.");
+      if (parts.length > 0) targetLabel = parts.join(" • ");
+    }
+    const targetHtml = targetLabel
+      ? `<div class="events-modal-item-target"><span>🎯 ${escapeHtml(targetLabel)}</span></div>`
+      : "";
+
+    const isValidUrl = typeof event.url === "string" && /^https?:\/\//i.test(event.url.trim());
+    const actionBtn = isValidUrl
+      ? `<div class="events-modal-item-actions">
+           <a href="${escapeHtml(event.url.trim())}" class="btn-primary events-modal-item-btn" target="_blank" rel="noopener noreferrer">
+             <span>${escapeHtml(event.button_text || "Więcej informacji")}</span>
+             <span aria-hidden="true">↗</span>
+           </a>
+         </div>`
+      : "";
+
+    return `
+      <article class="events-modal-item" style="--event-accent-color: ${escapeHtml(theme.color)};">
+        <div class="events-modal-item-header">
+          <span class="event-badge event-theme-${escapeHtml(theme.type)}">${escapeHtml(theme.badge)}</span>
+          <span class="events-modal-item-date">${escapeHtml(dateFormatted)}</span>
+        </div>
+        <h4 class="events-modal-item-title">
+          <span class="events-modal-item-icon" aria-hidden="true">${escapeHtml(theme.icon)}</span>
+          <span>${escapeHtml(event.title)}</span>
+        </h4>
+        ${metaHtml}
+        ${descHtml}
+        ${targetHtml}
+        ${actionBtn}
+      </article>
+    `.trim();
+  }).join("\n");
+
+  elements.eventsModalList.innerHTML = itemsHtml;
+}
+
+function openEventsModal() {
+  if (!elements.eventsModal) return;
+  closeSidebar();
+  renderEventsModalList();
+  if (typeof elements.eventsModal.showModal === "function") {
+    elements.eventsModal.showModal();
+  } else {
+    elements.eventsModal.classList.remove("hidden");
+  }
+  if (_EventsService && typeof _EventsService.loadEvents === "function" && !_EventsService.loaded) {
+    _EventsService.loadEvents("data/events.json").then(() => {
+      renderEventsModalList();
+    }).catch(() => {});
+  }
+}
+
+function closeEventsModal() {
+  if (!elements.eventsModal) return;
+  if (typeof elements.eventsModal.close === "function") {
+    elements.eventsModal.close();
+  } else {
+    elements.eventsModal.classList.add("hidden");
   }
 }
 
@@ -2329,9 +2700,21 @@ if (typeof module !== "undefined" && module.exports) {
     closeCalendarModal,
     openAboutModal,
     closeAboutModal,
+    openEventsModal,
+    closeEventsModal,
+    formatEventFullDate,
+    renderEventsModalList,
     openPwaModal,
     closeIosModal,
     setupDialogBackdropDismiss,
+    getLessonSlotKey,
+    isHideableLesson,
+    loadHiddenLessonSlots,
+    saveHiddenLessonSlots,
+    toggleLessonSlotHidden,
+    restoreAllHiddenLessonSlots,
+    togglePreviewHiddenLessons,
+    updateHiddenLessonsBannerUI,
     state,
     elements
   };

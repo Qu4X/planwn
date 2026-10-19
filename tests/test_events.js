@@ -177,7 +177,21 @@ EventsService.loadEvents("mock-url", fakeFetchSuccess).then(async (events) => {
 
   EventsService.closeEventModal();
   assert.strictEqual(modalClosed, true, "closeEventModal powinien wywołać dialog.close()");
-  console.log("✅ [PASS] getEventById oraz openEventModal / closeEventModal działają poprawnie (w tym obsługa button_text).");
+
+  // Test bezpieczeństwa URL: odrzucenie javascript: i nieobsługiwanych schematów
+  EventsService.events.push({
+    id: "test-xss-url",
+    date: "2026-10-01",
+    title: "Atak XSS",
+    url: "javascript:alert(1)"
+  });
+  EventsService.openEventModal("test-xss-url");
+  const footerEl = mockDialog.querySelector("#event-dialog-footer");
+  const linkEl = mockDialog.querySelector("#event-dialog-link");
+  assert.strictEqual(footerEl.classList.contains("hidden"), true, "Link z javascript: powinien ukryć footer");
+  assert.notStrictEqual(linkEl.href, "javascript:alert(1)", "Link z javascript: nie może być przypisany do href");
+
+  console.log("✅ [PASS] getEventById oraz openEventModal / closeEventModal działają poprawnie (w tym obsługa button_text i ochrona URL).");
 
   // --- TEST 7: Presety motywów party i flanki ---
   console.log("\n-- Test 7: Rozróżnienie presetów party (🎉, fiolet) i flanki (🍻, złoty)");
