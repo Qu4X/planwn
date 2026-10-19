@@ -1,3 +1,5 @@
+/STANDARDS_AUDIT.md
+
 # Skrypty testowe i zrzuty
 /test_scrapper.py
 /scrapper_test.py
@@ -19,4 +21,4 @@ temp/
 scratch/
 .scratch/
 cache_nst_pdf/
-architecture-review-*.html
+architecture-review-*.html
