@@ -1,6 +1,6 @@
 {
   "name": "planwn",
-  "version": "3.11.0",
+  "version": "3.11.1",
   "description": "Nowoczesny, responsywny plan zajęć dla studentów Wydziału Nawigacyjnego Uniwersytetu Morskiego w Gdyni",
   "private": true,
   "scripts": {
