@@ -921,7 +921,8 @@ with tempfile.TemporaryDirectory() as tmp_dist:
              patch("build_static.pobierz_liste_planow", return_value={"Transport Morski": "999"}), \
              patch("build_static.pobierz_plany_w_modyfikacji", return_value=[]), \
              patch("build_static.pobierz_surowy_plan", return_value=("<html></html>", [])), \
-             patch("build_static.fetch_nst_plans_list", return_value=[]):
+             patch("build_static.fetch_nst_plans_list", return_value=[]), \
+             patch("build_static.restore_nst_plans_from_production", return_value=({}, 0)):
             build_static.build()
         check("Quality gate: build() przerywa z kodem 1 przy braku przetworzonych grup", False, "build() zakończył się bez błędu (0 grup!)")
     except SystemExit as se:
@@ -993,6 +994,310 @@ try:
 finally:
     if os.path.exists(tmp_path):
         os.remove(tmp_path)
+
+
+# ── 32. NST query params resilience & plans.json preservation ────────────────
+print("\n-- 32. NST query params resilience & plans.json preservation --------")
+from unittest.mock import MagicMock
+mock_session = MagicMock()
+mock_resp = MagicMock()
+mock_resp.text = """
+<table>
+  <tr>
+    <td><a class="link_powrot" href="pliki_nst/TiL_I.pdf?idp=yq3yfh">TiL rok I</a></td>
+    <td></td>
+    <td>2026-10-20 12:00:00</td>
+  </tr>
+</table>
+"""
+mock_session.get.return_value = mock_resp
+nst_parsed_plans = fetch_nst_plans_list(session=mock_session)
+check("fetch_nst_plans_list extracts plans with query params", len(nst_parsed_plans) == 1)
+if nst_parsed_plans:
+    check("plan id stripped of query params and extension", nst_parsed_plans[0]["id"] == "TiL_I")
+    check("plan filename stripped of query params", nst_parsed_plans[0]["filename"] == "TiL_I.pdf")
+    check("plan pdf_url includes query params", "idp=yq3yfh" in nst_parsed_plans[0]["pdf_url"])
+
+# 32b. plans.json preservation on empty NST scrape during full build (when local schedule files exist)
+with tempfile.TemporaryDirectory() as tmp_dist:
+    tmp_data = os.path.join(tmp_dist, "data")
+    tmp_sched = os.path.join(tmp_data, "schedules")
+    tmp_cal = os.path.join(tmp_dist, "calendars")
+    os.makedirs(tmp_sched, exist_ok=True)
+    os.makedirs(tmp_cal, exist_ok=True)
+    existing_plans_json = {
+        "plans": {
+            "nst_TiL_I": {
+                "name": "TiL rok I",
+                "clean_name": "TiL rok I (niestacjonarne)",
+                "mode": "niestacjonarne",
+                "groups": ["GR. 1"]
+            }
+        }
+    }
+    with open(os.path.join(tmp_data, "plans.json"), "w", encoding="utf-8") as pf:
+        json.dump(existing_plans_json, pf)
+    with open(os.path.join(tmp_sched, "nst_TiL_I_GR__1.json"), "w", encoding="utf-8") as sf:
+        sf.write('{"2026-10-03": []}')
+
+    with patch("build_static.DIST_DIR", tmp_dist), \
+         patch("build_static.DATA_DIR", tmp_data), \
+         patch("build_static.SCHEDULES_DIR", tmp_sched), \
+         patch("build_static.CALENDARS_DIR", tmp_cal), \
+         patch("build_static.setup_dist_directories"), \
+         patch("build_static.pobierz_liste_planow", return_value={"Transport Morski": "999"}), \
+         patch("build_static.pobierz_plany_w_modyfikacji", return_value=[]), \
+         patch("build_static.pobierz_surowy_plan", return_value=("<html></html>", [f"GR. {i}" for i in range(15)])), \
+         patch("build_static.przetworz_plan_na_grafike", return_value=({"PON": {}}, 1, 1)), \
+         patch("build_static.fetch_nst_plans_list", return_value=[]), \
+         patch("build_static.build_cross_reference_indexes", return_value=True):
+        build_static.build()
+
+    with open(os.path.join(tmp_data, "plans.json"), "r", encoding="utf-8") as pf:
+        resulting_plans = json.load(pf)["plans"]
+    check("Full build preserves existing NST plans when NST scrape is empty and files exist", "nst_TiL_I" in resulting_plans)
+
+# 32c. restore_nst_plans_from_production unit test
+with tempfile.TemporaryDirectory() as tmp_dist:
+    tmp_data = os.path.join(tmp_dist, "data")
+    tmp_sched = os.path.join(tmp_data, "schedules")
+    tmp_cal = os.path.join(tmp_dist, "calendars")
+    os.makedirs(tmp_sched, exist_ok=True)
+    os.makedirs(tmp_cal, exist_ok=True)
+
+    mock_prod_session = MagicMock()
+    mock_plans_resp = MagicMock()
+    mock_plans_resp.status_code = 200
+    mock_plans_resp.json.return_value = {
+        "plans": {
+            "nst_TM_III": {
+                "name": "TM rok III",
+                "mode": "niestacjonarne",
+                "groups": ["GR. 01"]
+            },
+            "123": {
+                "name": "Stacjonarny",
+                "mode": "stacjonarne",
+                "groups": ["GR. 1"]
+            }
+        }
+    }
+    mock_sched_resp = MagicMock()
+    mock_sched_resp.status_code = 200
+    mock_sched_resp.text = '{"2026-10-10": []}'
+
+    mock_cal_resp = MagicMock()
+    mock_cal_resp.status_code = 200
+    mock_cal_resp.content = b"BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n"
+
+    def mock_get(url, *args, **kwargs):
+        if "plans.json" in url:
+            return mock_plans_resp
+        elif url.endswith(".json"):
+            return mock_sched_resp
+        elif url.endswith(".ics"):
+            return mock_cal_resp
+        m = MagicMock()
+        m.status_code = 404
+        return m
+
+    mock_prod_session.get.side_effect = mock_get
+
+    with patch("build_static.SCHEDULES_DIR", tmp_sched), \
+         patch("build_static.CALENDARS_DIR", tmp_cal):
+        restored, r_count = build_static.restore_nst_plans_from_production(
+            production_base_url="https://fake.prod/planwn",
+            session=mock_prod_session
+        )
+
+    check("restore_nst_plans_from_production returns NST plans", "nst_TM_III" in restored)
+    check("restore_nst_plans_from_production ignores stationary plans", "123" not in restored)
+    check("restore_nst_plans_from_production restores correct group count", r_count == 1)
+    check("restore_nst_plans_from_production saved schedule file", os.path.exists(os.path.join(tmp_sched, "nst_TM_III_GR__01.json")))
+    check("restore_nst_plans_from_production saved calendar file", os.path.exists(os.path.join(tmp_cal, "nst_TM_III_GR__01.ics")))
+
+# 32d. Quality Gate for NST: aborts full build if 0 NST groups and fallback failed
+with tempfile.TemporaryDirectory() as tmp_dist:
+    tmp_data = os.path.join(tmp_dist, "data")
+    tmp_sched = os.path.join(tmp_data, "schedules")
+    tmp_cal = os.path.join(tmp_dist, "calendars")
+    os.makedirs(tmp_sched, exist_ok=True)
+    os.makedirs(tmp_cal, exist_ok=True)
+
+    try:
+        with patch("build_static.DIST_DIR", tmp_dist), \
+             patch("build_static.DATA_DIR", tmp_data), \
+             patch("build_static.SCHEDULES_DIR", tmp_sched), \
+             patch("build_static.CALENDARS_DIR", tmp_cal), \
+             patch("build_static.setup_dist_directories"), \
+             patch("build_static.pobierz_liste_planow", return_value={"Transport Morski": "999"}), \
+             patch("build_static.pobierz_plany_w_modyfikacji", return_value=[]), \
+             patch("build_static.pobierz_surowy_plan", return_value=("<html></html>", [f"GR. {i}" for i in range(15)])), \
+             patch("build_static.przetworz_plan_na_grafike", return_value=({"PON": {}}, 1, 1)), \
+             patch("build_static.fetch_nst_plans_list", return_value=[]), \
+             patch("build_static.restore_nst_plans_from_production", return_value=({}, 0)), \
+             patch("build_static.build_cross_reference_indexes", return_value=True):
+            build_static.build()
+        check("Quality gate: build() przerywa z kodem 1 przy braku planów NST w pełnym buildzie", False, "build() nie zgłosił błędu!")
+    except SystemExit as se:
+        check("Quality gate: build() przerywa z kodem 1 przy braku planów NST w pełnym buildzie", se.code == 1, f"exit code: {se.code}")
+
+# 32e. Successful build using production fallback when scraper fails
+with tempfile.TemporaryDirectory() as tmp_dist:
+    tmp_data = os.path.join(tmp_dist, "data")
+    tmp_sched = os.path.join(tmp_data, "schedules")
+    tmp_cal = os.path.join(tmp_dist, "calendars")
+    os.makedirs(tmp_sched, exist_ok=True)
+    os.makedirs(tmp_cal, exist_ok=True)
+
+    fallback_plan = {
+        "nst_TiL_I": {
+            "name": "TiL rok I",
+            "clean_name": "TiL rok I (niestacjonarne)",
+            "mode": "niestacjonarne",
+            "groups": ["GR. 1"]
+        }
+    }
+    with patch("build_static.DIST_DIR", tmp_dist), \
+         patch("build_static.DATA_DIR", tmp_data), \
+         patch("build_static.SCHEDULES_DIR", tmp_sched), \
+         patch("build_static.CALENDARS_DIR", tmp_cal), \
+         patch("build_static.setup_dist_directories"), \
+         patch("build_static.pobierz_liste_planow", return_value={"Transport Morski": "999"}), \
+         patch("build_static.pobierz_plany_w_modyfikacji", return_value=[]), \
+         patch("build_static.pobierz_surowy_plan", return_value=("<html></html>", [f"GR. {i}" for i in range(15)])), \
+         patch("build_static.przetworz_plan_na_grafike", return_value=({"PON": {}}, 1, 1)), \
+         patch("build_static.fetch_nst_plans_list", return_value=[]), \
+         patch("build_static.restore_nst_plans_from_production", return_value=(fallback_plan, 1)), \
+         patch("build_static.build_cross_reference_indexes", return_value=True):
+        build_static.build()
+
+    with open(os.path.join(tmp_data, "plans.json"), "r", encoding="utf-8") as pf:
+        resulting_plans = json.load(pf)["plans"]
+    check("Full build succeeds and recovers NST plans via production fallback", "nst_TiL_I" in resulting_plans)
+
+
+# ── 33. Stationary fallback & Update watcher tests ────────────────────────────
+print("\n-- 33. Stationary fallback & Update watcher -------------------------")
+
+# 33a. restore_plan_from_production for stationary plan
+with tempfile.TemporaryDirectory() as tmp_dist:
+    tmp_data = os.path.join(tmp_dist, "data")
+    tmp_sched = os.path.join(tmp_data, "schedules")
+    tmp_cal = os.path.join(tmp_dist, "calendars")
+    os.makedirs(tmp_sched, exist_ok=True)
+    os.makedirs(tmp_cal, exist_ok=True)
+
+    stat_plan_data = {
+        "name": "Nawigacja sem. 1",
+        "clean_name": "Nawigacja sem. 1",
+        "version": "wer. 2",
+        "published_at": "2026-10-01 10:00",
+        "groups": ["GR. 1", "GR. 2"],
+        "mode": "stacjonarne"
+    }
+
+    mock_sess = MagicMock()
+    mock_sched_res = MagicMock(status_code=200, text='{"PON": {}}')
+    mock_cal_res = MagicMock(status_code=200, content=b"BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n")
+    mock_sess.get.side_effect = lambda url, *a, **k: mock_sched_res if url.endswith(".json") else mock_cal_res
+
+    with patch("build_static.SCHEDULES_DIR", tmp_sched), \
+         patch("build_static.CALENDARS_DIR", tmp_cal):
+        restored_count = build_static.restore_plan_from_production(
+            "557", stat_plan_data, production_base_url="https://fake.prod/planwn", session=mock_sess
+        )
+
+    check("restore_plan_from_production restored 2 stationary groups", restored_count == 2)
+    check("restore_plan_from_production wrote stationary schedule", os.path.exists(os.path.join(tmp_sched, "557_GR__1.json")))
+    check("restore_plan_from_production wrote stationary calendar", os.path.exists(os.path.join(tmp_cal, "557_GR__1.ics")))
+
+# 33b. Stationary fallback in build() preserves previous version and published_at
+with tempfile.TemporaryDirectory() as tmp_dist:
+    tmp_data = os.path.join(tmp_dist, "data")
+    tmp_sched = os.path.join(tmp_data, "schedules")
+    tmp_cal = os.path.join(tmp_dist, "calendars")
+    os.makedirs(tmp_sched, exist_ok=True)
+    os.makedirs(tmp_cal, exist_ok=True)
+
+    prod_cache = {
+        "557": {
+            "name": "Nawigacja sem. 1",
+            "clean_name": "Nawigacja sem. 1",
+            "version": "wer. 1",
+            "published_at": "2026-09-15 12:00",
+            "groups": ["GR. 1"],
+            "mode": "stacjonarne"
+        }
+    }
+
+    with patch("build_static.DIST_DIR", tmp_dist), \
+         patch("build_static.DATA_DIR", tmp_data), \
+         patch("build_static.SCHEDULES_DIR", tmp_sched), \
+         patch("build_static.CALENDARS_DIR", tmp_cal), \
+         patch("build_static.setup_dist_directories"), \
+         patch("build_static.fetch_production_plans_metadata", return_value=prod_cache), \
+         patch("build_static.restore_plan_from_production", return_value=10), \
+         patch("build_static.pobierz_liste_planow", return_value={"Nawigacja sem. 1 [2026-10-22 10:00] wer. 2": "557"}), \
+         patch("build_static.pobierz_plany_w_modyfikacji", return_value=[]), \
+         patch("build_static.pobierz_surowy_plan", side_effect=Exception("Arktur error 500")), \
+         patch("build_static.fetch_nst_plans_list", return_value=[]), \
+         patch("build_static.restore_nst_plans_from_production", return_value=({"nst_TM_I": {"name": "NST", "mode": "niestacjonarne"}}, 1)), \
+         patch("build_static.build_cross_reference_indexes", return_value=True):
+        build_static.build()
+
+    with open(os.path.join(tmp_data, "plans.json"), "r", encoding="utf-8") as pf:
+        res_data = json.load(pf)["plans"]
+    check("Stationary plan restored from fallback", "557" in res_data)
+    if "557" in res_data:
+        check("Stationary fallback preserves previous version 'wer. 1'", res_data["557"].get("version") == "wer. 1")
+        check("Stationary fallback preserves previous date '2026-09-15 12:00'", res_data["557"].get("published_at") == "2026-09-15 12:00")
+
+# 33c-33h. check_for_updates tests
+base_prod_plans = {
+    "557": {"name": "Nav 1", "version": "wer. 1", "published_at": "2026-10-01 10:00", "mode": "stacjonarne"},
+    "nst_TM_I": {"name": "NST 1", "published_at": "2026-10-15 12:00:00", "mode": "niestacjonarne"}
+}
+
+# 33c. Identical state -> no updates
+with patch("build_static.fetch_production_plans_metadata", return_value=base_prod_plans), \
+     patch("build_static.pobierz_liste_planow", return_value={"Nav 1 [2026-10-01 10:00] wer. 1": "557"}), \
+     patch("build_static.fetch_nst_plans_list", return_value=[{"id": "TM_I", "name": "NST 1", "modified": "2026-10-15 12:00:00"}]):
+    has_up, chs = build_static.check_for_updates()
+check("check_for_updates returns False when no changes", has_up is False and len(chs) == 0)
+
+# 33d. Stationary version changed
+with patch("build_static.fetch_production_plans_metadata", return_value=base_prod_plans), \
+     patch("build_static.pobierz_liste_planow", return_value={"Nav 1 [2026-10-01 10:00] wer. 2": "557"}), \
+     patch("build_static.fetch_nst_plans_list", return_value=[{"id": "TM_I", "name": "NST 1", "modified": "2026-10-15 12:00:00"}]):
+    has_up, chs = build_static.check_for_updates()
+check("check_for_updates detects stationary version change", has_up is True and any("ver wer. 1->wer. 2" in c for c in chs))
+
+# 33e. Stationary date changed
+with patch("build_static.fetch_production_plans_metadata", return_value=base_prod_plans), \
+     patch("build_static.pobierz_liste_planow", return_value={"Nav 1 [2026-10-02 11:00] wer. 1": "557"}), \
+     patch("build_static.fetch_nst_plans_list", return_value=[{"id": "TM_I", "name": "NST 1", "modified": "2026-10-15 12:00:00"}]):
+    has_up, chs = build_static.check_for_updates()
+check("check_for_updates detects stationary date change", has_up is True and any("date 2026-10-01 10:00->2026-10-02 11:00" in c for c in chs))
+
+# 33f. NST date changed
+with patch("build_static.fetch_production_plans_metadata", return_value=base_prod_plans), \
+     patch("build_static.pobierz_liste_planow", return_value={"Nav 1 [2026-10-01 10:00] wer. 1": "557"}), \
+     patch("build_static.fetch_nst_plans_list", return_value=[{"id": "TM_I", "name": "NST 1", "modified": "2026-10-20 15:30:00"}]):
+    has_up, chs = build_static.check_for_updates()
+check("check_for_updates detects NST date change", has_up is True and any("NST plan nst_TM_I updated" in c for c in chs))
+
+# 33g. New plan discovered
+with patch("build_static.fetch_production_plans_metadata", return_value=base_prod_plans), \
+     patch("build_static.pobierz_liste_planow", return_value={"Nav 1 [2026-10-01 10:00] wer. 1": "557", "Transport sem. 1": "560"}), \
+     patch("build_static.fetch_nst_plans_list", return_value=[{"id": "TM_I", "name": "NST 1", "modified": "2026-10-15 12:00:00"}]):
+    has_up, chs = build_static.check_for_updates()
+check("check_for_updates detects new plan", has_up is True and any("New stationary plan: 560" in c for c in chs))
+
+# 33h. Production unavailable -> returns True
+with patch("build_static.fetch_production_plans_metadata", return_value={}):
+    has_up, chs = build_static.check_for_updates()
+check("check_for_updates triggers build when production metadata unavailable", has_up is True)
 
 
 # ── Summary ───────────────────────────────────────────────────────────────────

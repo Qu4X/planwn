@@ -12,7 +12,8 @@ import shutil
 import argparse
 import logging
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
+import requests
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -33,6 +34,8 @@ DIST_DIR = os.path.join(BASE_DIR, "dist")
 DATA_DIR = os.path.join(DIST_DIR, "data")
 SCHEDULES_DIR = os.path.join(DATA_DIR, "schedules")
 CALENDARS_DIR = os.path.join(DIST_DIR, "calendars")
+PRODUCTION_BASE_URL = "https://qu4x.github.io/planwn"
+DEFAULT_HEADERS = {"User-Agent": "Mozilla/5.0"}
 
 
 def _get_data_path(filename: str) -> str:
@@ -340,12 +343,173 @@ def classify_lesson_form(
     return "cwiczenia"
 
 
+def fetch_production_plans_metadata(
+    production_base_url: str = PRODUCTION_BASE_URL,
+    session: Optional[requests.Session] = None
+) -> Dict[str, Any]:
+    """Pobiera i normalizuje plans.json ze wskazanego adresu produkcyjnego."""
+    http_session = session or requests.Session()
+    plans_url = f"{production_base_url.rstrip('/')}/data/plans.json"
+    try:
+        resp = http_session.get(plans_url, headers=DEFAULT_HEADERS, timeout=10)
+        if resp.status_code != 200:
+            logger.warning(f"Could not fetch production plans.json (status {resp.status_code})")
+            return {}
+        prod_data = resp.json()
+        all_plans = prod_data.get("plans", {})
+        if isinstance(all_plans, list):
+            all_plans = {str(p.get("id")): p for p in all_plans if isinstance(p, dict) and "id" in p}
+        elif not isinstance(all_plans, dict):
+            all_plans = {}
+        return all_plans
+    except Exception as e:
+        logger.warning(f"Failed to fetch production plans.json: {e}")
+        return {}
+
+
+def restore_plan_from_production(
+    plan_id: str,
+    plan_data: Dict[str, Any],
+    production_base_url: str = PRODUCTION_BASE_URL,
+    session: Optional[requests.Session] = None
+) -> int:
+    """
+    Pobiera pliki .json i .ics wszystkich grup danego planu (stacjonarnego lub NST) z produkcji.
+    Zwraca liczbę pomyślnie przywróconych grup.
+    """
+    http_session = session or requests.Session()
+    groups = plan_data.get("groups", [])
+    if not groups:
+        return 0
+
+    os.makedirs(SCHEDULES_DIR, exist_ok=True)
+    os.makedirs(CALENDARS_DIR, exist_ok=True)
+
+    plan_groups_restored = 0
+    for grp in groups:
+        safe_grp = re.sub(r'[^\w-]', '_', grp)
+        sched_filename = f"{plan_id}_{safe_grp}.json"
+        sched_url = f"{production_base_url.rstrip('/')}/data/schedules/{sched_filename}"
+        sched_path = os.path.join(SCHEDULES_DIR, sched_filename)
+
+        cal_filename = f"{plan_id}_{safe_grp}.ics"
+        cal_url = f"{production_base_url.rstrip('/')}/calendars/{cal_filename}"
+        cal_path = os.path.join(CALENDARS_DIR, cal_filename)
+
+        try:
+            s_resp = http_session.get(sched_url, headers=DEFAULT_HEADERS, timeout=10)
+            if s_resp.status_code == 200:
+                with open(sched_path, "w", encoding="utf-8") as sf:
+                    sf.write(s_resp.text)
+                plan_groups_restored += 1
+            else:
+                logger.warning(f"Could not fetch schedule {sched_url} (status {s_resp.status_code})")
+
+            c_resp = http_session.get(cal_url, headers=DEFAULT_HEADERS, timeout=10)
+            if c_resp.status_code == 200:
+                with open(cal_path, "wb") as cf:
+                    cf.write(c_resp.content)
+        except Exception as ge:
+            logger.warning(f"Error restoring group files for {plan_id} {grp}: {ge}")
+
+    if plan_groups_restored > 0:
+        logger.warning(f"⚠️ Restored plan '{plan_id}' ({plan_groups_restored} groups) from production ({production_base_url}).")
+
+    return plan_groups_restored
+
+
+def restore_nst_plans_from_production(
+    production_base_url: str = PRODUCTION_BASE_URL,
+    session: Optional[requests.Session] = None
+) -> Tuple[Dict[str, Any], int]:
+    """
+    Pobiera ostatni poprawny stan planów niestacjonarnych (NST) z produkcyjnego GitHub Pages.
+    Zwraca słownik planów NST oraz liczbę przywróconych grup (wrapper dla kompatybilności wstecznej).
+    """
+    all_plans = fetch_production_plans_metadata(production_base_url, session=session)
+    nst_plans = {pid: p for pid, p in all_plans.items() if p.get("mode") == "niestacjonarne"}
+    restored_plans = {}
+    total_restored = 0
+    for pid, pdata in nst_plans.items():
+        count = restore_plan_from_production(pid, pdata, production_base_url, session=session)
+        if count > 0:
+            restored_plans[pid] = pdata
+            total_restored += count
+    return restored_plans, total_restored
+
+
+def check_for_updates(
+    production_base_url: str = PRODUCTION_BASE_URL,
+    session: Optional[requests.Session] = None
+) -> Tuple[bool, List[str]]:
+    """
+    Sprawdza, czy na Arkturze pojawiły się nowe lub zaktualizowane plany w porównaniu z produkcją.
+    Zwraca (has_updates: bool, changes: List[str]).
+    """
+    http_session = session or requests.Session()
+    prod_plans = fetch_production_plans_metadata(production_base_url, session=http_session)
+    if not prod_plans:
+        logger.warning("Could not fetch production plans.json. Full build required.")
+        return True, ["Production plans.json unavailable - full build required"]
+
+    changes: List[str] = []
+
+    # 1. Sprawdź stacjonarne ze strpza5.php
+    arktur_plans = pobierz_liste_planow()
+    if not arktur_plans:
+        logger.warning("Could not fetch stationary plans list from Arktur. Assuming updates are present.")
+        return True, ["Arktur stationary list unreachable"]
+
+    for raw_name, pid in arktur_plans.items():
+        pid_str = str(pid)
+        parsed = parse_plan_title(raw_name)
+        new_ver = parsed.get("version")
+        new_date = parsed.get("published_at")
+
+        if pid_str not in prod_plans:
+            changes.append(f"New stationary plan: {pid_str} ('{parsed.get('clean_name')}')")
+            continue
+
+        prod_p = prod_plans[pid_str]
+        old_ver = prod_p.get("version")
+        old_date = prod_p.get("published_at")
+
+        if new_ver != old_ver or new_date != old_date:
+            changes.append(
+                f"Stationary plan {pid_str} updated: "
+                f"ver {old_ver}->{new_ver}, date {old_date}->{new_date}"
+            )
+
+    # 2. Sprawdź niestacjonarne ze strpza5n.php
+    try:
+        nst_plans = fetch_nst_plans_list(session=http_session)
+        for nst_item in nst_plans:
+            pid_nst = f"nst_{nst_item['id']}"
+            new_date = nst_item.get("modified")
+
+            if pid_nst not in prod_plans:
+                changes.append(f"New NST plan: {pid_nst} ('{nst_item.get('name')}')")
+                continue
+
+            prod_p = prod_plans[pid_nst]
+            old_date = prod_p.get("published_at")
+            if new_date and old_date and new_date != old_date:
+                changes.append(f"NST plan {pid_nst} updated: date {old_date}->{new_date}")
+    except Exception as e:
+        logger.warning(f"Error checking NST plans: {e}")
+        return True, [f"Error checking NST plans: {e}"]
+
+    has_updates = len(changes) > 0
+    return has_updates, changes
+
+
 def build(limit=None, plan_ids=None, filter_query=None):
     """Main build process"""
     start_time = datetime.now()
     logger.info("Starting UMG Static Site Build...")
 
     setup_dist_directories()
+    production_plans_cache = fetch_production_plans_metadata()
 
     curriculum_catalog = load_curriculum_forms()
     manual_forms_config = load_forms_manual()
@@ -393,6 +557,7 @@ def build(limit=None, plan_ids=None, filter_query=None):
     }
 
     total_groups_processed = 0
+    total_nst_groups_processed = 0
     discovered_subjects = {}
 
     for idx, (plan_name, plan_id) in enumerate(plan_items, start=1):
@@ -403,10 +568,20 @@ def build(limit=None, plan_ids=None, filter_query=None):
             html_text, grupy = pobierz_surowy_plan(plan_id_str)
         except Exception as e:
             logger.error(f"Error scraping plan {plan_id_str}: {e}")
-            continue
+            grupy = []
+            html_text = ""
 
         if not grupy:
-            logger.warning(f"No groups detected for plan {plan_id_str}. Skipping.")
+            logger.warning(f"No groups detected or scraping failed for plan {plan_id_str}.")
+            prev_plan = production_plans_cache.get(plan_id_str)
+            if prev_plan:
+                r_count = restore_plan_from_production(plan_id_str, prev_plan)
+                if r_count > 0:
+                    plans_metadata["plans"][plan_id_str] = prev_plan
+                    total_groups_processed += r_count
+                    logger.warning(f"Preserved stationary plan {plan_id_str} with previous version '{prev_plan.get('version')}' and date '{prev_plan.get('published_at')}'.")
+                    continue
+            logger.warning(f"Could not restore plan {plan_id_str}. Skipping.")
             continue
 
         parsed_title = parse_plan_title(plan_name)
@@ -474,6 +649,8 @@ def build(limit=None, plan_ids=None, filter_query=None):
     try:
         nst_plans = fetch_nst_plans_list()
         logger.info(f"Found {len(nst_plans)} part-time (NST) plans.")
+        if len(nst_plans) == 0:
+            logger.error("Scraper returned 0 part-time (NST) plans from Arktur.")
         if limit and limit > 0:
             nst_plans = nst_plans[:limit]
         cache_pdf_dir = os.path.join(BASE_DIR, "cache_nst_pdf")
@@ -488,13 +665,31 @@ def build(limit=None, plan_ids=None, filter_query=None):
             # Download or use cached PDF
             logger.info(f"Downloading/parsing NST plan {plan_id_nst} ({plan_name})...")
             if not download_pdf_file(pdf_url, local_pdf_path):
-                logger.warning(f"Could not download NST PDF {pdf_url}. Skipping.")
+                logger.warning(f"Could not download NST PDF {pdf_url}.")
+                prev_plan = production_plans_cache.get(plan_id_nst)
+                if prev_plan:
+                    r_count = restore_plan_from_production(plan_id_nst, prev_plan)
+                    if r_count > 0:
+                        plans_metadata["plans"][plan_id_nst] = prev_plan
+                        total_groups_processed += r_count
+                        total_nst_groups_processed += r_count
+                        logger.warning(f"Preserved NST plan {plan_id_nst} with previous date '{prev_plan.get('published_at')}'.")
+                        continue
                 continue
 
             # Parse PDF schedule
             nst_schedule_by_group = parse_pdf_schedule(local_pdf_path)
             if not nst_schedule_by_group:
-                logger.warning(f"No schedule extracted from {local_pdf_path}. Skipping.")
+                logger.warning(f"No schedule extracted from {local_pdf_path}.")
+                prev_plan = production_plans_cache.get(plan_id_nst)
+                if prev_plan:
+                    r_count = restore_plan_from_production(plan_id_nst, prev_plan)
+                    if r_count > 0:
+                        plans_metadata["plans"][plan_id_nst] = prev_plan
+                        total_groups_processed += r_count
+                        total_nst_groups_processed += r_count
+                        logger.warning(f"Preserved NST plan {plan_id_nst} with previous date '{prev_plan.get('published_at')}'.")
+                        continue
                 continue
 
             nst_groups = sorted(list(nst_schedule_by_group.keys()))
@@ -525,6 +720,7 @@ def build(limit=None, plan_ids=None, filter_query=None):
                         icsf.write(ics_text.encode("utf-8") if isinstance(ics_text, str) else ics_text)
 
                     total_groups_processed += 1
+                    total_nst_groups_processed += 1
                 except Exception as ge:
                     logger.error(f"Error processing NST group {group_name} in {plan_id_nst}: {ge}")
 
@@ -535,15 +731,44 @@ def build(limit=None, plan_ids=None, filter_query=None):
     plans_json_path = os.path.join(DATA_DIR, "plans.json")
     existing_plans = {}
     is_subset = bool(limit or plan_ids or filter_query)
-    if is_subset and os.path.exists(plans_json_path):
+    if os.path.exists(plans_json_path):
         try:
             with open(plans_json_path, "r", encoding="utf-8") as f:
                 existing_data = json.load(f)
                 existing_plans = existing_data.get("plans", {})
+                if isinstance(existing_plans, list):
+                    existing_plans = {str(p.get("id")): p for p in existing_plans if isinstance(p, dict) and "id" in p}
+                elif not isinstance(existing_plans, dict):
+                    existing_plans = {}
         except Exception:
             existing_plans = {}
 
-    merged_plans = {**existing_plans, **plans_metadata["plans"]}
+    if is_subset:
+        merged_plans = {**existing_plans, **plans_metadata["plans"]}
+    else:
+        merged_plans = {**plans_metadata["plans"]}
+        # Safety: preserve existing NST plans from previous plans.json if they were not parsed in this run
+        for pid, p in existing_plans.items():
+            if p.get("mode") == "niestacjonarne" and pid not in merged_plans:
+                has_files = False
+                for grp in p.get("groups", []):
+                    safe_grp = re.sub(r'[^\w-]', '_', grp)
+                    if os.path.exists(os.path.join(SCHEDULES_DIR, f"{pid}_{safe_grp}.json")):
+                        has_files = True
+                        total_nst_groups_processed += 1
+                        total_groups_processed += 1
+                if has_files:
+                    merged_plans[pid] = p
+                    logger.warning(f"Preserved existing NST plan '{pid}' from previous plans.json.")
+
+        # If STILL no NST plans are available in full build (e.g. fresh CI runner), restore from production
+        current_nst_count = sum(1 for p in merged_plans.values() if p.get("mode") == "niestacjonarne")
+        if current_nst_count == 0:
+            logger.warning("No NST plans found locally; attempting to restore from production...")
+            restored_plans, restored_groups = restore_nst_plans_from_production()
+            merged_plans.update(restored_plans)
+            total_nst_groups_processed += restored_groups
+            total_groups_processed += restored_groups
     plans_metadata["plans"] = dict(sorted(merged_plans.items(), key=get_plan_sort_key))
 
     with open(plans_json_path, "w", encoding="utf-8") as f:
@@ -576,6 +801,17 @@ def build(limit=None, plan_ids=None, filter_query=None):
             f"minimum required ({min_required_groups}). Aborting build."
         )
         sys.exit(1)
+
+    # Quality gate for part-time (NST) plans: in full build, require at least 1 NST group
+    if not is_subset:
+        nst_final_count = sum(1 for p in plans_metadata["plans"].values() if p.get("mode") == "niestacjonarne")
+        if nst_final_count == 0 or total_nst_groups_processed < 1:
+            logger.error(
+                f"Quality gate failure: 0 part-time (NST) plans/groups available in final build "
+                f"(nst_plans={nst_final_count}, nst_groups={total_nst_groups_processed}) "
+                f"and production fallback was unavailable. Aborting build."
+            )
+            sys.exit(1)
 
     # Generate cross-reference index files
     if not build_cross_reference_indexes(plans_metadata):
@@ -875,8 +1111,33 @@ if __name__ == "__main__":
         action="store_true",
         help="Skip network scraping and regenerate cross-reference indexes from existing schedule JSONs"
     )
+    parser.add_argument(
+        "--check-only",
+        action="store_true",
+        help="Check if Arktur has updates compared to production without building"
+    )
     args = parser.parse_args()
-    if args.reindex_only:
+    if args.check_only:
+        has_updates, changes = check_for_updates()
+        status_str = "true" if has_updates else "false"
+        logger.info(f"Update check finished: has_updates={status_str}")
+        if changes:
+            logger.info("Detected changes on Arktur:")
+            for ch in changes:
+                logger.info(f"  - {ch}")
+        else:
+            logger.info("No changes detected. Production schedule is up to date.")
+
+        github_output = os.environ.get("GITHUB_OUTPUT")
+        if github_output:
+            try:
+                with open(github_output, "a", encoding="utf-8") as gh:
+                    gh.write(f"has_updates={status_str}\n")
+            except Exception as e:
+                logger.warning(f"Failed to write to GITHUB_OUTPUT: {e}")
+
+        sys.exit(0)
+    elif args.reindex_only:
         setup_dist_directories()
         if not build_cross_reference_indexes():
             sys.exit(1)

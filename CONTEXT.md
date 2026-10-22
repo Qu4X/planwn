@@ -129,3 +129,10 @@ _Avoid_: Wolne sale, sprawdzarka sal.
 **Zakres wydziałowy (Faculty Scope)**:
 Wydział Nawigacyjny (WN) — jedyny zakres: Aplikacja celowo obsługuje wyłącznie plany Wydziału Nawigacyjnego UMG. Grupy innych wydziałów (np. INF, M, E z Wydziału Elektrycznego lub Mechanicznego) znajdują się poza systemem arktur.umg.edu.pl/planyzaj/ i są celowo pomijane w scraperze.
 _Avoid_: Wszystkie wydziały, ogólnouczelniany, brak grup WE/WM jako błąd.
+
+**Bramki jakościowe i fallback produkcyjny (Quality Gates & Production Fallback)**:
+Mechanizmy zabezpieczające build przed publikacją uszkodzonego lub pustego stanu w GitHub Actions:
+- W pełnym buildzie wymagana jest minimalna liczba grup stacjonarnych (`>= 10`) oraz grup niestacjonarnych (`>= 1`).
+- **Ujednolicony fallback per-plan**: W przypadku awarii scrapingu dowolnego planu stacjonarnego lub niestacjonarnego (błąd sieci, awaria Arktura, zmiana formatu), generator pobiera ostatni poprawny stan siatki i kalendarzy bezpośrednio z instancji produkcyjnej (`https://qu4x.github.io/planwn/`), zachowując poprzednią wersję (`version`) oraz datę publikacji (`published_at`/`modified`).
+- **Watcher aktualizacji (`--check-only`)**: Lekkie sprawdzanie zmian co godzinę w dni robocze (07:00–19:00 CEST) porównujące wersje i znaczniki czasu na Arkturze ze stanem produkcyjnym. Przy braku zmian workflow kończy się w kilka sekund bez deployu; przy wykryciu nowej wersji uruchamia pełny build i wdrożenie.
+- Build przerywa działanie z kodem błędu 1 wyłącznie w sytuacji, gdy zawiedzie zarówno scraping, jak i fallback produkcyjny.

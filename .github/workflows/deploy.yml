@@ -1,9 +1,11 @@
 name: Deploy UMG Schedule to GitHub Pages
 
 on:
-  # Run automatically once daily in the morning (~06:00 CEST / ~05:00 CET)
   schedule:
+    # Pełny build raz na dobę nad ranem (~06:00 CEST / ~05:00 CET)
     - cron: '0 4 * * *'
+    # Watcher: godzinowe sprawdzanie zmian w dni robocze (07:00-19:00 CEST / 05:00-17:00 UTC)
+    - cron: '0 5-17 * * 1-5'
   # Allow manual 1-click trigger from GitHub Actions tab
   workflow_dispatch:
   # Run on push to main
@@ -25,6 +27,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      has_updates: ${{ steps.check_updates.outputs.has_updates }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -35,29 +39,43 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Check for updates on Arktur
+        id: check_updates
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ github.event.schedule }}" = "0 5-17 * * 1-5" ]; then
+            python build_static.py --check-only
+          else
+            echo "has_updates=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Node.js
+        if: steps.check_updates.outputs.has_updates != 'false'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Run Backend Regression Tests (Python)
+        if: steps.check_updates.outputs.has_updates != 'false'
         run: |
           python tests/test_backend.py
 
       - name: Run Frontend Engine Tests (Node.js)
+        if: steps.check_updates.outputs.has_updates != 'false'
         run: |
           npm test
 
       - name: Build static site (Scrape & Export to dist/)
+        if: steps.check_updates.outputs.has_updates != 'false'
         run: |
           python build_static.py
 
       - name: Upload Pages artifact
+        if: steps.check_updates.outputs.has_updates != 'false'
         uses: actions/upload-pages-artifact@v3
         with:
           path: './dist'
@@ -68,6 +86,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     needs: build
+    if: needs.build.outputs.has_updates != 'false'
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
