@@ -1300,6 +1300,46 @@ with patch("build_static.fetch_production_plans_metadata", return_value={}):
 check("check_for_updates triggers build when production metadata unavailable", has_up is True)
 
 
+# ── 34. Dynamic NST group detection & robust multi-group table parsing ──────
+print("\n-- 34. Dynamic NST group detection & multi-group table parsing ------")
+
+# 34a. Multi-group header in _parse_single_table assigns lessons to all listed groups
+multi_group_table = [
+    [None, None, "10.10.2026", None, None],
+    [None, None, "sobota", None, None],
+    [None, None, "GR.01 GR.02 GR.03", "GR.04 GR.05", "Aula"],
+    ["08:00", "08:45", "Systemy transportowe\nW", "Logistyka\nC", "Aula"],
+    ["08:50", "09:35", None, None, None],
+    ["09:40", "10:25", "Kowalski Jan, dr", "Nowak Anna, mgr", "Aula"]
+]
+parsed_multi = _parse_single_table(multi_group_table)
+check("Multi-group header parsed GR.01", "GR.01" in parsed_multi and len(parsed_multi["GR.01"].get("2026-10-10", [])) == 1)
+check("Multi-group header parsed GR.02", "GR.02" in parsed_multi and len(parsed_multi["GR.02"].get("2026-10-10", [])) == 1)
+check("Multi-group header parsed GR.03", "GR.03" in parsed_multi and len(parsed_multi["GR.03"].get("2026-10-10", [])) == 1)
+check("Multi-group header parsed GR.04", "GR.04" in parsed_multi and len(parsed_multi["GR.04"].get("2026-10-10", [])) == 1)
+check("Multi-group header parsed GR.05", "GR.05" in parsed_multi and len(parsed_multi["GR.05"].get("2026-10-10", [])) == 1)
+check("Multi-group header does NOT invent GR.06", "GR.06" not in parsed_multi)
+
+# 34b. Real PDF tests from cache_nst_pdf if present
+cache_dir = os.path.join(REPO_ROOT, "cache_nst_pdf")
+mstil_path = os.path.join(cache_dir, "MSTiL_I.pdf")
+if os.path.exists(mstil_path):
+    res_mstil = parse_pdf_schedule(mstil_path)
+    check("MSTiL_I has exactly 2 groups ['GR.01', 'GR.02']", sorted(res_mstil.keys()) == ["GR.01", "GR.02"])
+    check("MSTiL_I GR.01 has non-empty lessons (>50)", sum(len(l) for l in res_mstil.get("GR.01", {}).values()) > 50)
+
+tm1_path = os.path.join(cache_dir, "TM_I.pdf")
+if os.path.exists(tm1_path):
+    res_tm1 = parse_pdf_schedule(tm1_path)
+    check("TM_I has exactly 4 groups ['GR.01', 'GR.02', 'GR.03', 'GR.04']", sorted(res_tm1.keys()) == ["GR.01", "GR.02", "GR.03", "GR.04"])
+    check("TM_I GR.01 has non-empty lessons (>50)", sum(len(l) for l in res_tm1.get("GR.01", {}).values()) > 50)
+
+tm2_path = os.path.join(cache_dir, "TM_II.pdf")
+if os.path.exists(tm2_path):
+    res_tm2 = parse_pdf_schedule(tm2_path)
+    check("TM_II has exactly 1 group ['GR.01']", sorted(res_tm2.keys()) == ["GR.01"])
+    check("TM_II GR.01 has non-empty lessons (>50)", sum(len(l) for l in res_tm2.get("GR.01", {}).values()) > 50)
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 print("\n" + "="*60)
 passed = sum(1 for ok,_ in results if ok)

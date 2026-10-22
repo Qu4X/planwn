@@ -4,7 +4,7 @@ Converts extracted vector tables and character streams from PDF files into unifi
 """
 import logging
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set, Tuple
 import pdfplumber
 
 logger = logging.getLogger(__name__)
@@ -151,40 +151,74 @@ def extract_stream_runs(chars: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 def parse_pdf_schedule(pdf_path: str) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
     """
     Parses a timetable PDF file for part-time studies.
-    Uses spatial stream parsing for robust extraction across irregular grid lines,
-    falling back to tabular table extraction if stream data is unavailable.
+    Dynamically identifies group counts per plan. Uses spatial stream parsing for
+    8-column plans with irregular grid lines, and tabular table extraction for others.
     """
+    # 1. Pre-scan table headers to identify actual groups present in this PDF
+    detected_groups: Set[str] = set()
+    try:
+        with pdfplumber.open(pdf_path) as pdf:
+            for page in pdf.pages:
+                for table in page.extract_tables():
+                    for r in table[:5]:
+                        for cell in r:
+                            if cell:
+                                txt = clean_cell_text(cell).upper()
+                                for num in re.findall(r"GR[\.\s_]*(\d+)", txt):
+                                    detected_groups.add(f"GR.{int(num):02d}")
+    except Exception as scan_err:
+        logger.warning(f"Error pre-scanning PDF groups in {pdf_path}: {scan_err}")
+
+    # The stream parser's coordinates are hardcoded for 8-column layouts (e.g. TiL_I)
+    is_standard_8_group_plan = (len(detected_groups) >= 6)
+
     groups_data: Dict[str, Dict[str, List[Dict[str, Any]]]] = {}
 
     try:
         with pdfplumber.open(pdf_path) as pdf:
             for page in pdf.pages:
-                page_data = _parse_page_streams(page)
-                if page_data:
-                    for grp, dates in page_data.items():
-                        if grp not in groups_data:
-                            groups_data[grp] = {}
-                        for date_iso, lessons in dates.items():
-                            if date_iso not in groups_data[grp]:
-                                groups_data[grp][date_iso] = []
-                            groups_data[grp][date_iso].extend(lessons)
-                else:
-                    # Fallback to standard table parsing
+                page_data: Dict[str, Dict[str, List[Dict[str, Any]]]] = {}
+
+                # Use stream parsing only if the plan has the standard 8-column layout
+                if is_standard_8_group_plan:
+                    raw_streams = _parse_page_streams(page)
+                    if any(len(l) > 0 for dates in raw_streams.values() for l in dates.values()):
+                        page_data = {
+                            g: dates for g, dates in raw_streams.items()
+                            if any(len(l) > 0 for l in dates.values())
+                        }
+
+                # Fallback to standard vector table extraction
+                if not page_data:
                     tables = page.extract_tables()
                     for table in tables:
                         parsed_day_tables = _parse_single_table(table)
                         for grp, dates in parsed_day_tables.items():
-                            if grp not in groups_data:
-                                groups_data[grp] = {}
+                            if grp not in page_data:
+                                page_data[grp] = {}
                             for date_iso, lessons in dates.items():
-                                if date_iso not in groups_data[grp]:
-                                    groups_data[grp][date_iso] = []
-                                groups_data[grp][date_iso].extend(lessons)
+                                if date_iso not in page_data[grp]:
+                                    page_data[grp][date_iso] = []
+                                page_data[grp][date_iso].extend(lessons)
+
+                for grp, dates in page_data.items():
+                    if grp not in groups_data:
+                        groups_data[grp] = {}
+                    for date_iso, lessons in dates.items():
+                        if date_iso not in groups_data[grp]:
+                            groups_data[grp][date_iso] = []
+                        groups_data[grp][date_iso].extend(lessons)
     except Exception as err:
         logger.error(f"Error while parsing PDF schedule {pdf_path}: {err}")
 
+    # Retain only groups that actually have lessons across the timetable
+    clean_groups_data: Dict[str, Dict[str, List[Dict[str, Any]]]] = {
+        grp: dates for grp, dates in groups_data.items()
+        if any(len(l) > 0 for l in dates.values())
+    }
+
     # Deduplicate and sort lessons chronologically by start hour for each day
-    for group_name, dates in groups_data.items():
+    for group_name, dates in clean_groups_data.items():
         for date_iso, lessons in dates.items():
             deduped: List[Dict[str, Any]] = []
             seen = set()
@@ -196,7 +230,7 @@ def parse_pdf_schedule(pdf_path: str) -> Dict[str, Dict[str, List[Dict[str, Any]
             deduped.sort(key=lambda item: item.get("godziny", "").split("-")[0])
             dates[date_iso] = deduped
 
-    return groups_data
+    return clean_groups_data
 
 
 def _parse_page_streams(page: pdfplumber.page.Page) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
@@ -396,18 +430,21 @@ def _parse_single_table(table: List[List[Optional[str]]]) -> Dict[str, Dict[str,
         return {}
 
     group_row_idx = None
-    group_cols: Dict[int, str] = {}
+    group_cols: Dict[int, List[str]] = {}
 
     for r_idx in range(min(5, len(table))):
         row = table[r_idx]
-        found_groups = {}
+        found_groups: Dict[int, List[str]] = {}
         for c_idx, cell in enumerate(row):
             txt = clean_cell_text(cell).upper()
-            if re.match(r"^GR[\.\s_]*\d+", txt) or re.match(r"^\d{1,2}[A-Z]*$", txt):
+            all_gr = re.findall(r"GR[\.\s_]*(\d+)", txt)
+            if all_gr:
+                found_groups[c_idx] = [f"GR.{int(num):02d}" for num in all_gr]
+            elif re.match(r"^\d{1,2}[A-Z]*$", txt):
                 match = re.search(r"(\d+)", txt)
                 if match:
                     group_num = int(match.group(1))
-                    found_groups[c_idx] = f"GR.{group_num:02d}"
+                    found_groups[c_idx] = [f"GR.{group_num:02d}"]
         if len(found_groups) >= 1:
             group_row_idx = r_idx
             group_cols = found_groups
@@ -416,8 +453,12 @@ def _parse_single_table(table: List[List[Optional[str]]]) -> Dict[str, Dict[str,
     if not group_cols:
         return {}
 
+    all_groups: Set[str] = set()
+    for g_list in group_cols.values():
+        all_groups.update(g_list)
+
     result: Dict[str, Dict[str, List[Dict[str, Any]]]] = {
-        group: {date_iso: []} for group in group_cols.values()
+        group: {date_iso: []} for group in all_groups
     }
     sorted_col_indices = sorted(group_cols.keys())
 
@@ -495,7 +536,16 @@ def _parse_single_table(table: List[List[Optional[str]]]) -> Dict[str, Dict[str,
             if not full_text or full_text.lower() in ("przerwa", "-"):
                 continue
 
-            first_group = group_cols[span[0]]
+            target_groups: List[str] = []
+            for c in span:
+                for grp in group_cols.get(c, []):
+                    if grp not in target_groups:
+                        target_groups.append(grp)
+
+            if not target_groups:
+                continue
+
+            first_group = target_groups[0]
             lesson = _extract_lesson_details(
                 raw_text=full_text,
                 fallback_room=fallback_room,
@@ -505,8 +555,7 @@ def _parse_single_table(table: List[List[Optional[str]]]) -> Dict[str, Dict[str,
                 group_name=first_group
             )
             if lesson:
-                for c in span:
-                    grp = group_cols[c]
+                for grp in target_groups:
                     grp_lesson = dict(lesson)
                     grp_lesson["grupa"] = grp
                     result[grp][date_iso].append(grp_lesson)
