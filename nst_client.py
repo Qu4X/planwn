@@ -5,6 +5,7 @@ Fetches available plans metadata from strpza5n.php and downloads PDF schedule fi
 import logging
 import os
 import re
+import urllib.parse
 from typing import Dict, List, Optional
 import requests
 from bs4 import BeautifulSoup
@@ -30,7 +31,8 @@ def fetch_nst_plans_list(session: Optional[requests.Session] = None) -> List[Dic
         plans = []
         for anchor in soup.find_all("a", class_="link_powrot"):
             href = anchor.get("href", "")
-            if not href.endswith(".pdf"):
+            parsed_path = urllib.parse.urlparse(href).path
+            if not parsed_path.lower().endswith(".pdf"):
                 continue
             plan_name = anchor.get_text().strip()
 
@@ -39,7 +41,7 @@ def fetch_nst_plans_list(session: Optional[requests.Session] = None) -> List[Dic
             else:
                 full_url = requests.compat.urljoin(NST_BASE_URL, href)
 
-            filename = os.path.basename(href)
+            filename = os.path.basename(parsed_path)
             plan_id = os.path.splitext(filename)[0]
 
             modified_date = ""
