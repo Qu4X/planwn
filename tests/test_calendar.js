@@ -1978,5 +1978,24 @@ assert.ok(cssContent.includes("#0d233a"), "style.css powinien używać stałego 
 
 console.log("✅ [PASS] Dialog Wydarzenia, obsługa Tally i stałe tło logo aplikacji przetestowane pomyślnie.");
 
+// --- Test: Kliknięcie kafelka lekcji otwiera modal przedmiotu (Issue #15) ---
+console.log("\n-- Test: Modal przedmiotu po kliknięciu kafelka lekcji");
+const { renderLessonCard: testRenderLessonCard } = require(path.join(ROOT_DIR, "web/app.js"));
+const subjectTestLesson = {
+  przedmiot: "Nawigacja Terestryczna",
+  godziny: "08:00 - 09:30",
+  sala: "114",
+  prowadzacy: "dr inż. Jan Kowalski",
+  forma: "wyklad"
+};
+const lessonCardHtml = testRenderLessonCard(subjectTestLesson, "2026-10-05", "PON");
+assert.ok(lessonCardHtml.includes('data-subject="Nawigacja Terestryczna"'), "Kafelek lekcji powinien posiadać data-subject");
+assert.ok(lessonCardHtml.includes('role="button"'), "Kafelek lekcji powinien posiadać role='button'");
+assert.ok(lessonCardHtml.includes('tabindex="0"'), "Kafelek lekcji powinien posiadać tabindex='0'");
+
+const updatedCssContent = fs.readFileSync(path.join(ROOT_DIR, "web/style.css"), "utf-8");
+assert.ok(/\.lesson-card\s*\{[^}]*cursor:\s*pointer/s.test(updatedCssContent), ".lesson-card powinien mieć cursor: pointer");
+console.log("✅ [PASS] Kafelek lekcji poprawnie eksponuje atrybuty interaktywne modalu przedmiotu.");
+
 
 

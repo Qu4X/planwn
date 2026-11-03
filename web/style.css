@@ -945,6 +945,7 @@ input, select, textarea, button {
   flex-direction: column;
   gap: 0.35rem;
   transition: transform 0.15s, box-shadow 0.15s;
+  cursor: pointer;
 }
 
 .lesson-card:hover {
@@ -952,19 +953,23 @@ input, select, textarea, button {
   box-shadow: var(--shadow-md);
 }
 
-.lesson-card.form-wyklad {
+.lesson-card.form-wyklad,
+.modal-slot-item.form-wyklad {
   border-left-color: var(--form-wyklad);
 }
 
-.lesson-card.form-cwiczenia {
+.lesson-card.form-cwiczenia,
+.modal-slot-item.form-cwiczenia {
   border-left-color: var(--form-cwiczenia);
 }
 
-.lesson-card.form-laboratorium {
+.lesson-card.form-laboratorium,
+.modal-slot-item.form-laboratorium {
   border-left-color: var(--form-laboratorium);
 }
 
-.lesson-card.form-symulator {
+.lesson-card.form-symulator,
+.modal-slot-item.form-symulator {
   border-left-color: var(--form-symulator);
 }
 
@@ -3560,3 +3565,27 @@ iframe[src*="tally.so"] {
   contain-intrinsic-size: auto 50px;
 }
 
+
+/* Clickable subject button in cross-ref modals */
+.lesson-subject-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 700;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.15s ease;
+}
+
+.lesson-subject-btn:hover {
+  color: var(--brand-primary);
+  text-decoration: underline;
+}
+
+[data-theme="dark"] .lesson-subject-btn:hover {
+  color: var(--brand-accent);
+}

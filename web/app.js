@@ -734,6 +734,14 @@ function setupEventListeners() {
         }
         return;
       }
+      const lessonCard = e.target.closest(".lesson-card");
+      if (lessonCard && lessonCard.dataset.subject) {
+        e.stopPropagation();
+        if (window.CrossRef && window.CrossRef.UI) {
+          window.CrossRef.UI.openSubject(lessonCard.dataset.subject, lessonCard, { planId: state.selectedPlanId, group: state.selectedGroup });
+        }
+        return;
+      }
     });
 
     elements.scheduleContent.addEventListener("keydown", (e) => {
@@ -744,6 +752,15 @@ function setupEventListeners() {
           if (_EventsService && typeof _EventsService.openEventModal === "function") {
             _EventsService.openEventModal(eventCard.dataset.eventId, eventCard);
           }
+          return;
+        }
+        const lessonCard = e.target.closest(".lesson-card");
+        if (lessonCard && lessonCard.dataset.subject && !e.target.closest("button")) {
+          e.preventDefault();
+          if (window.CrossRef && window.CrossRef.UI) {
+            window.CrossRef.UI.openSubject(lessonCard.dataset.subject, lessonCard, { planId: state.selectedPlanId, group: state.selectedGroup });
+          }
+          return;
         }
       }
     });
@@ -765,6 +782,14 @@ function setupEventListeners() {
         e.stopPropagation();
         if (window.CrossRef && window.CrossRef.UI) {
           window.CrossRef.UI.openTeacher(teacherBtn.dataset.teacher);
+        }
+        return;
+      }
+      const subjectBtn = e.target.closest(".lesson-subject-btn");
+      if (subjectBtn && subjectBtn.dataset.subject) {
+        e.stopPropagation();
+        if (window.CrossRef && window.CrossRef.UI) {
+          window.CrossRef.UI.openSubject(subjectBtn.dataset.subject, subjectBtn, { planId: state.selectedPlanId, group: state.selectedGroup });
         }
         return;
       }
@@ -2095,7 +2120,7 @@ function renderLessonCard(lesson, targetMonday = null, day = null) {
   const formClass = lesson.forma ? ` form-${escapeHtml(lesson.forma)}` : "";
 
   return `
-    <div class="lesson-card${formClass}${isHiddenClass}" data-slot-key="${escapeHtml(slotKey)}" data-day="${escapeHtml(baseDay)}">
+    <div class="lesson-card${formClass}${isHiddenClass}" data-slot-key="${escapeHtml(slotKey)}" data-day="${escapeHtml(baseDay)}" data-subject="${escapeHtml(lesson.przedmiot || "")}" role="button" tabindex="0" aria-label="Szczegóły przedmiotu ${safeTitle}" title="Szczegóły przedmiotu ${safeTitle}">
       <div class="lesson-header-row">
         <div class="lesson-title">${safeTitle}</div>
         ${(canHide || hiddenBadge) ? `

@@ -1,5 +1,15 @@
 [
   {
+    "version": "3.12.0",
+    "date": "2026-11-03",
+    "features": [
+      "Nowe okno szczegółów przedmiotu: Kliknij kafelek zajęć, aby sprawdzić pełny harmonogram i szybko znaleźć termin na odrobienie zajęć — wraz z salami, grupami oraz prowadzącymi.",
+      "Kafelki w oknie przedmiotu mają czytelne oznaczenia kolorystyczne typu zajęć (wykład, ćwiczenia, laboratorium, symulator).",
+      "Przypomnienie: kliknięcie w nazwisko wykładowcy lub numer sali na kafelku otwiera pełny plan zajęć prowadzącego oraz dostępność wybranej sali.",
+      "Płynna nawigacja między przedmiotem, prowadzącym a salą bezpośrednio w oknach dialogowych."
+    ]
+  },
+  {
     "version": "3.11.0",
     "date": "2026-10-19",
     "features": [
@@ -20,12 +30,12 @@
     "version": "3.10.0",
     "date": "2026-10-01",
     "features": [
-	  "Pełne wsparcie dla planów studiów niestacjonarnych (NST) oraz II stopnia.",
+      "Pełne wsparcie dla planów studiów niestacjonarnych (NST) oraz II stopnia.",
       "Usprawniona wyszukiwarka wolnych sal uwzględniająca cykle 2-tygodniowe.",
       "Nowy system Wydarzeń i Ogłoszeń Studenckich w planie zajęć.",
       "Karty wydarzeń i okno szczegółów z mapą, opisem i linkami zewnętrznymi.",
       "Automatyczne dodawanie wydarzeń przez zgłoszenia GitHub Issues.",
-	  "Zwiększony kontrast plakietek w trybie ciemnym (WCAG AA)."
+      "Zwiększony kontrast plakietek w trybie ciemnym (WCAG AA)."
     ]
   },
   {
@@ -42,4 +52,4 @@
       "Błędy lub pomysły na nowe funkcje?\nZgłoś je w menu O aplikacji."
     ]
   }
-]
+]

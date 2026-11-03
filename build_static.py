@@ -953,6 +953,7 @@ def build_cross_reference_indexes(plans_metadata=None, schedules_dir=SCHEDULES_D
                 co_ile = int(lesson.get("co_ile", 1) or 1)
                 od_tyg = int(lesson.get("od_tyg", 1) or 1)
                 polowa_sem = lesson.get("polowa_sem")
+                forma = (lesson.get("forma") or "").strip()
 
                 if not subject:
                     continue
@@ -972,6 +973,8 @@ def build_cross_reference_indexes(plans_metadata=None, schedules_dir=SCHEDULES_D
                             _is_same_cycle(entry, co_ile, od_tyg, polowa_sem, data_start)):
                             if group not in entry["groups"]:
                                 entry["groups"].append(group)
+                            if not entry.get("forma") and forma:
+                                entry["forma"] = forma
                             deduped = True
                             break
                     if not deduped:
@@ -989,7 +992,8 @@ def build_cross_reference_indexes(plans_metadata=None, schedules_dir=SCHEDULES_D
                             "data_start": data_start,
                             "co_ile": co_ile,
                             "od_tyg": od_tyg,
-                            "polowa_sem": polowa_sem
+                            "polowa_sem": polowa_sem,
+                            "forma": forma
                         })
 
                 # 2. Room index (exclude purely virtual 'OL' or blank)
@@ -1008,6 +1012,8 @@ def build_cross_reference_indexes(plans_metadata=None, schedules_dir=SCHEDULES_D
                                     entry["groups"].append(group)
                                 if not entry["teacher"] and teacher:
                                     entry["teacher"] = teacher
+                                if not entry.get("forma") and forma:
+                                    entry["forma"] = forma
                                 deduped = True
                                 break
                         if not deduped:
@@ -1023,7 +1029,8 @@ def build_cross_reference_indexes(plans_metadata=None, schedules_dir=SCHEDULES_D
                                 "data_start": data_start,
                                 "co_ile": co_ile,
                                 "od_tyg": od_tyg,
-                                "polowa_sem": polowa_sem
+                                "polowa_sem": polowa_sem,
+                                "forma": forma
                             })
 
                 # 3. Subject index

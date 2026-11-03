@@ -57,7 +57,8 @@ const fixtureCrossRefData = {
         data_start: "2026-10-06",
         co_ile: 1,
         od_tyg: 1,
-        polowa_sem: null
+        polowa_sem: null,
+        forma: "cwiczenia"
       }
     ],
     "Daniszewska Małgorzata": [
@@ -72,6 +73,23 @@ const fixtureCrossRefData = {
         plan_name: "Nawigacja 1",
         weeks: 15,
         data_start: "2026-10-07",
+        co_ile: 1,
+        od_tyg: 1,
+        polowa_sem: null
+      }
+    ],
+    "Kowalski Jan": [
+      {
+        day: "CZW",
+        slot: 4,
+        hours: "13:30 - 15:00",
+        subject: "Matematyka",
+        room: "114",
+        groups: ["GR 5"],
+        plan_id: "plan_wn_3",
+        plan_name: "Nawigacja sem. 5",
+        weeks: 15,
+        data_start: "2026-10-08",
         co_ile: 1,
         od_tyg: 1,
         polowa_sem: null
@@ -335,6 +353,33 @@ assert.ok(cardHtml.includes("&lt;img src=x"), "Encje HTML powinny być obecne w 
 assert.ok(cardHtml.includes("1. poł. sem."), "Plakietka połowy semestru powinna być wyrenderowana");
 assert.ok(cardHtml.includes("co 2 tyg (od 2 tyg)"), "Plakietka cyklu powinna być wyrenderowana");
 assert.ok(cardHtml.includes("modal-group-chip"), "Grupy powinny być wyrenderowane jako chipy");
+
+// Test renderSlotCard dla type="subject" (harmonogram przedmiotu z salą i prowadzącym)
+const subjectSlotHtml = CrossRef.Engine.renderSlotCard({
+  hours: "08:00 - 09:30",
+  subject: "Fizyka I",
+  teacher: "Boniewicz-Szmyt Katarzyna",
+  room: "114",
+  groups: ["GR 1", "GR 2"],
+  plan_name: "Nawigacja 1"
+}, "subject");
+assert.ok(subjectSlotHtml.includes("lesson-room-btn"), "Dla type='subject' karta slotu powinna zawierać przycisk sali");
+assert.ok(subjectSlotHtml.includes("lesson-teacher-btn"), "Dla type='subject' karta slotu powinna zawierać przycisk prowadzącego");
+assert.ok(subjectSlotHtml.includes("Boniewicz-Szmyt Katarzyna"), "Karta slotu powinna zawierać nazwisko prowadzącego");
+
+// Test oznaczania formy zajęć na kafelku w modalu (form-wyklad, form-cwiczenia, form-laboratorium, form-symulator)
+const labSlot = CrossRef.Engine.renderSlotCard({ hours: "10:15 - 11:45", subject: "Nawigacja", teacher: "Jan", forma: "laboratorium" }, "subject");
+assert.ok(labSlot.includes("modal-slot-item form-laboratorium"), "Slot laboratorium musi posiadać klasę form-laboratorium");
+
+const cwSlot = CrossRef.Engine.renderSlotCard({ hours: "12:00 - 13:30", subject: "Matematyka", teacher: "Jan", forma: "cwiczenia" }, "subject");
+assert.ok(cwSlot.includes("modal-slot-item form-cwiczenia"), "Slot ćwiczeń musi posiadać klasę form-cwiczenia");
+
+const symSlot = CrossRef.Engine.renderSlotCard({ hours: "13:30 - 15:00", subject: "Manewrowanie", teacher: "Jan", forma: "symulator" }, "subject");
+assert.ok(symSlot.includes("modal-slot-item form-symulator"), "Slot symulatora musi posiadać klasę form-symulator");
+
+const wykSlot = CrossRef.Engine.renderSlotCard({ hours: "08:00 - 09:30", subject: "Fizyka", teacher: "Jan", forma: "wyklad" }, "subject");
+assert.ok(wykSlot.includes("modal-slot-item form-wyklad"), "Slot wykładu musi posiadać klasę form-wyklad");
+
 console.log("✅ [PASS] renderSlotCard generuje bezpieczny HTML z prawidłowymi klasami.");
 
 // --- Test 7: DataService (Cache, mockowanie storage, fetch i onUpdate) ---
@@ -570,6 +615,28 @@ console.log("\n-- Test 7: DataService (Cache, unieważnianie, fallback i onUpdat
   assert.strictEqual(mockModal.open, true);
   mockModal.triggerClick({ clientX: 20, clientY: 20, target: mockModal });
   assert.strictEqual(mockModal.open, false, "Kliknięcie w tło powinno zamknąć modal");
+
+  // 8h: openSubject z harmonogramem tygodniowym, filtrowaniem do wybranego planu i brakiem szumu technicznego
+  const subjectCardOpener = createMockElement("lesson-card");
+  await CrossRef.UI.openSubject("Fizyka I", subjectCardOpener, { planId: "plan_wn_1" });
+  assert.strictEqual(mockTitle.textContent, "Fizyka I");
+  assert.strictEqual(mockBadge.textContent, "📚 Przedmiot");
+  assert.strictEqual(mockModal.open, true);
+  assert.strictEqual(CrossRef.UI.previousFocusedElement, subjectCardOpener, "Trigger element powinien być zachowany dla fokusu");
+  assert.ok(mockBody.innerHTML.includes("modal-day-group"), "Modal przedmiotu powinien zawierać harmonogram dni zajęć");
+  assert.ok(mockBody.innerHTML.includes("lesson-room-btn"), "Modal przedmiotu powinien zawierać przycisk do sali");
+  assert.ok(mockBody.innerHTML.includes("lesson-teacher-btn"), "Modal przedmiotu powinien zawierać przycisk do wykładowcy");
+  assert.ok(mockBody.innerHTML.includes("Boniewicz-Szmyt Katarzyna"), "Modal przedmiotu powinien wyświetlać przypisanego wykładowcę");
+  assert.ok(!mockBody.innerHTML.includes("Oznaczenia w planach"), "Modal nie powinien zawierać technicznej sekcji 'Oznaczenia w planach'");
+  assert.ok(!mockBody.innerHTML.includes("Karta przedmiotu"), "Modal nie powinien zawierać linku do sylabusa ani karty przedmiotu");
+  assert.ok(!mockBody.innerHTML.includes("syllabus_url"), "Modal nie powinien zawierać syllabus_url");
+
+  // Weryfikacja izolacji wybranego planu: student sem. 1 nie widzi zajęć starszych lat (plan_wn_3)
+  await CrossRef.UI.openSubject("Matematyka", subjectCardOpener, { planId: "plan_wn_1" });
+  assert.ok(mockBody.innerHTML.includes("Wawrzyńska Aleksandra"), "Powinien wyświetlać wykładowcę z wybranego planu sem. 1");
+  assert.ok(mockBody.innerHTML.includes("modal-slot-item form-cwiczenia"), "Kafelek ćwiczeń w modalu przedmiotu musi posiadać form-cwiczenia");
+  assert.ok(!mockBody.innerHTML.includes("Kowalski Jan"), "Nie powinien wyświetlać wykładowcy ze starszego rocznika (plan_wn_3)");
+  assert.ok(!mockBody.innerHTML.includes("Nawigacja sem. 5"), "Nie powinien zawierać obcych planów starszych roczników");
 
   console.log("✅ [PASS] CrossRef.UI poprawnie orkiestruje natywny <dialog> (Issue #9), a11y, date picker i wyszukiwarkę.");
 

@@ -82,7 +82,53 @@
   }
 
   // --- Czysta warstwa logiki i zapytań (CrossRef.Engine) ---
+  function resolveFormFallback(item) {
+    if (!item) return "";
+    if (item.forma) return item.forma;
+
+    const schedule = (typeof state !== "undefined" && state && state.scheduleData)
+      ? state.scheduleData
+      : ((typeof window !== "undefined" && window.state && window.state.scheduleData)
+        ? window.state.scheduleData
+        : null);
+
+    if (schedule) {
+      const normSub = normalizeQuery(item.subject || "");
+      for (const [dayKey, dayVal] of Object.entries(schedule)) {
+        const lessons = Array.isArray(dayVal) ? dayVal : Object.values(dayVal || {});
+        for (const l of lessons) {
+          if (!l) continue;
+          const normLSub = normalizeQuery(l.przedmiot || "");
+          if (normLSub === normSub) {
+            if (item.hours && l.godziny && item.hours === l.godziny) {
+              if (l.forma) return l.forma;
+            }
+            if (item.room && l.sala && item.room.toLowerCase() === l.sala.toLowerCase()) {
+              if (l.forma) return l.forma;
+            }
+          }
+        }
+      }
+    }
+
+    const room = (item.room || "").toLowerCase();
+    if (room.includes("306,400") || room.includes("306/400")) return "laboratorium";
+    if (room.includes("306") || room.includes("symulat") || room.includes("ecdis") || room.includes("nawigacyjn")) return "symulator";
+    if (room.includes("lab") || room.includes("laborator") || room === "p1" || room === "mw" || room.includes("komputer")) return "laboratorium";
+    if (room === "aula" || room === "audytorium") return "wyklad";
+
+    const sub = (item.subject || "").toLowerCase();
+    if (sub.includes("wychowanie fizyczne") || sub.includes("sport") || sub.includes("basen")) return "cwiczenia";
+    if (sub.includes("bhp") || sub.includes("ochrona w\xc5\x82asno\xc5\x9bci") || sub.includes("ochrona własności")) return "wyklad";
+
+    if (item.groups && item.groups.length >= 3) return "wyklad";
+    if (item.groups && item.groups.length > 0 && item.groups.length <= 2) return "cwiczenia";
+
+    return "wyklad";
+  }
+
   const Engine = {
+    resolveFormFallback,
     STANDARD_SLOTS,
     DNI_TYGODNIA,
     DNI_PELNE,
@@ -226,6 +272,9 @@
     renderSlotCard(item, type = "room") {
       if (!item) return "";
 
+      const form = item.forma || resolveFormFallback(item);
+      const formClass = form ? ` form-${escapeHtml(form)}` : "";
+
       let cycleBadges = "";
       if (item.polowa_sem) {
         cycleBadges += `<span class="lesson-sem-badge">${escapeHtml(item.polowa_sem)}. poł. sem.</span>`;
@@ -250,7 +299,7 @@
       const planNameHtml = item.plan_name ? `<div style="font-size: 0.75rem; color: var(--text-muted);">${escapeHtml(item.plan_name)}</div>` : "";
 
       return `
-        <div class="modal-slot-item">
+        <div class="modal-slot-item${formClass}">
           <div class="modal-slot-header">
             <span class="modal-slot-time">${escapeHtml(item.hours || "")}</span>
             <div style="display:flex; gap:0.35rem; align-items:center;">
@@ -258,9 +307,9 @@
               ${type === "room" ? `<span class="free-room-badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">Zajęta</span>` : roomBtn}
             </div>
           </div>
-          <div class="modal-slot-subject">${escapeHtml(item.subject || "")}</div>
+          <div class="modal-slot-subject">${type === "subject" ? escapeHtml(item.subject || "") : `<button class="lesson-subject-btn" data-subject="${escapeHtml(item.subject || "")}" title="Szczegóły przedmiotu ${escapeHtml(item.subject || "")}">${escapeHtml(item.subject || "")}</button>`}</div>
           <div class="modal-slot-meta">
-            ${type === "room" ? teacherHtml : (type === "teacher" ? `<span>Grupy:</span>` : "")}
+            ${type === "teacher" ? `<span>Grupy:</span>` : teacherHtml}
             <div class="modal-groups-chips">${groupsHtml}</div>
           </div>
           ${planNameHtml}
@@ -641,59 +690,185 @@
       this._bindModalActionLinks();
     },
 
-    async openSubject(subjectName) {
+    async openSubject(subjectName, triggerElement = null, options = {}) {
       if (this.onBeforeOpen) this.onBeforeOpen();
 
-      this.openModal(subjectName, "📚 Przedmiot", `<div class="spinner" style="margin: 2rem auto;"></div><p style="text-align:center;">Wczytywanie szczegółów przedmiotu...</p>`);
+      this.openModal(subjectName, "📚 Przedmiot", `<div class="spinner" style="margin: 2rem auto;"></div><p style="text-align:center;">Wczytywanie szczegółów przedmiotu...</p>`, triggerElement);
 
       const data = await this._ensureData();
       if (!data) {
-        this.openModal(subjectName, "📚 Przedmiot", `<p class="placeholder-text" style="text-align:center; padding: 2rem; color: #ef4444;">Nie udało się załadować danych.</p>`);
+        this.openModal(subjectName, "📚 Przedmiot", `<p class="placeholder-text" style="text-align:center; padding: 2rem; color: #ef4444;">Nie udało się załadować danych.</p>`, triggerElement);
         return;
       }
 
       let sInfo = (data.subjects && data.subjects[subjectName]) || null;
+      let matchedSubjectKey = subjectName;
+
       if (!sInfo && data.subjects) {
-        const lower = subjectName.toLowerCase().trim();
+        const norm = normalizeQuery(subjectName);
         for (const [k, v] of Object.entries(data.subjects)) {
-          if (k.toLowerCase().trim() === lower) {
+          if (normalizeQuery(k) === norm) {
             sInfo = v;
+            matchedSubjectKey = k;
+            break;
+          }
+          const rawVariants = (v.raw_variants || []).map(normalizeQuery);
+          if (rawVariants.includes(norm)) {
+            sInfo = v;
+            matchedSubjectKey = k;
             break;
           }
         }
       }
 
       if (!sInfo) {
-        this.openModal(subjectName, "📚 Przedmiot", `<p class="placeholder-text" style="text-align:center; padding: 2rem;">Brak danych w bazie dla przedmiotu ${escapeHtml(subjectName)}.</p>`);
+        sInfo = {
+          subject: subjectName,
+          raw_variants: [],
+          teachers: [],
+          majors: [],
+          syllabus_url: "",
+          plans: []
+        };
+      }
+
+      const targetPlanId = (options && options.planId)
+        ? String(options.planId)
+        : ((typeof state !== "undefined" && state && state.selectedPlanId)
+          ? String(state.selectedPlanId)
+          : ((typeof window !== "undefined" && window.state && window.state.selectedPlanId)
+            ? String(window.state.selectedPlanId)
+            : null));
+
+      const normSubject = normalizeQuery(matchedSubjectKey);
+      const rawVariantsNorm = (sInfo.raw_variants || []).map(normalizeQuery);
+      if (normalizeQuery(subjectName) !== normSubject) {
+        rawVariantsNorm.push(normalizeQuery(subjectName));
+      }
+
+      // Zbierz terminy zajęć tego przedmiotu (z filtrowaniem do wybranego planu jeśli jest dostępny)
+      const entries = [];
+      const seenKey = new Set();
+
+      if (data.teachers) {
+        for (const [tName, tClasses] of Object.entries(data.teachers)) {
+          for (const c of tClasses) {
+            if (targetPlanId && String(c.plan_id) !== targetPlanId) {
+              continue;
+            }
+
+            const cSubNorm = normalizeQuery(c.subject || "");
+            const cRawNorm = normalizeQuery(c.raw_subject || "");
+            const matches = cSubNorm === normSubject ||
+                            rawVariantsNorm.includes(cSubNorm) ||
+                            (cRawNorm && (cRawNorm === normSubject || rawVariantsNorm.includes(cRawNorm)));
+            if (matches) {
+              const dedupeKey = `${c.day}-${c.slot}-${c.hours}-${c.room}-${(c.groups || []).join(",")}-${c.plan_id}`;
+              if (!seenKey.has(dedupeKey)) {
+                seenKey.add(dedupeKey);
+                entries.push({
+                  ...c,
+                  teacher: c.teacher || tName,
+                  forma: c.forma || resolveFormFallback(c)
+                });
+              }
+            }
+          }
+        }
+      }
+
+      // Prowadzący dla wybranego planu
+      const teachersList = [];
+      for (const e of entries) {
+        if (e.teacher && !teachersList.includes(e.teacher) && e.teacher !== "Brak danych prowadzącego") {
+          teachersList.push(e.teacher);
+        }
+      }
+      if (teachersList.length === 0 && !targetPlanId && Array.isArray(sInfo.teachers)) {
+        teachersList.push(...sInfo.teachers);
+      }
+
+      if (entries.length === 0 && teachersList.length === 0 && (!sInfo.plans || sInfo.plans.length === 0)) {
+        this.openModal(matchedSubjectKey, "📚 Przedmiot", `<p class="placeholder-text" style="text-align:center; padding: 2rem;">Brak danych w bazie dla przedmiotu ${escapeHtml(subjectName)}.</p>`, triggerElement);
         return;
+      }
+
+      const byDay = {};
+      for (const day of DNI_TYGODNIA) byDay[day] = [];
+      for (const entry of entries) {
+        if (!byDay[entry.day]) byDay[entry.day] = [];
+        byDay[entry.day].push(entry);
       }
 
       let html = `<div class="modal-schedule-section">`;
 
-      if (sInfo.raw_variants && sInfo.raw_variants.length > 0) {
+      if (sInfo.majors && sInfo.majors.length > 0) {
         html += `
-          <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
-            Oznaczenia w planach: ${sInfo.raw_variants.map(v => `<code>${escapeHtml(v)}</code>`).join(", ")}
+          <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.4rem;">
+            Kierunek: <strong>${escapeHtml(sInfo.majors.join(", "))}</strong>
           </div>
         `;
       }
 
-      if (sInfo.teachers && sInfo.teachers.length > 0) {
+      if (teachersList.length > 0) {
         html += `
-          <div style="margin-top: 0.5rem;">
-            <div class="control-label" style="margin-bottom: 0.25rem;">Prowadzący ten przedmiot:</div>
-            <div style="display: flex; flex-direction: column; gap: 0.35rem;">
-              ${sInfo.teachers.map(t => `<button class="lesson-teacher-btn" data-teacher="${escapeHtml(t)}">👨‍🏫 ${escapeHtml(t)}</button>`).join("")}
+          <div style="margin-bottom: 0.85rem;">
+            <div class="control-label" style="margin-bottom: 0.35rem;">Prowadzący:</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 0.35rem;">
+              ${teachersList.map(t => `<button class="lesson-teacher-btn" data-teacher="${escapeHtml(t)}">👨‍🏫 ${escapeHtml(t)}</button>`).join("")}
             </div>
           </div>
         `;
       }
 
-      if (sInfo.plans && sInfo.plans.length > 0) {
+      if (entries.length > 0) {
+        const scheduleTitle = targetPlanId
+          ? `Harmonogram zajęć dla Twojego planu (terminów: <strong>${entries.length}</strong>):`
+          : `Harmonogram zajęć w tygodniu (łącznie terminów: <strong>${entries.length}</strong>):`;
+        html += `<p style="margin: 0.85rem 0 0.4rem; color: var(--text-secondary); font-size: 0.88rem;">${scheduleTitle}</p>`;
+
+        for (const day of DNI_TYGODNIA) {
+          const dayEntries = byDay[day] || [];
+          if (dayEntries.length === 0) continue;
+
+          html += `
+            <div class="modal-day-group">
+              <div class="modal-day-title">
+                <span>${DNI_PELNE[day] || day}</span>
+                <span>${dayEntries.length} ${dayEntries.length === 1 ? 'zajęcia' : 'zajęć'}</span>
+              </div>
+              <div class="modal-slots-list">
+          `;
+
+          for (const e of dayEntries) {
+            html += Engine.renderSlotCard(e, "subject");
+          }
+
+          html += `</div></div>`;
+        }
+      }
+
+      // Grupy realizujące ten przedmiot
+      if (targetPlanId) {
+        const currentPlan = (sInfo.plans || []).find(p => String(p.plan_id) === targetPlanId);
+        let planGroups = currentPlan ? (currentPlan.groups || []) : [];
+        if (planGroups.length === 0 && entries.length > 0) {
+          planGroups = Array.from(new Set(entries.flatMap(e => e.groups || []))).sort();
+        }
+        if (planGroups.length > 0) {
+          const gChips = planGroups.map(g => `<span class="modal-group-chip">${escapeHtml(g)}</span>`).join("");
+          html += `
+            <div style="margin-top: 1rem;">
+              <div class="control-label" style="margin-bottom: 0.35rem;">Grupy w Twoim planie realizujące ten przedmiot:</div>
+              <div class="modal-groups-chips">${gChips}</div>
+            </div>
+          `;
+        }
+      } else if (sInfo.plans && sInfo.plans.length > 0) {
         html += `
-          <div style="margin-top: 0.5rem;">
-            <div class="control-label" style="margin-bottom: 0.25rem;">Grupy realizujące ten przedmiot w semestrze:</div>
-            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <div style="margin-top: 1rem;">
+            <div class="control-label" style="margin-bottom: 0.35rem;">Grupy realizujące ten przedmiot:</div>
+            <div style="display: flex; flex-direction: column; gap: 0.45rem;">
         `;
         for (const p of sInfo.plans) {
           const gChips = (p.groups || []).map(g => `<span class="modal-group-chip">${escapeHtml(g)}</span>`).join("");
@@ -708,7 +883,7 @@
       }
 
       html += `</div>`;
-      this.openModal(subjectName, "📚 Przedmiot", html);
+      this.openModal(matchedSubjectKey, "📚 Przedmiot", html, triggerElement);
       this._bindModalActionLinks();
     },
 
@@ -926,6 +1101,14 @@
           e.stopPropagation();
           const r = btn.dataset.room;
           if (r) this.openRoom(r);
+        });
+      });
+
+      this.elements.body.querySelectorAll(".lesson-subject-btn").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const s = btn.dataset.subject;
+          if (s) this.openSubject(s, btn);
         });
       });
     },

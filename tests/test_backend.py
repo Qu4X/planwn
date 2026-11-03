@@ -364,16 +364,16 @@ with tempfile.TemporaryDirectory() as td:
             }
         }
     }
-    # GR 1 & GR 2 in week 1 cycle
+    # GR 1 & GR 2 in week 1 cycle (wykład)
     g1_data = {"PON": {"24": {"przedmiot": "Nawigacja", "prowadzacy": "Kpt. Nowak", "godziny": "08:00 - 09:30",
-                              "sala": "202", "co_ile": 2, "od_tyg": 1, "data_start": "2026-10-05", "tygodnie": 8}}}
+                              "sala": "202", "co_ile": 2, "od_tyg": 1, "data_start": "2026-10-05", "tygodnie": 8, "forma": "wyklad"}}}
     g2_data = {"PON": {"24": {"przedmiot": "Nawigacja", "prowadzacy": "Kpt. Nowak", "godziny": "08:00 - 09:30",
-                              "sala": "202", "co_ile": 2, "od_tyg": 1, "data_start": "2026-10-05", "tygodnie": 8}}}
-    # GR 3 & GR 4 in week 2 cycle
+                              "sala": "202", "co_ile": 2, "od_tyg": 1, "data_start": "2026-10-05", "tygodnie": 8, "forma": "wyklad"}}}
+    # GR 3 & GR 4 in week 2 cycle (laboratorium)
     g3_data = {"PON": {"24": {"przedmiot": "Nawigacja", "prowadzacy": "Kpt. Nowak", "godziny": "08:00 - 09:30",
-                              "sala": "202", "co_ile": 2, "od_tyg": 2, "data_start": "2026-10-12", "tygodnie": 7}}}
+                              "sala": "202", "co_ile": 2, "od_tyg": 2, "data_start": "2026-10-12", "tygodnie": 7, "forma": "laboratorium"}}}
     g4_data = {"PON": {"24": {"przedmiot": "Nawigacja", "prowadzacy": "Kpt. Nowak", "godziny": "08:00 - 09:30",
-                              "sala": "202", "co_ile": 2, "od_tyg": 2, "data_start": "2026-10-12", "tygodnie": 7}}}
+                              "sala": "202", "co_ile": 2, "od_tyg": 2, "data_start": "2026-10-12", "tygodnie": 7, "forma": "laboratorium"}}}
 
     for grp, dt in [("GR_1", g1_data), ("GR_2", g2_data), ("GR_3", g3_data), ("GR_4", g4_data)]:
         with open(os.path.join(td, f"999_{grp}.json"), "w", encoding="utf-8") as f:
@@ -393,6 +393,9 @@ with tempfile.TemporaryDirectory() as td:
 
     room_classes = cross_res["rooms"].get("202", {}).get("PON", [])
     check("Room has exactly 2 separate cycle entries", len(room_classes) == 2, f"Got {len(room_classes)}")
+    check("Teachers index preserves forma for cycle 1", nowak_classes[0].get("forma") == "wyklad")
+    check("Teachers index preserves forma for cycle 2", nowak_classes[1].get("forma") == "laboratorium")
+    check("Rooms index preserves forma", room_classes[0].get("forma") == "wyklad")
 
 # ── 21. Arktur cell color parsing (arktur_kolor) ─────────────────────────────
 print("\n-- 21. Arktur cell color parsing (arktur_kolor) ----------------------")
