@@ -325,20 +325,6 @@ def _parse_single_stream_day(
         if all_z2_txt.strip().lower() in ("przerwa", "wolne", "-"):
             continue
 
-        # Check whether any subject starts in an odd group column (single-group allocation)
-        has_odd_subject = False
-        for r in z2_runs:
-            t = r["text"].lower()
-            if any(s in t for s in ("matematyka", "fizyka", "grafika", "nautyki", "nauki", "prawo")):
-                x = r["x0"]
-                for o_idx in (1, 3, 5, 7):
-                    _, _, xmin, xmax = GROUP_BOUNDS[o_idx]
-                    if xmin <= x < xmax:
-                        has_odd_subject = True
-                        break
-            if has_odd_subject:
-                break
-
         is_cohort_lecture = False
         if global_room in ("AULA", "ON-LINE") or "W" in [r["text"].strip() for r in z2_runs] or "organizacyjne" in all_z2_txt.lower():
             subj_count = sum(1 for r in z2_runs if any(ks in r["text"].lower() for ks in ("matematyka", "fizyka", "organizacyjne", "prawo", "grafika", "nautyki", "nauki")))
@@ -366,43 +352,73 @@ def _parse_single_stream_day(
                     result[grp].append(g_lesson)
             continue
 
-        if has_odd_subject:
-            # Single groups (GROUP_BOUNDS)
-            for g_idx, grp_name, xmin, xmax in GROUP_BOUNDS:
-                col_runs = [r for r in z2_runs if xmin <= r["x0"] < xmax]
-                if not col_runs:
-                    continue
-                combined_txt = " ".join(r["text"] for r in col_runs)
-                lesson = _extract_lesson_details(
-                    raw_text=combined_txt,
-                    fallback_room=global_room,
-                    time_range=time_range,
-                    day_name=day_name,
-                    date_iso=d_iso,
-                    group_name=grp_name
-                )
-                if lesson:
-                    result[grp_name].append(lesson)
-        else:
-            # Double groups (PAIR_BOUNDS)
-            for p_idx, pair_names, xmin, xmax in PAIR_BOUNDS:
-                pair_runs = [r for r in z2_runs if xmin <= r["x0"] < xmax]
-                if not pair_runs:
-                    continue
-                combined_txt = " ".join(r["text"] for r in pair_runs)
-                lesson = _extract_lesson_details(
-                    raw_text=combined_txt,
-                    fallback_room=global_room,
-                    time_range=time_range,
-                    day_name=day_name,
-                    date_iso=d_iso,
-                    group_name=pair_names[0]
-                )
-                if lesson:
-                    for pn in pair_names:
-                        g_lesson = dict(lesson)
-                        g_lesson["grupa"] = pn
-                        result[pn].append(g_lesson)
+        # Resolve lessons pair-by-pair: handles independent single subgroups (e.g. labs)
+        # alongside shared 2-group classes (e.g. exercises/lectures with room on the right half)
+        for p_idx, pair_names, xmin, xmax in PAIR_BOUNDS:
+            g_left, g_right = pair_names
+            pair_runs = [r for r in z2_runs if xmin <= r["x0"] < xmax]
+            if not pair_runs:
+                continue
+
+            xmid = GROUP_BOUNDS[p_idx * 2][3]
+            left_runs = [r for r in pair_runs if r["x0"] < xmid]
+            right_runs = [r for r in pair_runs if r["x0"] >= xmid]
+
+            left_txt = " ".join(r["text"] for r in left_runs)
+            right_txt = " ".join(r["text"] for r in right_runs)
+            pair_txt = " ".join(r["text"] for r in pair_runs)
+
+            left_lesson = _extract_lesson_details(
+                raw_text=left_txt,
+                fallback_room=global_room,
+                time_range=time_range,
+                day_name=day_name,
+                date_iso=d_iso,
+                group_name=g_left
+            ) if left_txt else None
+
+            right_lesson = _extract_lesson_details(
+                raw_text=right_txt,
+                fallback_room=global_room,
+                time_range=time_range,
+                day_name=day_name,
+                date_iso=d_iso,
+                group_name=g_right
+            ) if right_txt else None
+
+            pair_lesson = _extract_lesson_details(
+                raw_text=pair_txt,
+                fallback_room=global_room,
+                time_range=time_range,
+                day_name=day_name,
+                date_iso=d_iso,
+                group_name=g_left
+            ) if pair_txt else None
+
+            if left_lesson and right_lesson:
+                # Both subgroups have their own independent lesson (e.g. separate labs)
+                result[g_left].append(left_lesson)
+                result[g_right].append(right_lesson)
+            elif left_lesson and not right_lesson:
+                # If pair_lesson found a room from right_runs (e.g. Matematyka in C30 where C30 was in right_runs),
+                # it is a shared 2-group class across both groups.
+                if pair_lesson and pair_lesson.get("sala") != "brak sali" and left_lesson.get("sala") in ("brak sali", "") and right_runs:
+                    result[g_left].append(dict(pair_lesson, grupa=g_left))
+                    result[g_right].append(dict(pair_lesson, grupa=g_right))
+                elif left_lesson.get("forma") == "laboratorium":
+                    result[g_left].append(left_lesson)
+                elif pair_lesson:
+                    result[g_left].append(dict(pair_lesson, grupa=g_left))
+                    result[g_right].append(dict(pair_lesson, grupa=g_right))
+                else:
+                    result[g_left].append(left_lesson)
+            elif right_lesson and not left_lesson:
+                # Single subgroup lesson in the right half only
+                result[g_right].append(right_lesson)
+            elif pair_lesson:
+                # Shared 2-group class
+                result[g_left].append(dict(pair_lesson, grupa=g_left))
+                result[g_right].append(dict(pair_lesson, grupa=g_right))
 
     return result
 
@@ -662,6 +678,10 @@ def _extract_lesson_details(
         subject = "Zajęcia"
 
     subject = subject.strip(" ,.-")
+
+    # Discard phantom lessons that have neither teacher nor a recognized subject name
+    if (not subject or subject == "Zajęcia") and not teacher:
+        return None
 
     # Discard phantom lessons that have neither teacher nor room and are not recognized
     if not teacher and not room and subject not in KNOWN_TEACHER_SUBJECTS.values():

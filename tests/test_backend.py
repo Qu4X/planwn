@@ -664,6 +664,37 @@ if os.path.exists(sample_pdf_path):
         check("GR.01 18:30 subject is Podstawy nautyki w transporcie", gr1_1830["przedmiot"] == "Podstawy nautyki w transporcie", f"got {gr1_1830['przedmiot']}")
         check("GR.01 18:30 teacher is Gil Mateusz", "Gil Mateusz" in gr1_1830["prowadzacy"], f"got {gr1_1830['prowadzacy']}")
         check("GR.01 18:30 room is C31", gr1_1830["sala"] == "C31", f"got {gr1_1830['sala']}")
+
+    # Regression: 2026-11-28 13:30 — shared pair classes must not produce phantom "Zajęcia"
+    gr3_nov28 = parsed_pdf.get("GR.03", {}).get("2026-11-28", [])
+    gr4_nov28 = parsed_pdf.get("GR.04", {}).get("2026-11-28", [])
+    gr7_nov28 = parsed_pdf.get("GR.07", {}).get("2026-11-28", [])
+    gr8_nov28 = parsed_pdf.get("GR.08", {}).get("2026-11-28", [])
+
+    gr3_1330 = next((l for l in gr3_nov28 if l["godziny"].startswith("13:30")), None)
+    gr4_1330 = next((l for l in gr4_nov28 if l["godziny"].startswith("13:30")), None)
+    gr7_1330 = next((l for l in gr7_nov28 if l["godziny"].startswith("13:30")), None)
+    gr8_1330 = next((l for l in gr8_nov28 if l["godziny"].startswith("13:30")), None)
+
+    check("GR.03 on 2026-11-28 13:30 has Matematyka in C30", gr3_1330 is not None and gr3_1330["przedmiot"] == "Matematyka" and gr3_1330["sala"] == "C30")
+    check("GR.04 on 2026-11-28 13:30 has Matematyka (not Zajęcia) in C30", gr4_1330 is not None and gr4_1330["przedmiot"] == "Matematyka" and gr4_1330["sala"] == "C30")
+    check("GR.07 on 2026-11-28 13:30 has Fizyka in C136", gr7_1330 is not None and gr7_1330["przedmiot"] == "Fizyka" and gr7_1330["sala"] == "C136")
+    check("GR.08 on 2026-11-28 13:30 has Fizyka (not Zajęcia) in C136", gr8_1330 is not None and gr8_1330["przedmiot"] == "Fizyka" and gr8_1330["sala"] == "C136")
+
+    nov28_zajecia = [
+        (g, l) for g in parsed_pdf
+        for l in parsed_pdf[g].get("2026-11-28", [])
+        if l.get("przedmiot") == "Zajęcia" or l.get("przedmiot", "").lower() == "zajęcia"
+    ]
+    check("No group on 2026-11-28 has phantom 'Zajęcia'", len(nov28_zajecia) == 0, f"got {nov28_zajecia}")
+
+    all_til_zajecia = [
+        (g, d, l) for g in parsed_pdf
+        for d, lessons in parsed_pdf[g].items()
+        for l in lessons
+        if l.get("przedmiot") == "Zajęcia" or l.get("przedmiot", "").lower() == "zajęcia"
+    ]
+    check("TiL_I.pdf has 0 phantom 'Zajęcia' across all dates", len(all_til_zajecia) == 0, f"got {all_til_zajecia}")
 else:
     print(f"  [SKIP] 26e/26f — PDF fixture not found at {sample_pdf_path!r}. Run with the real PDF to execute integration tests.")
 
@@ -741,6 +772,15 @@ check("_extract_lesson_details('GR.01 GR.02') zwraca None",
 check("_extract_lesson_details('GR 1 GR 2') zwraca None",
       _extract_lesson_details("GR 1 GR 2", fallback_room="", time_range="08:00-10:25",
                               day_name="Sobota", date_iso="2026-10-29", group_name="GR.01") is None)
+check("_extract_lesson_details('C136') returns None (orphan room without teacher/subject)",
+      _extract_lesson_details("C136", fallback_room="", time_range="13:30-15:55",
+                              day_name="Sobota", date_iso="2026-11-28", group_name="GR.08") is None)
+check("_extract_lesson_details('C30') returns None (orphan room without teacher/subject)",
+      _extract_lesson_details("C30", fallback_room="", time_range="13:30-15:55",
+                              day_name="Sobota", date_iso="2026-11-28", group_name="GR.04") is None)
+check("_extract_lesson_details('B211') returns None (orphan room without teacher/subject)",
+      _extract_lesson_details("B211", fallback_room="", time_range="10:30-12:55",
+                              day_name="Sobota", date_iso="2027-01-09", group_name="GR.02") is None)
 
 # Prawidłowy tekst zajęć — nie powinien zwrócić None
 ok_result = _extract_lesson_details(
